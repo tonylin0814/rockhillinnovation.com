@@ -117,7 +117,7 @@ export default async function ProductDetailPage({ params }: { params: { id: stri
     const { data: components, error: componentsError } = await supabase
       .from("product_components")
       .select(
-        "*, component:products(id, code, name_english, name_chinese, product_type, supplier_id, payment_category, status, notes, created_at, updated_at, supplier:suppliers(id, name, code))"
+        "*, component:products(id, code, supplier_product_code, name_english, name_chinese, product_type, supplier_id, payment_category, status, notes, created_at, updated_at, supplier:suppliers(id, name, code))"
       )
       .eq("set_product_id", params.id)
       .order("sort_order", { ascending: true });
@@ -163,7 +163,8 @@ export default async function ProductDetailPage({ params }: { params: { id: stri
             </CardHeader>
             <CardContent>
               <div className="grid gap-x-6 sm:grid-cols-2">
-                <DetailRow label="Product Code" value={product.code} />
+                <DetailRow label="Rock Hill Product Code" value={product.code} />
+                <DetailRow label="Supplier Product Code" value={product.supplier_product_code} />
                 <DetailRow label="English Name" value={product.name_english} />
                 <DetailRow label="Chinese Name" value={product.name_chinese} />
                 <div className="border-b border-slate-100 py-3">

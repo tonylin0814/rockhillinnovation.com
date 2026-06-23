@@ -28,6 +28,7 @@ import { QuoteReviewDialog } from "./QuoteReviewDialog";
 type ProductOption = {
   id: string;
   code: string;
+  supplier_product_code: string | null;
   name_english: string;
 };
 
@@ -77,6 +78,10 @@ function RecordedByBadge({ recordedBy }: { recordedBy: SupplierQuoteSession["rec
       {recordedByLabels[recordedBy]}
     </Badge>
   );
+}
+
+function productLabel(product: ProductOption) {
+  return [product.code, product.supplier_product_code, product.name_english].filter(Boolean).join(" - ");
 }
 
 export function SupplierQuotesTab({
@@ -178,11 +183,11 @@ export function SupplierQuotesTab({
                           setSelectedHistoryProduct(product);
                           setPriceLookupOpen(false);
                         }}
-                        value={`${product.code} ${product.name_english}`}
+                        value={`${product.code} ${product.supplier_product_code ?? ""} ${product.name_english}`}
                       >
                         <div className="min-w-0">
                           <div className="font-medium text-[#0d1b34]">{product.code}</div>
-                          <div className="truncate text-xs text-slate-500">{product.name_english}</div>
+                          <div className="truncate text-xs text-slate-500">{productLabel(product)}</div>
                         </div>
                       </CommandItem>
                     ))}

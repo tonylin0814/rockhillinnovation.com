@@ -71,6 +71,7 @@ export function ProductsTable({ mode = "products", products }: { mode?: Products
       const matchesSearch =
         !normalizedSearch ||
         product.code.toLowerCase().includes(normalizedSearch) ||
+        (product.supplier_product_code ?? "").toLowerCase().includes(normalizedSearch) ||
         product.name_english.toLowerCase().includes(normalizedSearch) ||
         (product.name_chinese ?? "").toLowerCase().includes(normalizedSearch);
 
@@ -106,7 +107,8 @@ export function ProductsTable({ mode = "products", products }: { mode?: Products
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>Code</TableHead>
+            <TableHead>Rock Hill Code</TableHead>
+            {mode === "products" ? <TableHead>Supplier Code</TableHead> : null}
             <TableHead>English Name</TableHead>
             <TableHead>Chinese Name</TableHead>
             {mode === "products" ? <TableHead>Supplier</TableHead> : null}
@@ -120,6 +122,7 @@ export function ProductsTable({ mode = "products", products }: { mode?: Products
             filteredProducts.map((product) => (
               <TableRow key={product.id}>
                 <TableCell className="font-semibold text-[#0d1b34]">{product.code}</TableCell>
+                {mode === "products" ? <TableCell>{product.supplier_product_code ?? "-"}</TableCell> : null}
                 <TableCell>{product.name_english}</TableCell>
                 <TableCell>{product.name_chinese ?? "-"}</TableCell>
                 {mode === "products" ? <TableCell>{product.supplier?.name ?? "-"}</TableCell> : null}
@@ -142,7 +145,7 @@ export function ProductsTable({ mode = "products", products }: { mode?: Products
             ))
           ) : (
             <TableRow>
-              <TableCell className="text-slate-500" colSpan={mode === "products" ? 7 : 6}>
+              <TableCell className="text-slate-500" colSpan={mode === "products" ? 8 : 6}>
                 {mode === "products" ? "No products yet." : "No sets yet."}
               </TableCell>
             </TableRow>

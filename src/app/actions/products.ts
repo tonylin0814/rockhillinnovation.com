@@ -23,6 +23,7 @@ type ComponentInput = {
 const productSchema = z
   .object({
     code: z.string().trim().min(1, "Product code is required").transform((value) => value.toUpperCase()),
+    supplier_product_code: z.string().trim().nullable(),
     name_english: z.string().trim().min(1, "English name is required"),
     name_chinese: z.string().trim().nullable(),
     product_type: z.enum(["part", "set"]).default("part"),
@@ -42,6 +43,7 @@ const productSchema = z
   })
   .transform((value) => ({
     ...value,
+    supplier_product_code: value.product_type === "part" ? value.supplier_product_code : null,
     payment_category: value.product_type === "part" ? value.payment_category : null,
   }));
 
@@ -78,6 +80,9 @@ function valuesFromForm(formData: FormData, fallback?: Product) {
 
   return {
     code: formData.has("code") ? formData.get("code") : fallback?.code,
+    supplier_product_code: formData.has("supplier_product_code")
+      ? emptyToNull(formData.get("supplier_product_code"))
+      : fallback?.supplier_product_code,
     name_english: formData.has("name_english") ? formData.get("name_english") : fallback?.name_english,
     name_chinese: formData.has("name_chinese") ? emptyToNull(formData.get("name_chinese")) : fallback?.name_chinese,
     product_type: productType,
@@ -91,6 +96,14 @@ function valuesFromForm(formData: FormData, fallback?: Product) {
     status: formData.has("status") ? formData.get("status") || "active" : fallback?.status ?? "active",
     notes: formData.has("notes") ? emptyToNull(formData.get("notes")) : fallback?.notes,
   };
+}
+
+function productErrorMessage(message: string, code?: string) {
+  if (code === "23505" || message.toLowerCase().includes("products_code_unique_idx")) {
+    return "Rock Hill product code already exists";
+  }
+
+  return message;
 }
 
 export async function createProduct(formData: FormData): Promise<ActionResult> {
@@ -110,7 +123,7 @@ export async function createProduct(formData: FormData): Promise<ActionResult> {
   const { data, error } = await supabase.from("products").insert(parsed.data).select("id").single();
 
   if (error) {
-    return { error: error.message };
+    return { error: productErrorMessage(error.message, error.code) };
   }
 
   revalidatePath("/products");
@@ -154,7 +167,7 @@ export async function updateProduct(id: string, formData: FormData): Promise<Act
   const { error } = await supabase.from("products").update(parsed.data).eq("id", id);
 
   if (error) {
-    return { error: error.message };
+    return { error: productErrorMessage(error.message, error.code) };
   }
 
   revalidatePath("/products");

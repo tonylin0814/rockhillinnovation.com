@@ -22,11 +22,11 @@ export async function GET(request: Request) {
   const [{ data: lines, error: linesError }, { data: products, error: productsError }] = await Promise.all([
     supabase
       .from("client_quotation_lines")
-      .select("*, product:products(id, code, name_english)")
+      .select("*, product:products(id, code, supplier_product_code, name_english)")
       .eq("session_id", parsed.data),
     supabase
       .from("products")
-      .select("id, code, name_english")
+      .select("id, code, supplier_product_code, name_english")
       .eq("status", "active")
       .order("code", { ascending: true }),
   ]);

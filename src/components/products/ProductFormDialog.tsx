@@ -118,7 +118,7 @@ export function ProductFormDialog({
         <form className="space-y-5" onSubmit={handleSubmit}>
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
-              <Label htmlFor="code">Product Code</Label>
+              <Label htmlFor="code">Rock Hill Product Code</Label>
               <Input
                 className="uppercase"
                 defaultValue={initialData?.code ?? ""}
@@ -131,6 +131,18 @@ export function ProductFormDialog({
                 required
               />
             </div>
+            {productType === "part" ? (
+              <div className="space-y-2">
+                <Label htmlFor="supplier_product_code">Supplier Product Code</Label>
+                <Input
+                  defaultValue={initialData?.supplier_product_code ?? ""}
+                  disabled={isPending}
+                  id="supplier_product_code"
+                  name="supplier_product_code"
+                  placeholder="Code shown on supplier quote/invoice"
+                />
+              </div>
+            ) : null}
             <div className="space-y-2">
               <Label htmlFor="name_english">English Name</Label>
               <Input

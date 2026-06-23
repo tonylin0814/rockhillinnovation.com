@@ -106,6 +106,7 @@ export type ExpenseVendor = {
 export type Product = {
   id: string;
   code: string;
+  supplier_product_code: string | null;
   name_english: string;
   name_chinese: string | null;
   product_type: "part" | "set";
@@ -178,7 +179,7 @@ export type OrderLine = {
   total_price_usd: number;
   notes: string | null;
   sort_order: number;
-  product?: { id: string; code: string; name_english: string; product_type: string } | null;
+  product?: { id: string; code: string; supplier_product_code: string | null; name_english: string; product_type: string } | null;
 };
 
 export type ComponentDemand = {
@@ -242,7 +243,7 @@ export type SupplierQuoteLine = {
   payment_category: "outsourced" | "produced" | "misc_expense" | null;
   notes: string | null;
   sort_order: number;
-  product?: { id: string; code: string; name_english: string } | null;
+  product?: { id: string; code: string; supplier_product_code: string | null; name_english: string } | null;
 };
 
 export type ClientQuotationSession = {
@@ -266,7 +267,7 @@ export type ClientQuotationLine = {
   unit_price_usd: number;
   total_price_usd: number;
   notes: string | null;
-  product?: { id: string; code: string; name_english: string } | null;
+  product?: { id: string; code: string; supplier_product_code: string | null; name_english: string } | null;
 };
 
 export type TradeDocument = {

@@ -30,6 +30,7 @@ import type { ComponentDemand, OrderLine } from "@/types";
 type AvailableProduct = {
   id: string;
   code: string;
+  supplier_product_code: string | null;
   name_english: string;
   product_type: string;
 };
@@ -84,6 +85,10 @@ function PaymentCategoryBadge({ category }: { category: string | null }) {
       {category}
     </Badge>
   );
+}
+
+function productLabel(product: AvailableProduct) {
+  return [product.code, product.supplier_product_code, product.name_english].filter(Boolean).join(" - ");
 }
 
 export function OrderLinesTab({
@@ -239,13 +244,13 @@ export function OrderLinesTab({
                               <SelectItem value="none">None</SelectItem>
                               {availableProducts.map((product) => (
                                 <SelectItem key={product.id} value={product.id}>
-                                  {product.code} - {product.name_english}
+                                  {productLabel(product)}
                                 </SelectItem>
                               ))}
                             </SelectContent>
                           </Select>
                         ) : selectedProduct ? (
-                          `${selectedProduct.code} - ${selectedProduct.name_english}`
+                          productLabel(selectedProduct)
                         ) : (
                           "-"
                         )}

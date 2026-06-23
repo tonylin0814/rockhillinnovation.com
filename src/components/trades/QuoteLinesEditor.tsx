@@ -31,6 +31,7 @@ import { PriceHistoryDialog } from "./PriceHistoryDialog";
 type ProductOption = {
   id: string;
   code: string;
+  supplier_product_code: string | null;
   name_english: string;
 };
 
@@ -90,6 +91,10 @@ function PaymentCategoryBadge({ category }: { category: EditableQuoteLine["payme
       {categoryLabels[category]}
     </Badge>
   );
+}
+
+function productLabel(product: ProductOption) {
+  return [product.code, product.supplier_product_code, product.name_english].filter(Boolean).join(" - ");
 }
 
 export function QuoteLinesEditor({
@@ -247,13 +252,13 @@ export function QuoteLinesEditor({
                           <SelectItem value="none">None</SelectItem>
                           {availableProducts.map((availableProduct) => (
                             <SelectItem key={availableProduct.id} value={availableProduct.id}>
-                              {availableProduct.code} - {availableProduct.name_english}
+                              {productLabel(availableProduct)}
                             </SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
                     ) : product ? (
-                      `${product.code} - ${product.name_english}`
+                      productLabel(product)
                     ) : (
                       "-"
                     )}

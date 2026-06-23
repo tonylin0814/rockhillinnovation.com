@@ -17,6 +17,7 @@ import { QuotationLinesEditor } from "./QuotationLinesEditor";
 type ProductOption = {
   id: string;
   code: string;
+  supplier_product_code: string | null;
   name_english: string;
 };
 

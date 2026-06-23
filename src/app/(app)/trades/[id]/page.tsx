@@ -153,17 +153,17 @@ export default async function TradeWorkspacePage({ params }: { params: { id: str
       : Promise.resolve({ data: [], error: null }),
     supabase
       .from("order_lines")
-      .select("*, product:products(id, code, name_english, product_type)")
+      .select("*, product:products(id, code, supplier_product_code, name_english, product_type)")
       .eq("trade_id", params.id)
       .order("sort_order", { ascending: true }),
     supabase
       .from("component_demand")
-      .select("*, product:products(id, code, name_english, name_chinese, payment_category)")
+      .select("*, product:products(id, code, supplier_product_code, name_english, name_chinese, payment_category)")
       .eq("trade_id", params.id)
       .order("product_id", { ascending: true }),
     supabase
       .from("products")
-      .select("id, code, name_english, product_type")
+      .select("id, code, supplier_product_code, name_english, product_type")
       .eq("status", "active")
       .order("code", { ascending: true }),
     supabase
