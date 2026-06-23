@@ -79,9 +79,18 @@ function LinkedCell({
   );
 }
 
-export function ProductsTable({ mode = "products", products }: { mode?: ProductsTableMode; products: Product[] }) {
+export function ProductsTable({
+  backHref = "/products?tab=products",
+  mode = "products",
+  products,
+}: {
+  backHref?: string;
+  mode?: ProductsTableMode;
+  products: Product[];
+}) {
   const [search, setSearch] = useState("");
   const [paymentFilter, setPaymentFilter] = useState<PaymentFilter>("all");
+  const detailHref = (productId: string) => `/products/${productId}?from=${encodeURIComponent(backHref)}`;
 
   const filteredProducts = useMemo(() => {
     const normalizedSearch = search.trim().toLowerCase();
@@ -141,20 +150,20 @@ export function ProductsTable({ mode = "products", products }: { mode?: Products
             filteredProducts.map((product) => (
               <TableRow key={product.id}>
                 <TableCell className="font-semibold text-[#0d1b34]">
-                  <LinkedCell className="font-semibold" href={`/products/${product.id}`}>
+                  <LinkedCell className="font-semibold" href={detailHref(product.id)}>
                     {product.code}
                   </LinkedCell>
                 </TableCell>
                 {mode !== "sets" ? (
                   <TableCell>
-                    <LinkedCell href={`/products/${product.id}`}>{product.supplier_product_code}</LinkedCell>
+                    <LinkedCell href={detailHref(product.id)}>{product.supplier_product_code}</LinkedCell>
                   </TableCell>
                 ) : null}
                 <TableCell>
-                  <LinkedCell href={`/products/${product.id}`}>{product.name_english}</LinkedCell>
+                  <LinkedCell href={detailHref(product.id)}>{product.name_english}</LinkedCell>
                 </TableCell>
                 <TableCell>
-                  <LinkedCell href={`/products/${product.id}`}>{product.name_chinese}</LinkedCell>
+                  <LinkedCell href={detailHref(product.id)}>{product.name_chinese}</LinkedCell>
                 </TableCell>
                 {mode !== "sets" ? <TableCell>{product.supplier?.code ?? "-"}</TableCell> : null}
                 {mode === "sets" ? (

@@ -15,6 +15,17 @@ import {
 } from "@/app/actions/history";
 import { Button } from "@/components/ui/button";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -167,10 +178,6 @@ function DeleteButton({
   const [isPending, startTransition] = useTransition();
 
   function handleDelete() {
-    if (!window.confirm(`Delete this ${label}?`)) {
-      return;
-    }
-
     startTransition(async () => {
       const result = await action();
 
@@ -185,9 +192,31 @@ function DeleteButton({
   }
 
   return (
-    <Button disabled={isPending} onClick={handleDelete} size="icon" type="button" variant="ghost">
-      {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
-    </Button>
+    <AlertDialog>
+      <AlertDialogTrigger asChild>
+        <Button disabled={isPending} size="icon" type="button" variant="ghost">
+          {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+        </Button>
+      </AlertDialogTrigger>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Delete {label}?</AlertDialogTitle>
+          <AlertDialogDescription>
+            This will permanently remove this {label} row. This action cannot be undone.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel disabled={isPending}>Cancel</AlertDialogCancel>
+          <AlertDialogAction
+            className="bg-red-600 hover:bg-red-700"
+            disabled={isPending}
+            onClick={handleDelete}
+          >
+            {isPending ? "Deleting..." : "Delete"}
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   );
 }
 

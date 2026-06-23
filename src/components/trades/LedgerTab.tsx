@@ -6,6 +6,17 @@ import { FormEvent, useState, useTransition } from "react";
 import { toast } from "sonner";
 
 import { addLedgerEntry, deleteLedgerEntry } from "@/app/actions/trade-ledger";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -388,10 +399,6 @@ function DeleteEntryButton({ entryId, tradeId }: { entryId: string; tradeId: str
   const [isPending, startTransition] = useTransition();
 
   function handleDelete() {
-    if (!confirm("Delete this ledger entry?")) {
-      return;
-    }
-
     startTransition(async () => {
       const result = await deleteLedgerEntry(entryId, tradeId);
 
@@ -406,10 +413,32 @@ function DeleteEntryButton({ entryId, tradeId }: { entryId: string; tradeId: str
   }
 
   return (
-    <Button disabled={isPending} onClick={handleDelete} size="icon" type="button" variant="ghost">
-      <Trash2 className="h-4 w-4 text-slate-400 hover:text-red-600" />
-      <span className="sr-only">Delete entry</span>
-    </Button>
+    <AlertDialog>
+      <AlertDialogTrigger asChild>
+        <Button disabled={isPending} size="icon" type="button" variant="ghost">
+          <Trash2 className="h-4 w-4 text-slate-400 hover:text-red-600" />
+          <span className="sr-only">Delete entry</span>
+        </Button>
+      </AlertDialogTrigger>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Delete ledger entry?</AlertDialogTitle>
+          <AlertDialogDescription>
+            This will permanently remove this ledger entry. This action cannot be undone.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel disabled={isPending}>Cancel</AlertDialogCancel>
+          <AlertDialogAction
+            className="bg-red-600 hover:bg-red-700"
+            disabled={isPending}
+            onClick={handleDelete}
+          >
+            {isPending ? "Deleting..." : "Delete"}
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   );
 }
 

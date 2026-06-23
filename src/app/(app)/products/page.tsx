@@ -7,7 +7,11 @@ import { getCurrentUser } from "@/lib/auth";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import type { Product } from "@/types";
 
-export default async function ProductsPage() {
+export default async function ProductsPage({
+  searchParams,
+}: {
+  searchParams?: { tab?: string };
+}) {
   const user = await getCurrentUser();
 
   if (user?.role === "partner") {
@@ -44,6 +48,9 @@ export default async function ProductsPage() {
   const setProducts = activeProducts.filter((product) => product.product_type === "set");
   const inactiveProducts = allProducts.filter((product) => product.status === "inactive");
   const supplierOptions = (suppliers ?? []) as ProductSupplierOption[];
+  const activeTab = ["products", "sets", "inactive"].includes(searchParams?.tab ?? "")
+    ? searchParams?.tab
+    : "products";
 
   return (
     <section className="space-y-6">
@@ -68,11 +75,17 @@ export default async function ProductsPage() {
         </div>
       </div>
 
-      <Tabs className="space-y-4" defaultValue="products">
+      <Tabs className="space-y-4" defaultValue={activeTab}>
         <TabsList>
-          <TabsTrigger value="products">Products</TabsTrigger>
-          <TabsTrigger value="sets">Sets</TabsTrigger>
-          <TabsTrigger value="inactive">Inactive Items</TabsTrigger>
+          <TabsTrigger asChild value="products">
+            <a href="/products?tab=products">Products</a>
+          </TabsTrigger>
+          <TabsTrigger asChild value="sets">
+            <a href="/products?tab=sets">Sets</a>
+          </TabsTrigger>
+          <TabsTrigger asChild value="inactive">
+            <a href="/products?tab=inactive">Inactive Items</a>
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="products">
@@ -81,7 +94,7 @@ export default async function ProductsPage() {
               <CardTitle>Products</CardTitle>
             </CardHeader>
             <CardContent>
-              <ProductsTable mode="products" products={standardProducts} />
+              <ProductsTable backHref="/products?tab=products" mode="products" products={standardProducts} />
             </CardContent>
           </Card>
         </TabsContent>
@@ -92,7 +105,7 @@ export default async function ProductsPage() {
               <CardTitle>Set Products</CardTitle>
             </CardHeader>
             <CardContent>
-              <ProductsTable mode="sets" products={setProducts} />
+              <ProductsTable backHref="/products?tab=sets" mode="sets" products={setProducts} />
             </CardContent>
           </Card>
         </TabsContent>
@@ -103,7 +116,7 @@ export default async function ProductsPage() {
               <CardTitle>Inactive Items</CardTitle>
             </CardHeader>
             <CardContent>
-              <ProductsTable mode="inactive" products={inactiveProducts} />
+              <ProductsTable backHref="/products?tab=inactive" mode="inactive" products={inactiveProducts} />
             </CardContent>
           </Card>
         </TabsContent>

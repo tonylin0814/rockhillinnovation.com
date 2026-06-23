@@ -106,7 +106,13 @@ function formatDate(value: string) {
   }).format(new Date(value));
 }
 
-export default async function ProductDetailPage({ params }: { params: { id: string } }) {
+export default async function ProductDetailPage({
+  params,
+  searchParams,
+}: {
+  params: { id: string };
+  searchParams?: { from?: string };
+}) {
   const user = await getCurrentUser();
 
   if (user?.role === "partner") {
@@ -156,6 +162,7 @@ export default async function ProductDetailPage({ params }: { params: { id: stri
   }
 
   const product = data as Product;
+  const backHref = searchParams?.from?.startsWith("/products") ? searchParams.from : "/products?tab=products";
   const supplierOptions = (suppliers ?? []) as ProductSupplierOption[];
   const availableProductOptions = (availableProducts ?? []) as Product[];
   const costHistoryRows = (costHistory ?? []) as ProductCostHistory[];
@@ -214,7 +221,7 @@ export default async function ProductDetailPage({ params }: { params: { id: stri
   return (
     <section className="space-y-6">
       <div>
-        <Link className="text-sm font-medium text-slate-500 transition-colors hover:text-[#0d1b34]" href="/products">
+        <Link className="text-sm font-medium text-slate-500 transition-colors hover:text-[#0d1b34]" href={backHref}>
           Back to Products
         </Link>
         <div className="mt-4 flex flex-wrap items-center gap-3">
