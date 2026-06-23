@@ -346,3 +346,31 @@ export type TradeLedgerEntry = {
   vendor_invoice?: { id: string; invoice_number: string } | null;
   recorder?: { id: string; name: string } | null;
 };
+
+export type ShareholderBook = {
+  id: string;
+  trade_id: string;
+  gross_profit_usd: number;
+  expense_deductions_usd: number;
+  taxable_base_usd: number;
+  corporate_tax_rate: number;
+  corporate_tax_usd: number;
+  net_profit_usd: number;
+  per_share_usd: number;
+  status: "draft" | "confirmed";
+  calculated_at: string;
+  notes: string | null;
+  lines?: ShareholderBookLine[];
+};
+
+export type ShareholderBookLine = {
+  id: string;
+  book_id: string;
+  trade_shareholder_id: string | null;
+  person_name: string;
+  split_pct: number;
+  gross_share_usd: number;
+  tax_contribution_usd: number;
+  net_share_usd: number;
+  invoiced_through: string | null;
+};

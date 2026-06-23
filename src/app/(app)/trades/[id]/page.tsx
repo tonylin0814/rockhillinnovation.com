@@ -8,6 +8,7 @@ import { InvoicesTab } from "@/components/trades/InvoicesTab";
 import { LedgerTab } from "@/components/trades/LedgerTab";
 import { ManagePartnersDialog } from "@/components/trades/ManagePartnersDialog";
 import { OrderLinesTab } from "@/components/trades/OrderLinesTab";
+import { ShareholderBookCard } from "@/components/trades/ShareholderBookCard";
 import { ShareholderRulesEditor } from "@/components/trades/ShareholderRulesEditor";
 import { SupplierQuotesTab } from "@/components/trades/SupplierQuotesTab";
 import { TradeEditDialog } from "@/components/trades/TradeEditDialog";
@@ -29,6 +30,7 @@ import type {
   ExpenseVendor,
   OrderLine,
   Product,
+  ShareholderBook,
   SupplierQuoteSession,
   SupplierInvoiceOutgoing,
   Trade,
@@ -126,6 +128,7 @@ export default async function TradeWorkspacePage({ params }: { params: { id: str
     { data: vendorInvoices, error: vendorInvoicesError },
     { data: exchangeRates, error: exchangeRatesError },
     { data: ledgerEntries, error: ledgerEntriesError },
+    { data: shareholderBook, error: shareholderBookError },
   ] = await Promise.all([
     supabase
       .from("trades")
@@ -210,6 +213,11 @@ export default async function TradeWorkspacePage({ params }: { params: { id: str
       )
       .eq("trade_id", params.id)
       .order("entry_date", { ascending: false }),
+    supabase
+      .from("shareholder_book")
+      .select("*, lines:shareholder_book_lines(*)")
+      .eq("trade_id", params.id)
+      .maybeSingle(),
   ]);
 
   if (
@@ -229,7 +237,8 @@ export default async function TradeWorkspacePage({ params }: { params: { id: str
     supplierInvoicesOutgoingError ||
     vendorInvoicesError ||
     exchangeRatesError ||
-    ledgerEntriesError
+    ledgerEntriesError ||
+    shareholderBookError
   ) {
     return (
       <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm font-medium text-red-700">
@@ -249,7 +258,8 @@ export default async function TradeWorkspacePage({ params }: { params: { id: str
           supplierInvoicesOutgoingError?.message ??
           vendorInvoicesError?.message ??
           exchangeRatesError?.message ??
-          ledgerEntriesError?.message}
+          ledgerEntriesError?.message ??
+          shareholderBookError?.message}
       </div>
     );
   }
@@ -275,6 +285,7 @@ export default async function TradeWorkspacePage({ params }: { params: { id: str
   const vendorInvoiceRows = (vendorInvoices ?? []) as ExpenseVendorInvoice[];
   const exchangeRateRows = (exchangeRates ?? []) as ExchangeRate[];
   const ledgerEntryRows = (ledgerEntries ?? []) as TradeLedgerEntry[];
+  const shareholderBookData = (shareholderBook ?? null) as ShareholderBook | null;
   const participantPartnerIds = tradeParticipants.map((participant) => participant.user_id);
 
   return (
@@ -453,6 +464,7 @@ export default async function TradeWorkspacePage({ params }: { params: { id: str
             shareholders={tradeShareholderRows}
             tradeId={trade.id}
           />
+          <ShareholderBookCard book={shareholderBookData} canManage={canManage} tradeId={trade.id} />
         </TabsContent>
       </Tabs>
     </section>
