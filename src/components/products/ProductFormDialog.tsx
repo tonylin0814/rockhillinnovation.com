@@ -208,14 +208,14 @@ export function ProductFormDialog({
             </div>
             {productType === "part" ? (
               <div className="space-y-2">
-                <Label htmlFor="payment_category">Payment Category</Label>
+                <Label htmlFor="payment_category">Source</Label>
                 <Select
                   disabled={isPending}
                   onValueChange={(value: NonNullable<Product["payment_category"]>) => setPaymentCategory(value)}
                   value={paymentCategory ?? "outsourced"}
                 >
                   <SelectTrigger id="payment_category">
-                    <SelectValue placeholder="Select payment category" />
+                    <SelectValue placeholder="Select source" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="outsourced">Outsourced</SelectItem>
