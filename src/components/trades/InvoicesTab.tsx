@@ -1,11 +1,12 @@
 "use client";
 
-import { ChevronDown, FileText, MoreHorizontal } from "lucide-react";
+import { ChevronDown, FileText, Mail, MoreHorizontal } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useTransition } from "react";
 import { toast } from "sonner";
 
 import { updateInvoiceStatus } from "@/app/actions/invoices";
+import { sendClientInvoice } from "@/app/actions/send-invoice";
 import { updateSupplierInvoiceStatus } from "@/app/actions/supplier-invoices-outgoing";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -119,6 +120,43 @@ function ClientInvoiceStatusDropdown({ invoice }: { invoice: ClientInvoice }) {
         ))}
       </DropdownMenuContent>
     </DropdownMenu>
+  );
+}
+
+function SendInvoiceButton({ invoice }: { invoice: ClientInvoice }) {
+  const router = useRouter();
+  const [isPending, startTransition] = useTransition();
+
+  if (!invoice.pdf_onedrive_url || invoice.status === "paid") {
+    return null;
+  }
+
+  function handleSend() {
+    startTransition(async () => {
+      const result = await sendClientInvoice(invoice.id);
+
+      if (result.error) {
+        toast.error(result.error);
+        return;
+      }
+
+      toast.success("Invoice emailed to client");
+      router.refresh();
+    });
+  }
+
+  return (
+    <Button
+      disabled={isPending}
+      onClick={handleSend}
+      size="icon"
+      title="Send invoice via email"
+      type="button"
+      variant="ghost"
+    >
+      <Mail className="h-4 w-4" />
+      <span className="sr-only">Send via email</span>
+    </Button>
   );
 }
 
@@ -298,7 +336,8 @@ export function InvoicesTab({
                         )}
                       </TableCell>
                       <TableCell>
-                        <div className="flex justify-end">
+                        <div className="flex items-center justify-end gap-1">
+                          {canManage ? <SendInvoiceButton invoice={invoice} /> : null}
                           {canManage ? <ClientInvoiceStatusDropdown invoice={invoice} /> : null}
                         </div>
                       </TableCell>
