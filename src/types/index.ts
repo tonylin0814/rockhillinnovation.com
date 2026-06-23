@@ -174,3 +174,15 @@ export type TradeShareholder = {
   expense_vendor_id: string | null;
   expense_vendor?: { id: string; name: string; code: string } | null;
 };
+
+export type SupplierQuoteSession = {
+  id: string;
+  trade_id: string;
+  session_number: number;
+  quote_date: string;
+  status: "draft" | "confirmed" | "superseded";
+  source_document_id: string | null;
+  recorded_by: "chatgpt" | "judy" | "manual";
+  notes: string | null;
+  created_at: string;
+};

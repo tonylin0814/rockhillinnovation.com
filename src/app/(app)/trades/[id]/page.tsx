@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { ManagePartnersDialog } from "@/components/trades/ManagePartnersDialog";
 import { OrderLinesTab } from "@/components/trades/OrderLinesTab";
 import { ShareholderRulesEditor } from "@/components/trades/ShareholderRulesEditor";
+import { SupplierQuotesTab } from "@/components/trades/SupplierQuotesTab";
 import { TradeEditDialog } from "@/components/trades/TradeEditDialog";
 import { TradeStatusDropdown } from "@/components/trades/TradeStatusDropdown";
 import type { TradeClientOption, TradePartnerOption } from "@/components/trades/NewTradeDialog";
@@ -18,6 +19,7 @@ import type {
   ExpenseVendor,
   OrderLine,
   Product,
+  SupplierQuoteSession,
   Trade,
   TradeParticipant,
   TradeShareholder,
@@ -103,6 +105,7 @@ export default async function TradeWorkspacePage({ params }: { params: { id: str
     { data: activeProducts, error: activeProductsError },
     { data: tradeShareholders, error: tradeShareholdersError },
     { data: activeVendors, error: activeVendorsError },
+    { data: quoteSessions, error: quoteSessionsError },
   ] = await Promise.all([
     supabase
       .from("trades")
@@ -149,6 +152,11 @@ export default async function TradeWorkspacePage({ params }: { params: { id: str
       .select("id, name, code")
       .eq("status", "active")
       .order("name", { ascending: true }),
+    supabase
+      .from("supplier_quote_sessions")
+      .select("*")
+      .eq("trade_id", params.id)
+      .order("session_number", { ascending: false }),
   ]);
 
   if (
@@ -160,7 +168,8 @@ export default async function TradeWorkspacePage({ params }: { params: { id: str
     componentDemandError ||
     activeProductsError ||
     tradeShareholdersError ||
-    activeVendorsError
+    activeVendorsError ||
+    quoteSessionsError
   ) {
     return (
       <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm font-medium text-red-700">
@@ -172,7 +181,8 @@ export default async function TradeWorkspacePage({ params }: { params: { id: str
           componentDemandError?.message ??
           activeProductsError?.message ??
           tradeShareholdersError?.message ??
-          activeVendorsError?.message}
+          activeVendorsError?.message ??
+          quoteSessionsError?.message}
       </div>
     );
   }
@@ -190,6 +200,7 @@ export default async function TradeWorkspacePage({ params }: { params: { id: str
   const activeProductOptions = (activeProducts ?? []) as Product[];
   const tradeShareholderRows = (tradeShareholders ?? []) as TradeShareholder[];
   const activeVendorOptions = (activeVendors ?? []) as ExpenseVendor[];
+  const quoteSessionRows = (quoteSessions ?? []) as SupplierQuoteSession[];
   const participantPartnerIds = tradeParticipants.map((participant) => participant.user_id);
 
   return (
@@ -273,7 +284,7 @@ export default async function TradeWorkspacePage({ params }: { params: { id: str
         </TabsContent>
 
         <TabsContent value="quotes">
-          <ComingSoonCard title="Quotes" />
+          <SupplierQuotesTab canManage={canManage} initialSessions={quoteSessionRows} tradeId={trade.id} />
         </TabsContent>
         <TabsContent value="quotations">
           <ComingSoonCard title="Quotations" />
