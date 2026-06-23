@@ -125,6 +125,7 @@ export default async function SupplierDetailPage({ params }: { params: { id: str
                 </div>
               </div>
               <DetailRow label="Address" value={supplier.address} />
+              <DetailRow label="Other Address" value={supplier.other_address} />
               <DetailRow label="Notes" value={supplier.notes} />
             </CardContent>
           </Card>

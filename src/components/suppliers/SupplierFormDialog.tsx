@@ -167,6 +167,16 @@ export function SupplierFormDialog({ mode, initialData, trigger }: SupplierFormD
             <Textarea defaultValue={initialData?.address ?? ""} disabled={isPending} id="address" name="address" />
           </div>
 
+          <div className="space-y-2">
+            <Label htmlFor="other_address">Other Address</Label>
+            <Textarea
+              defaultValue={initialData?.other_address ?? ""}
+              disabled={isPending}
+              id="other_address"
+              name="other_address"
+            />
+          </div>
+
           <div className="space-y-4 rounded-lg border border-slate-200 p-4">
             <div>
               <h3 className="text-sm font-semibold text-[#0d1b34]">Banking Information</h3>

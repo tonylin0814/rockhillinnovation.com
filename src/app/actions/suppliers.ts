@@ -34,6 +34,7 @@ const supplierSchema = z.object({
   invoice_format: z.enum(["image", "excel", "pdf", "word"]).default("image"),
   contacts: z.array(supplierContactSchema).default([]),
   address: z.string().trim().nullable(),
+  other_address: z.string().trim().nullable(),
   bank_account_name: z.string().trim().nullable(),
   bank_account_number: z.string().trim().nullable(),
   bank_currency: z.string().trim().nullable(),
@@ -90,6 +91,9 @@ function valuesFromForm(formData: FormData, fallback?: Supplier) {
       : fallback?.invoice_format ?? "image",
     contacts: formData.has("contacts") ? parseContacts(formData.get("contacts")) : fallback?.contacts ?? [],
     address: formData.has("address") ? emptyToNull(formData.get("address")) : fallback?.address,
+    other_address: formData.has("other_address")
+      ? emptyToNull(formData.get("other_address"))
+      : fallback?.other_address,
     bank_account_name: formData.has("bank_account_name")
       ? emptyToNull(formData.get("bank_account_name"))
       : fallback?.bank_account_name,
