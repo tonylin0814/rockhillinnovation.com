@@ -35,7 +35,7 @@ export function Sidebar({ currentUser }: { currentUser: SidebarUser }) {
   const visibleNavItems = navItems.filter((item) => item.label !== "Admin" || currentUser.role === "admin");
 
   return (
-    <aside className="fixed inset-y-0 left-0 flex w-[240px] flex-col bg-[#0d1b34] text-white shadow-2xl shadow-slate-950/20">
+    <aside className="sticky top-0 flex h-screen w-[240px] flex-col bg-[#0d1b34] text-white shadow-2xl shadow-slate-950/20">
       <div className="flex h-[112px] items-center border-b border-white/10 px-3">
         <div className="flex h-[82px] w-full items-center justify-center rounded-lg bg-white px-3 shadow-sm">
           <Image
