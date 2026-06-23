@@ -1,0 +1,182 @@
+import Link from "next/link";
+import { notFound } from "next/navigation";
+
+import { LetterheadEditor } from "@/components/vendors/LetterheadEditor";
+import { VendorContactsEditor } from "@/components/vendors/VendorContactsEditor";
+import { VendorFormDialog } from "@/components/vendors/VendorFormDialog";
+import { VendorStatusButton } from "@/components/vendors/VendorStatusButton";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { getCurrentUser } from "@/lib/auth";
+import { createServerSupabaseClient } from "@/lib/supabase/server";
+import type { ExpenseVendor } from "@/types";
+
+const vendorTypeLabels: Record<ExpenseVendor["vendor_type"], string> = {
+  legal: "Legal",
+  consulting: "Consulting",
+  maintenance: "Maintenance",
+  related_company: "Related Company",
+};
+
+const vendorTypeClasses: Record<ExpenseVendor["vendor_type"], string> = {
+  legal: "border-amber-200 bg-amber-50 text-amber-700",
+  consulting: "border-violet-200 bg-violet-50 text-violet-700",
+  maintenance: "border-blue-200 bg-blue-50 text-blue-700",
+  related_company: "border-slate-200 bg-slate-100 text-slate-700",
+};
+
+function StatusBadge({ status }: { status: ExpenseVendor["status"] }) {
+  return (
+    <Badge
+      className={
+        status === "active"
+          ? "border-green-200 bg-green-50 text-green-700"
+          : "border-red-200 bg-red-50 text-red-700"
+      }
+      variant="outline"
+    >
+      {status}
+    </Badge>
+  );
+}
+
+function VendorTypeBadge({ type }: { type: ExpenseVendor["vendor_type"] }) {
+  return (
+    <Badge className={vendorTypeClasses[type]} variant="outline">
+      {vendorTypeLabels[type]}
+    </Badge>
+  );
+}
+
+function DetailRow({ label, value }: { label: string; value: string | number | null }) {
+  return (
+    <div className="border-b border-slate-100 py-3 last:border-0">
+      <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{label}</p>
+      <p className="mt-1 text-sm text-[#0d1b34]">{value || "—"}</p>
+    </div>
+  );
+}
+
+export default async function VendorDetailPage({ params }: { params: { id: string } }) {
+  const user = await getCurrentUser();
+
+  if (user?.role === "partner") {
+    return (
+      <div className="flex min-h-[calc(100vh-8rem)] items-center justify-center">
+        <div className="text-center">
+          <h1 className="text-2xl font-semibold text-[#0d1b34]">Access denied</h1>
+          <p className="mt-2 text-sm text-slate-500">Expense vendors are available to admins and managers only.</p>
+        </div>
+      </div>
+    );
+  }
+
+  const supabase = createServerSupabaseClient();
+  const { data, error } = await supabase.from("expense_vendors").select("*").eq("id", params.id).maybeSingle();
+
+  if (error) {
+    return (
+      <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm font-medium text-red-700">
+        {error.message}
+      </div>
+    );
+  }
+
+  if (!data) {
+    notFound();
+  }
+
+  const vendor = data as ExpenseVendor;
+
+  return (
+    <section className="space-y-6">
+      <div>
+        <Link className="text-sm font-medium text-slate-500 transition-colors hover:text-[#0d1b34]" href="/vendors">
+          ← Vendors
+        </Link>
+        <div className="mt-4 flex flex-wrap items-center gap-3">
+          <h1 className="text-3xl font-semibold text-[#0d1b34]">{vendor.name}</h1>
+          <StatusBadge status={vendor.status} />
+        </div>
+      </div>
+
+      <div className="grid gap-6 lg:grid-cols-3">
+        <div className="space-y-6 lg:col-span-2">
+          <Card className="border-slate-200 shadow-sm">
+            <CardHeader className="flex flex-row items-center justify-between">
+              <CardTitle>Main Info</CardTitle>
+              <VendorFormDialog
+                initialData={vendor}
+                mode="edit"
+                trigger={
+                  <Button size="sm" variant="outline">
+                    Edit
+                  </Button>
+                }
+              />
+            </CardHeader>
+            <CardContent>
+              <div className="grid gap-x-6 sm:grid-cols-2">
+                <DetailRow label="Vendor Code" value={vendor.code} />
+                <DetailRow label="Full Name" value={vendor.name} />
+                <DetailRow label="Country" value={vendor.country} />
+                <div className="border-b border-slate-100 py-3">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Vendor Type</p>
+                  <div className="mt-1">
+                    <VendorTypeBadge type={vendor.vendor_type} />
+                  </div>
+                </div>
+              </div>
+              <DetailRow label="Address" value={vendor.address} />
+              <DetailRow label="Notes" value={vendor.notes} />
+            </CardContent>
+          </Card>
+
+          <Card className="border-slate-200 shadow-sm">
+            <CardHeader>
+              <CardTitle>Letterhead</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <LetterheadEditor letterheadUrl={vendor.letterhead_onedrive_url} vendorId={vendor.id} />
+            </CardContent>
+          </Card>
+
+          <Card className="border-slate-200 shadow-sm">
+            <CardHeader>
+              <CardTitle>Contacts</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <VendorContactsEditor initialContacts={vendor.contacts ?? []} vendorId={vendor.id} />
+            </CardContent>
+          </Card>
+        </div>
+
+        <div>
+          <Card className="border-slate-200 shadow-sm">
+            <CardHeader>
+              <CardTitle>Profile</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-5">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Status</p>
+                <div className="mt-2 flex items-center justify-between gap-3">
+                  <StatusBadge status={vendor.status} />
+                  <VendorStatusButton status={vendor.status} vendorId={vendor.id} />
+                </div>
+              </div>
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Created</p>
+                <p className="mt-1 text-sm text-[#0d1b34]">
+                  {new Intl.DateTimeFormat("en-US", {
+                    dateStyle: "medium",
+                  }).format(new Date(vendor.created_at))}
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    </section>
+  );
+}

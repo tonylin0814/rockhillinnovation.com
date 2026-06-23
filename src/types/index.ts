@@ -52,3 +52,24 @@ export type Supplier = {
   status: "active" | "inactive";
   created_at: string;
 };
+
+export type VendorContact = {
+  name: string;
+  role: string;
+  email: string;
+  phone: string;
+};
+
+export type ExpenseVendor = {
+  id: string;
+  code: string;
+  name: string;
+  country: string | null;
+  vendor_type: "legal" | "consulting" | "maintenance" | "related_company";
+  letterhead_onedrive_url: string | null;
+  contacts: VendorContact[];
+  address: string | null;
+  notes: string | null;
+  status: "active" | "inactive";
+  created_at: string;
+};
