@@ -335,20 +335,9 @@ export function ProductFormDialog({
 
           {mode === "create" && productType === "set" ? (
             <section className="space-y-4 rounded-lg border-2 border-slate-300 p-4">
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <div>
-                  <h3 className="text-sm font-semibold uppercase tracking-wide text-blue-700">Set Components</h3>
-                  <p className="text-xs text-slate-500">Select each product in the set and enter the quantity needed.</p>
-                </div>
-                <Button
-                  disabled={isPending || setComponentRows.length >= availableProducts.length}
-                  onClick={addSetComponentRow}
-                  type="button"
-                  variant="outline"
-                >
-                  <Plus className="mr-2 h-4 w-4" />
-                  Add Component Row
-                </Button>
+              <div>
+                <h3 className="text-sm font-semibold uppercase tracking-wide text-blue-700">Set Components</h3>
+                <p className="text-xs text-slate-500">Select each product in the set and enter the quantity needed.</p>
               </div>
 
               <Table>
@@ -431,6 +420,18 @@ export function ProductFormDialog({
                   )}
                 </TableBody>
               </Table>
+
+              <div className="flex justify-start">
+                <Button
+                  disabled={isPending || setComponentRows.length >= availableProducts.length}
+                  onClick={addSetComponentRow}
+                  type="button"
+                  variant="outline"
+                >
+                  <Plus className="mr-2 h-4 w-4" />
+                  Add Component Row
+                </Button>
+              </div>
             </section>
           ) : null}
 
