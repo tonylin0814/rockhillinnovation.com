@@ -18,6 +18,8 @@ const supplierContactSchema = z.object({
   role: z.string().trim().default(""),
   email: z.string().trim().default(""),
   wechat: z.string().trim().default(""),
+  whatsapp: z.string().trim().default(""),
+  line: z.string().trim().default(""),
   phone: z.string().trim().default(""),
 });
 

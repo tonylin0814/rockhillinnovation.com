@@ -48,6 +48,8 @@ export type SupplierContact = {
   role: string;
   email: string;
   wechat: string;
+  whatsapp: string;
+  line: string;
   phone: string;
 };
 

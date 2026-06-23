@@ -2,7 +2,7 @@
 
 import { Loader2, Plus, X } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { toast } from "sonner";
 
 import { updateSupplier } from "@/app/actions/suppliers";
@@ -23,8 +23,25 @@ const emptyContact: SupplierContact = {
   role: "",
   email: "",
   wechat: "",
+  whatsapp: "",
+  line: "",
   phone: "",
 };
+
+type SupplierContactRow = SupplierContact & { _key: string };
+
+function createContactRow(contact?: Partial<SupplierContact>, index = 0): SupplierContactRow {
+  return {
+    ...emptyContact,
+    ...contact,
+    _key: `${Date.now()}-${index}-${Math.random().toString(36).slice(2)}`,
+  };
+}
+
+function stripContactKey(contact: SupplierContactRow): SupplierContact {
+  const { _key, ...cleanContact } = contact;
+  return cleanContact;
+}
 
 export function SupplierContactsEditor({
   initialContacts,
@@ -35,8 +52,14 @@ export function SupplierContactsEditor({
 }) {
   const router = useRouter();
   const [isEditing, setIsEditing] = useState(false);
-  const [contacts, setContacts] = useState<SupplierContact[]>(initialContacts);
+  const [contacts, setContacts] = useState<SupplierContactRow[]>(() => initialContacts.map(createContactRow));
   const [isPending, startTransition] = useTransition();
+
+  useEffect(() => {
+    if (!isEditing) {
+      setContacts(initialContacts.map(createContactRow));
+    }
+  }, [initialContacts, isEditing]);
 
   function updateContact(index: number, field: keyof SupplierContact, value: string) {
     setContacts((current) =>
@@ -45,7 +68,7 @@ export function SupplierContactsEditor({
   }
 
   function addContact() {
-    setContacts((current) => [...current, { ...emptyContact }]);
+    setContacts((current) => [...current, createContactRow(undefined, current.length)]);
   }
 
   function removeContact(index: number) {
@@ -53,13 +76,13 @@ export function SupplierContactsEditor({
   }
 
   function cancelEdit() {
-    setContacts(initialContacts);
+    setContacts(initialContacts.map(createContactRow));
     setIsEditing(false);
   }
 
   function saveContacts() {
     const formData = new FormData();
-    formData.set("contacts", JSON.stringify(contacts));
+    formData.set("contacts", JSON.stringify(contacts.map(stripContactKey)));
 
     startTransition(async () => {
       const result = await updateSupplier(supplierId, formData);
@@ -106,6 +129,8 @@ export function SupplierContactsEditor({
             <TableHead>Role</TableHead>
             <TableHead>Email</TableHead>
             <TableHead>WeChat</TableHead>
+            <TableHead>WhatsApp</TableHead>
+            <TableHead>Line</TableHead>
             <TableHead>Phone</TableHead>
             {isEditing ? <TableHead className="w-12" /> : null}
           </TableRow>
@@ -113,8 +138,8 @@ export function SupplierContactsEditor({
         <TableBody>
           {contacts.length ? (
             contacts.map((contact, index) => (
-              <TableRow key={`${contact.email}-${contact.wechat}-${index}`}>
-                {(["name", "role", "email", "wechat", "phone"] as const).map((field) => (
+              <TableRow key={contact._key}>
+                {(["name", "role", "email", "wechat", "whatsapp", "line", "phone"] as const).map((field) => (
                   <TableCell key={field}>
                     {isEditing ? (
                       <Input
@@ -124,7 +149,7 @@ export function SupplierContactsEditor({
                         value={contact[field]}
                       />
                     ) : (
-                      contact[field] || "—"
+                      contact[field] || "-"
                     )}
                   </TableCell>
                 ))}
@@ -146,7 +171,7 @@ export function SupplierContactsEditor({
             ))
           ) : (
             <TableRow>
-              <TableCell className="text-slate-500" colSpan={isEditing ? 6 : 5}>
+              <TableCell className="text-slate-500" colSpan={isEditing ? 8 : 7}>
                 No contacts yet.
               </TableCell>
             </TableRow>
