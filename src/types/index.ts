@@ -112,7 +112,14 @@ export type Trade = {
   notes: string | null;
   created_at: string;
   updated_at: string;
-  client?: { id: string; name: string; code: string } | null;
+  client?: {
+    id: string;
+    name: string;
+    code: string;
+    currency?: string;
+    deposit_pct?: number;
+    final_pct?: number;
+  } | null;
 };
 
 export type TradeParticipant = {

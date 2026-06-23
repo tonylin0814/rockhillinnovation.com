@@ -12,7 +12,7 @@ type ActionResult = {
   error?: string;
 };
 
-const tradeSchema = z.object({
+const tradeFieldsSchema = z.object({
   trade_id: z.string().trim().min(1, "Trade ID is required"),
   order_number: z.string().trim().nullable(),
   trade_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Trade date is required"),
@@ -20,6 +20,9 @@ const tradeSchema = z.object({
   working_exchange_rate: z.coerce.number().positive("Working exchange rate must be positive").nullable(),
   corporate_tax_rate: z.coerce.number().min(0).max(1).default(0.12),
   notes: z.string().trim().nullable(),
+});
+
+const tradeSchema = tradeFieldsSchema.extend({
   partner_ids: z.array(z.string().uuid()).default([]),
 });
 
@@ -101,6 +104,51 @@ export async function createTrade(formData: FormData): Promise<ActionResult> {
   return { success: true, id: trade.id };
 }
 
+export async function updateTrade(id: string, formData: FormData): Promise<ActionResult> {
+  const access = await requireTradeManager();
+
+  if ("error" in access) {
+    return { error: access.error };
+  }
+
+  const idCheck = z.string().uuid().safeParse(id);
+
+  if (!idCheck.success) {
+    return { error: "Invalid trade ID" };
+  }
+
+  const parsed = tradeFieldsSchema.safeParse(valuesFromForm(formData));
+
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "Invalid trade details" };
+  }
+
+  const supabase = createServerSupabaseClient();
+  const { data: existingTrade, error: fetchError } = await supabase
+    .from("trades")
+    .select("id")
+    .eq("id", id)
+    .maybeSingle();
+
+  if (fetchError) {
+    return { error: fetchError.message };
+  }
+
+  if (!existingTrade) {
+    return { error: "Trade not found" };
+  }
+
+  const { error } = await supabase.from("trades").update(parsed.data).eq("id", id);
+
+  if (error) {
+    return { error: error.message };
+  }
+
+  revalidatePath("/trades");
+  revalidatePath(`/trades/${id}`);
+  return { success: true };
+}
+
 export async function setTradeStatus(
   id: string,
   status: "draft" | "active" | "settled" | "archived"
@@ -131,5 +179,51 @@ export async function setTradeStatus(
 
   revalidatePath("/trades");
   revalidatePath(`/trades/${id}`);
+  return { success: true };
+}
+
+export async function updateTradeParticipants(tradeId: string, partnerIds: string[]): Promise<ActionResult> {
+  const access = await requireTradeManager();
+
+  if ("error" in access) {
+    return { error: access.error };
+  }
+
+  const parsed = z
+    .object({
+      tradeId: z.string().uuid(),
+      partnerIds: z.array(z.string().uuid()),
+    })
+    .safeParse({ tradeId, partnerIds });
+
+  if (!parsed.success) {
+    return { error: "Invalid partner assignment" };
+  }
+
+  const supabase = createServerSupabaseClient();
+  const { error: deleteError } = await supabase
+    .from("trade_participants")
+    .delete()
+    .eq("trade_id", tradeId);
+
+  if (deleteError) {
+    return { error: deleteError.message };
+  }
+
+  if (parsed.data.partnerIds.length) {
+    const rows = parsed.data.partnerIds.map((partnerId) => ({
+      trade_id: tradeId,
+      user_id: partnerId,
+      added_by: access.user.id,
+    }));
+
+    const { error: insertError } = await supabase.from("trade_participants").insert(rows);
+
+    if (insertError) {
+      return { error: insertError.message };
+    }
+  }
+
+  revalidatePath(`/trades/${tradeId}`);
   return { success: true };
 }
