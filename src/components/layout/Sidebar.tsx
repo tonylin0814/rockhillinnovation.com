@@ -4,31 +4,35 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import {
+  ArrowLeftRight,
+  Briefcase,
   Building2,
   Factory,
-  FolderKanban,
   LayoutDashboard,
+  LogOut,
   Package,
   ShieldCheck,
-  Store,
 } from "lucide-react";
 
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import type { UserRole } from "@/types";
+import type { CurrentUser } from "@/types";
 
 const navItems = [
   { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-  { label: "Trades", href: "/trades", icon: FolderKanban },
+  { label: "Trades", href: "/trades", icon: ArrowLeftRight },
   { label: "Clients", href: "/clients", icon: Building2 },
   { label: "Suppliers", href: "/suppliers", icon: Factory },
-  { label: "Vendors", href: "/vendors", icon: Store },
+  { label: "Vendors", href: "/vendors", icon: Briefcase },
   { label: "Products", href: "/products", icon: Package },
   { label: "Admin", href: "/admin/users", icon: ShieldCheck },
 ];
 
-export function Sidebar({ role }: { role: UserRole }) {
+type SidebarUser = Pick<CurrentUser, "name" | "role">;
+
+export function Sidebar({ currentUser }: { currentUser: SidebarUser }) {
   const pathname = usePathname();
-  const visibleNavItems = navItems.filter((item) => item.label !== "Admin" || role === "admin");
+  const visibleNavItems = navItems.filter((item) => item.label !== "Admin" || currentUser.role === "admin");
 
   return (
     <aside className="fixed inset-y-0 left-0 flex w-[240px] flex-col bg-[#0d1b34] text-white shadow-2xl shadow-slate-950/20">
@@ -55,8 +59,8 @@ export function Sidebar({ role }: { role: UserRole }) {
               key={item.href}
               href={item.href}
               className={cn(
-                "flex h-10 items-center gap-3 rounded-md px-3 text-sm font-medium text-slate-300 transition-colors hover:bg-white/10 hover:text-white",
-                isActive && "bg-white text-[#0d1b34] shadow-sm hover:bg-white hover:text-[#0d1b34]"
+                "flex h-10 items-center gap-3 rounded-md px-3 text-sm font-medium transition-colors",
+                isActive ? "bg-white/15 text-white" : "text-slate-400 hover:bg-white/10 hover:text-white"
               )}
             >
               <Icon className="h-4 w-4" />
@@ -65,10 +69,24 @@ export function Sidebar({ role }: { role: UserRole }) {
           );
         })}
       </nav>
-      <div className="border-t border-white/10 px-5 py-4 text-[11px] leading-5 text-slate-400">
-        Operations Platform
-        <br />
-        Rock Hill Innovation Inc. Ltd.
+      <div className="border-t border-white/10 px-4 py-4">
+        <div className="flex items-center justify-between gap-3">
+          <div className="min-w-0 text-xs text-slate-400">
+            <p className="truncate font-medium text-slate-300">{currentUser.name}</p>
+            <p className="capitalize">{currentUser.role}</p>
+          </div>
+          <form action="/api/auth/logout" method="post">
+            <Button
+              aria-label="Logout"
+              className="h-8 w-8 border-white/10 bg-transparent p-0 text-slate-400 hover:bg-white/10 hover:text-white"
+              size="icon"
+              type="submit"
+              variant="outline"
+            >
+              <LogOut className="h-4 w-4" />
+            </Button>
+          </form>
+        </div>
       </div>
     </aside>
   );

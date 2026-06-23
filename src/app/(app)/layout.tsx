@@ -19,9 +19,9 @@ export default async function AppLayout({
   return (
     <UserProvider initialUser={user}>
       <div className="flex min-h-screen bg-[#f8fafc]">
-        <Sidebar role={user.role} />
+        <Sidebar currentUser={{ name: user.name, role: user.role }} />
         <div className="ml-[240px] flex min-h-screen flex-1 flex-col">
-          <TopBar name={user.name} role={user.role} />
+          <TopBar userName={user.name} />
           <main className="flex-1 overflow-y-auto px-8 py-7">{children}</main>
         </div>
       </div>
