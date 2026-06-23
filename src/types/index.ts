@@ -164,3 +164,13 @@ export type ComponentDemand = {
     payment_category: string | null;
   } | null;
 };
+
+export type TradeShareholder = {
+  id: string;
+  trade_id: string;
+  person_name: string;
+  split_pct: number;
+  invoices_through_entity: boolean;
+  expense_vendor_id: string | null;
+  expense_vendor?: { id: string; name: string; code: string } | null;
+};

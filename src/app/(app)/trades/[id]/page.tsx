@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 
 import { ManagePartnersDialog } from "@/components/trades/ManagePartnersDialog";
 import { OrderLinesTab } from "@/components/trades/OrderLinesTab";
+import { ShareholderRulesEditor } from "@/components/trades/ShareholderRulesEditor";
 import { TradeEditDialog } from "@/components/trades/TradeEditDialog";
 import { TradeStatusDropdown } from "@/components/trades/TradeStatusDropdown";
 import type { TradeClientOption, TradePartnerOption } from "@/components/trades/NewTradeDialog";
@@ -12,7 +13,16 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { getCurrentUser } from "@/lib/auth";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
-import type { ComponentDemand, OrderLine, Product, Trade, TradeParticipant, UserRole } from "@/types";
+import type {
+  ComponentDemand,
+  ExpenseVendor,
+  OrderLine,
+  Product,
+  Trade,
+  TradeParticipant,
+  TradeShareholder,
+  UserRole,
+} from "@/types";
 
 const statusClasses: Record<Trade["status"], string> = {
   draft: "border-slate-200 bg-slate-100 text-slate-700",
@@ -47,14 +57,14 @@ function formatDate(value: string) {
 }
 
 function formatRate(rate: number | null) {
-  return typeof rate === "number" ? `¥${rate.toFixed(2)} / $1` : "—";
+  return typeof rate === "number" ? `\u00A5${rate.toFixed(2)} / $1` : "-";
 }
 
 function formatPercent(value: number | undefined | null) {
-  return typeof value === "number" ? `${value}%` : "—";
+  return typeof value === "number" ? `${value}%` : "-";
 }
 function formatTaxPercent(value: number | undefined | null) {
-  return typeof value === "number" ? `${Math.round(value * 100)}%` : "—";
+  return typeof value === "number" ? `${Math.round(value * 100)}%` : "-";
 }
 
 function DetailRow({ label, value }: { label: string; value: string | number | null }) {
@@ -91,6 +101,8 @@ export default async function TradeWorkspacePage({ params }: { params: { id: str
     { data: orderLines, error: orderLinesError },
     { data: componentDemand, error: componentDemandError },
     { data: activeProducts, error: activeProductsError },
+    { data: tradeShareholders, error: tradeShareholdersError },
+    { data: activeVendors, error: activeVendorsError },
   ] = await Promise.all([
     supabase
       .from("trades")
@@ -127,6 +139,16 @@ export default async function TradeWorkspacePage({ params }: { params: { id: str
       .select("id, code, name_english, product_type")
       .eq("status", "active")
       .order("code", { ascending: true }),
+    supabase
+      .from("trade_shareholders")
+      .select("*, expense_vendor:expense_vendors(id, name, code)")
+      .eq("trade_id", params.id)
+      .order("person_name", { ascending: true }),
+    supabase
+      .from("expense_vendors")
+      .select("id, name, code")
+      .eq("status", "active")
+      .order("name", { ascending: true }),
   ]);
 
   if (
@@ -136,7 +158,9 @@ export default async function TradeWorkspacePage({ params }: { params: { id: str
     partnersError ||
     orderLinesError ||
     componentDemandError ||
-    activeProductsError
+    activeProductsError ||
+    tradeShareholdersError ||
+    activeVendorsError
   ) {
     return (
       <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm font-medium text-red-700">
@@ -146,7 +170,9 @@ export default async function TradeWorkspacePage({ params }: { params: { id: str
           partnersError?.message ??
           orderLinesError?.message ??
           componentDemandError?.message ??
-          activeProductsError?.message}
+          activeProductsError?.message ??
+          tradeShareholdersError?.message ??
+          activeVendorsError?.message}
       </div>
     );
   }
@@ -162,6 +188,8 @@ export default async function TradeWorkspacePage({ params }: { params: { id: str
   const orderLineRows = (orderLines ?? []) as OrderLine[];
   const componentDemandRows = (componentDemand ?? []) as ComponentDemand[];
   const activeProductOptions = (activeProducts ?? []) as Product[];
+  const tradeShareholderRows = (tradeShareholders ?? []) as TradeShareholder[];
+  const activeVendorOptions = (activeVendors ?? []) as ExpenseVendor[];
   const participantPartnerIds = tradeParticipants.map((participant) => participant.user_id);
 
   return (
@@ -177,8 +205,8 @@ export default async function TradeWorkspacePage({ params }: { params: { id: str
           </div>
           <p className="mt-2 text-sm text-slate-500">
             {trade.client?.name ?? "No client"}
-            {trade.order_number ? ` • Order ${trade.order_number}` : ""}
-            {` • ${formatDate(trade.trade_date)}`}
+            {trade.order_number ? ` - Order ${trade.order_number}` : ""}
+            {` - ${formatDate(trade.trade_date)}`}
           </p>
         </div>
         <TradeStatusDropdown currentStatus={trade.status} role={currentRole} tradeId={trade.id} />
@@ -273,7 +301,7 @@ export default async function TradeWorkspacePage({ params }: { params: { id: str
         <TabsContent value="shareholders">
           <Card className="border-slate-200 shadow-sm">
             <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle>Shareholders</CardTitle>
+              <CardTitle>Project Partners</CardTitle>
               {canManage ? (
                 <ManagePartnersDialog
                   initialPartnerIds={participantPartnerIds}
@@ -297,7 +325,7 @@ export default async function TradeWorkspacePage({ params }: { params: { id: str
                     >
                       <div>
                         <p className="font-medium text-[#0d1b34]">{participant.user?.name ?? "Unknown user"}</p>
-                        <p className="text-sm text-slate-500">{participant.user?.email ?? "—"}</p>
+                        <p className="text-sm text-slate-500">{participant.user?.email ?? "-"}</p>
                       </div>
                       <RoleBadge role={participant.user?.role ?? "partner"} />
                     </div>
@@ -308,6 +336,12 @@ export default async function TradeWorkspacePage({ params }: { params: { id: str
               )}
             </CardContent>
           </Card>
+          <ShareholderRulesEditor
+            availableVendors={activeVendorOptions}
+            canManage={canManage}
+            initialShareholders={tradeShareholderRows}
+            tradeId={trade.id}
+          />
         </TabsContent>
       </Tabs>
     </section>

@@ -12,6 +12,14 @@ type ActionResult = {
   error?: string;
 };
 
+type ShareholderInput = {
+  id?: string;
+  person_name: string;
+  split_pct: number;
+  invoices_through_entity: boolean;
+  expense_vendor_id: string | null;
+};
+
 const tradeFieldsSchema = z.object({
   trade_id: z.string().trim().min(1, "Trade ID is required"),
   order_number: z.string().trim().nullable(),
@@ -24,6 +32,14 @@ const tradeFieldsSchema = z.object({
 
 const tradeSchema = tradeFieldsSchema.extend({
   partner_ids: z.array(z.string().uuid()).default([]),
+});
+
+const shareholderInputSchema = z.object({
+  id: z.string().uuid().optional(),
+  person_name: z.string().trim().min(1, "Person name is required"),
+  split_pct: z.coerce.number().positive("Split percentage must be greater than 0").max(100),
+  invoices_through_entity: z.boolean(),
+  expense_vendor_id: z.string().uuid().nullable(),
 });
 
 async function requireTradeManager() {
@@ -218,6 +234,60 @@ export async function updateTradeParticipants(tradeId: string, partnerIds: strin
     }));
 
     const { error: insertError } = await supabase.from("trade_participants").insert(rows);
+
+    if (insertError) {
+      return { error: insertError.message };
+    }
+  }
+
+  revalidatePath(`/trades/${tradeId}`);
+  return { success: true };
+}
+
+export async function saveTradeShareholders(
+  tradeId: string,
+  shareholders: ShareholderInput[]
+): Promise<ActionResult> {
+  const access = await requireTradeManager();
+
+  if ("error" in access) {
+    return { error: access.error };
+  }
+
+  const parsed = z
+    .object({
+      tradeId: z.string().uuid(),
+      shareholders: z.array(shareholderInputSchema),
+    })
+    .safeParse({ tradeId, shareholders });
+
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "Invalid shareholder rules" };
+  }
+
+  const totalSplit = parsed.data.shareholders.reduce((total, shareholder) => total + shareholder.split_pct, 0);
+
+  if (Math.abs(totalSplit - 100) > 0.01) {
+    return { error: "Split percentages must sum to 100%" };
+  }
+
+  const supabase = createServerSupabaseClient();
+  const { error: deleteError } = await supabase.from("trade_shareholders").delete().eq("trade_id", tradeId);
+
+  if (deleteError) {
+    return { error: deleteError.message };
+  }
+
+  if (parsed.data.shareholders.length) {
+    const rows = parsed.data.shareholders.map((shareholder) => ({
+      trade_id: tradeId,
+      person_name: shareholder.person_name,
+      split_pct: shareholder.split_pct,
+      invoices_through_entity: shareholder.invoices_through_entity,
+      expense_vendor_id: shareholder.invoices_through_entity ? shareholder.expense_vendor_id : null,
+    }));
+
+    const { error: insertError } = await supabase.from("trade_shareholders").insert(rows);
 
     if (insertError) {
       return { error: insertError.message };
