@@ -130,3 +130,37 @@ export type TradeParticipant = {
   added_by: string | null;
   user?: { id: string; name: string; email: string; role: string } | null;
 };
+
+export type OrderLine = {
+  id: string;
+  trade_id: string;
+  original_item_name: string | null;
+  product_id: string | null;
+  quantity: number;
+  unit_price_usd: number;
+  total_price_usd: number;
+  notes: string | null;
+  sort_order: number;
+  product?: { id: string; code: string; name_english: string; product_type: string } | null;
+};
+
+export type ComponentDemand = {
+  id: string;
+  trade_id: string;
+  product_id: string;
+  required_quantity: number;
+  source_order_line_ids: string[];
+  source_quote_line_id: string | null;
+  latest_unit_cost_rmb: number | null;
+  estimated_cost_rmb: number | null;
+  estimated_cost_usd: number | null;
+  actual_cost_usd: number | null;
+  notes: string | null;
+  product?: {
+    id: string;
+    code: string;
+    name_english: string;
+    name_chinese: string | null;
+    payment_category: string | null;
+  } | null;
+};
