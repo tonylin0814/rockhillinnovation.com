@@ -208,7 +208,7 @@ export default async function TradeWorkspacePage({ params }: { params: { id: str
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div>
           <Link className="text-sm font-medium text-slate-500 transition-colors hover:text-[#0d1b34]" href="/trades">
-            ← Trades
+            Back to Trades
           </Link>
           <div className="mt-4 flex flex-wrap items-center gap-3">
             <h1 className="font-mono text-3xl font-semibold text-[#0d1b34]">{trade.trade_id}</h1>
@@ -284,7 +284,12 @@ export default async function TradeWorkspacePage({ params }: { params: { id: str
         </TabsContent>
 
         <TabsContent value="quotes">
-          <SupplierQuotesTab canManage={canManage} initialSessions={quoteSessionRows} tradeId={trade.id} />
+          <SupplierQuotesTab
+            availableProducts={activeProductOptions}
+            canManage={canManage}
+            initialSessions={quoteSessionRows}
+            tradeId={trade.id}
+          />
         </TabsContent>
         <TabsContent value="quotations">
           <ComingSoonCard title="Quotations" />

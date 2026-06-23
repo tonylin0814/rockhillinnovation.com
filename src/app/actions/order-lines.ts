@@ -51,7 +51,7 @@ function normalizeText(value: string | null | undefined) {
   return trimmed.length ? trimmed : null;
 }
 
-async function expandComponentDemand(tradeId: string) {
+export async function expandComponentDemand(tradeId: string) {
   const supabase = createServerSupabaseClient();
   const { data: trade, error: tradeError } = await supabase
     .from("trades")

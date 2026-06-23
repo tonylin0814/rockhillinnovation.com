@@ -9,8 +9,21 @@ import { updateQuoteSessionStatus } from "@/app/actions/supplier-quotes";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import type { SupplierQuoteSession } from "@/types";
+import { Skeleton } from "@/components/ui/skeleton";
+import type { SupplierQuoteLine, SupplierQuoteSession } from "@/types";
 import { NewQuoteSessionDialog } from "./NewQuoteSessionDialog";
+import { QuoteLinesEditor } from "./QuoteLinesEditor";
+
+type ProductOption = {
+  id: string;
+  code: string;
+  name_english: string;
+};
+
+type LoadedQuoteLines = {
+  lines: SupplierQuoteLine[];
+  products: ProductOption[];
+};
 
 const statusClasses: Record<SupplierQuoteSession["status"], string> = {
   draft: "border-slate-200 bg-slate-100 text-slate-700",
@@ -56,17 +69,21 @@ function RecordedByBadge({ recordedBy }: { recordedBy: SupplierQuoteSession["rec
 }
 
 export function SupplierQuotesTab({
+  availableProducts,
   canManage,
   initialSessions,
   tradeId,
 }: {
   tradeId: string;
   initialSessions: SupplierQuoteSession[];
+  availableProducts: ProductOption[];
   canManage: boolean;
 }) {
   const router = useRouter();
   const [expandedSessionId, setExpandedSessionId] = useState<string | null>(null);
   const [pendingSessionId, setPendingSessionId] = useState<string | null>(null);
+  const [loadedLines, setLoadedLines] = useState<Record<string, LoadedQuoteLines>>({});
+  const [loadingSessionId, setLoadingSessionId] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
   function updateStatus(sessionId: string, status: SupplierQuoteSession["status"]) {
@@ -85,6 +102,39 @@ export function SupplierQuotesTab({
       toast.success(status === "confirmed" ? "Quote session confirmed" : "Quote session superseded");
       router.refresh();
     });
+  }
+
+  async function toggleLines(sessionId: string) {
+    const nextExpandedSessionId = expandedSessionId === sessionId ? null : sessionId;
+    setExpandedSessionId(nextExpandedSessionId);
+
+    if (!nextExpandedSessionId || loadedLines[sessionId]) {
+      return;
+    }
+
+    setLoadingSessionId(sessionId);
+
+    try {
+      const response = await fetch(`/api/quote-lines?sessionId=${sessionId}`);
+      const payload = await response.json();
+
+      if (!response.ok) {
+        toast.error(payload.error ?? "Unable to load quote lines");
+        return;
+      }
+
+      setLoadedLines((currentLines) => ({
+        ...currentLines,
+        [sessionId]: {
+          lines: payload.lines ?? [],
+          products: payload.products ?? availableProducts,
+        },
+      }));
+    } catch {
+      toast.error("Unable to load quote lines");
+    } finally {
+      setLoadingSessionId(null);
+    }
   }
 
   return (
@@ -135,7 +185,7 @@ export function SupplierQuotesTab({
                         </Button>
                       ) : null}
                       <Button
-                        onClick={() => setExpandedSessionId(isExpanded ? null : session.id)}
+                        onClick={() => toggleLines(session.id)}
                         size="sm"
                         variant="outline"
                       >
@@ -144,7 +194,25 @@ export function SupplierQuotesTab({
                     </div>
                   </div>
                 </CardHeader>
-                {isExpanded ? <CardContent className="text-sm text-slate-500">No lines yet.</CardContent> : null}
+                {isExpanded ? (
+                  <CardContent>
+                    {loadingSessionId === session.id ? (
+                      <div className="space-y-3">
+                        <Skeleton className="h-10 w-full" />
+                        <Skeleton className="h-10 w-full" />
+                      </div>
+                    ) : (
+                      <QuoteLinesEditor
+                        availableProducts={loadedLines[session.id]?.products ?? availableProducts}
+                        canManage={canManage}
+                        initialLines={loadedLines[session.id]?.lines ?? []}
+                        sessionId={session.id}
+                        sessionStatus={session.status}
+                        tradeId={tradeId}
+                      />
+                    )}
+                  </CardContent>
+                ) : null}
               </Card>
             );
           })}

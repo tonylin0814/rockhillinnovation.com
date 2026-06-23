@@ -186,3 +186,18 @@ export type SupplierQuoteSession = {
   notes: string | null;
   created_at: string;
 };
+
+export type SupplierQuoteLine = {
+  id: string;
+  session_id: string;
+  product_id: string | null;
+  item_name_chinese: string | null;
+  item_name_english: string | null;
+  quantity: number;
+  unit_price_rmb: number;
+  total_price_rmb: number;
+  payment_category: "outsourced" | "produced" | "misc_expense" | null;
+  notes: string | null;
+  sort_order: number;
+  product?: { id: string; code: string; name_english: string } | null;
+};
