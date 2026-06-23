@@ -33,16 +33,29 @@ export default async function UserManagementPage() {
     );
   }
 
-  const supabase = createServerSupabaseAdmin();
-  const { data: users, error } = await supabase
-    .from("users")
-    .select("id, name, email, role, is_active, created_at")
-    .order("created_at", { ascending: true });
+  let users: UserRow[] = [];
+  let loadError: string | null = null;
 
-  if (error) {
+  try {
+    const supabase = createServerSupabaseAdmin();
+    const { data, error } = await supabase
+      .from("users")
+      .select("id, name, email, role, is_active, created_at")
+      .order("created_at", { ascending: true });
+
+    if (error) {
+      loadError = error.message;
+    } else {
+      users = (data ?? []) as UserRow[];
+    }
+  } catch (error) {
+    loadError = error instanceof Error ? error.message : "Could not load users.";
+  }
+
+  if (loadError) {
     return (
       <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm font-medium text-red-700">
-        {error.message}
+        {loadError}
       </div>
     );
   }
@@ -59,7 +72,7 @@ export default async function UserManagementPage() {
 
       <Card className="border-slate-200 shadow-sm">
         <CardHeader>
-          <CardTitle>Users ({users?.length ?? 0})</CardTitle>
+          <CardTitle>Users ({users.length})</CardTitle>
         </CardHeader>
         <CardContent className="p-0">
           <Table>
@@ -73,7 +86,7 @@ export default async function UserManagementPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {(users as UserRow[]).map((user) => {
+              {users.map((user) => {
                 const isSelf = user.id === currentUser.id;
 
                 return (
