@@ -25,7 +25,7 @@ export default async function ProductsPage() {
   const [{ data: products, error: productsError }, { data: suppliers, error: suppliersError }] = await Promise.all([
     supabase
       .from("products")
-      .select("*, supplier:suppliers(id, name, code), components:product_components(id)")
+      .select("*, supplier:suppliers(id, name, code), components:product_components!product_components_set_product_id_fkey(id)")
       .order("code", { ascending: true }),
     supabase.from("suppliers").select("id, name, code").eq("status", "active").order("name", { ascending: true }),
   ]);
