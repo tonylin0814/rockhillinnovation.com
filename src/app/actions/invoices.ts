@@ -17,6 +17,8 @@ type ActionResult = {
   error?: string;
 };
 
+type InvoiceKind = "pro_forma" | "deposit" | "final";
+
 const invoiceSchema = z.object({
   invoice_number: z.string().trim().min(1, "Invoice number is required"),
   invoice_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Invoice date is required"),
@@ -57,7 +59,23 @@ function normalizeDate(value: string) {
   }).format(new Date(`${value}T00:00:00.000Z`));
 }
 
-export async function generateProForma(tradeId: string, formData: FormData): Promise<ActionResult> {
+function roundMoney(value: number) {
+  return Math.round((value + Number.EPSILON) * 100) / 100;
+}
+
+function suffixInvoiceNumber(baseNumber: string, invoiceType: InvoiceKind) {
+  if (invoiceType === "deposit") {
+    return `${baseNumber}-D`;
+  }
+
+  return baseNumber;
+}
+
+async function generateClientInvoice(
+  tradeId: string,
+  formData: FormData,
+  invoiceType: InvoiceKind
+): Promise<ActionResult> {
   const access = await requireInvoiceManager();
 
   if ("error" in access) {
@@ -72,9 +90,9 @@ export async function generateProForma(tradeId: string, formData: FormData): Pro
     .safeParse({
       tradeId,
       invoice: {
-        invoice_number: formData.get("invoice_number"),
-        invoice_date: formData.get("invoice_date"),
         due_date: emptyToNull(formData.get("due_date")),
+        invoice_date: formData.get("invoice_date"),
+        invoice_number: formData.get("invoice_number"),
         notes: emptyToNull(formData.get("notes")),
       },
     });
@@ -86,7 +104,7 @@ export async function generateProForma(tradeId: string, formData: FormData): Pro
   const supabase = createServerSupabaseClient();
   const { data: trade, error: tradeError } = await supabase
     .from("trades")
-    .select("id, trade_id, client:clients(id, name, address, currency)")
+    .select("id, trade_id, client:clients(id, name, address, currency, deposit_pct, final_pct)")
     .eq("id", tradeId)
     .maybeSingle();
 
@@ -109,7 +127,7 @@ export async function generateProForma(tradeId: string, formData: FormData): Pro
   }
 
   if (!orderLines?.length) {
-    return { error: "Add order lines before generating a pro-forma invoice" };
+    return { error: "Add order lines before generating an invoice" };
   }
 
   const client = Array.isArray(trade.client) ? trade.client[0] : trade.client;
@@ -118,14 +136,28 @@ export async function generateProForma(tradeId: string, formData: FormData): Pro
     return { error: "Trade client not found" };
   }
 
+  const pct =
+    invoiceType === "deposit"
+      ? Number(client.deposit_pct ?? 50)
+      : invoiceType === "final"
+        ? Number(client.final_pct ?? 50)
+        : 100;
+  const percentageMultiplier = pct / 100;
+  const invoiceNumber = suffixInvoiceNumber(parsed.data.invoice.invoice_number, invoiceType);
+  const suffixLabel =
+    invoiceType === "deposit" ? ` (Deposit ${pct}%)` : invoiceType === "final" ? ` (Final ${pct}%)` : "";
+
   const invoiceLines = orderLines.map((line, index) => {
     const product = Array.isArray(line.product) ? line.product[0] : line.product;
     const quantity = Number(line.quantity);
     const unitPrice = Number(line.unit_price_usd);
-    const total = Number(line.total_price_usd ?? quantity * unitPrice);
+    const originalTotal = Number(line.total_price_usd ?? quantity * unitPrice);
+    const total = invoiceType === "pro_forma" ? originalTotal : roundMoney(originalTotal * percentageMultiplier);
+    const dbQuantity = invoiceType === "pro_forma" || unitPrice === 0 ? quantity : total / unitPrice;
 
     return {
-      description: line.original_item_name ?? product?.name_english ?? "Item",
+      dbQuantity,
+      description: `${line.original_item_name ?? product?.name_english ?? "Item"}${suffixLabel}`,
       orderLineId: line.id,
       quantity,
       sortOrder: Number(line.sort_order ?? index + 1),
@@ -133,21 +165,22 @@ export async function generateProForma(tradeId: string, formData: FormData): Pro
       unitPrice,
     };
   });
-  const subtotal = invoiceLines.reduce((sum, line) => sum + line.total, 0);
+  const subtotal = roundMoney(invoiceLines.reduce((sum, line) => sum + line.total, 0));
   const total = subtotal;
   const html = buildProFormaHtml({
     clientAddress: client.address ?? null,
     clientName: client.name,
     currency: client.currency ?? "USD",
     invoiceDate: normalizeDate(parsed.data.invoice.invoice_date),
-    invoiceNumber: parsed.data.invoice.invoice_number,
+    invoiceNumber,
+    invoiceType,
     lines: invoiceLines,
     notes: parsed.data.invoice.notes,
     subtotal,
     total,
   });
   const pdfBuffer = await generatePdf(html);
-  const fileName = `${parsed.data.invoice.invoice_number}.pdf`;
+  const fileName = `${invoiceNumber}.pdf`;
   const uploaded = await uploadToOneDrive({
     category: "invoice",
     fileBuffer: pdfBuffer,
@@ -161,8 +194,8 @@ export async function generateProForma(tradeId: string, formData: FormData): Pro
     .insert({
       due_date: parsed.data.invoice.due_date,
       invoice_date: parsed.data.invoice.invoice_date,
-      invoice_number: parsed.data.invoice.invoice_number,
-      invoice_type: "pro_forma",
+      invoice_number: invoiceNumber,
+      invoice_type: invoiceType,
       notes: parsed.data.invoice.notes,
       pdf_onedrive_url: uploaded.webUrl,
       status: "draft",
@@ -182,7 +215,7 @@ export async function generateProForma(tradeId: string, formData: FormData): Pro
       description: line.description,
       invoice_id: invoice.id,
       order_line_id: line.orderLineId,
-      quantity: line.quantity,
+      quantity: line.dbQuantity,
       sort_order: line.sortOrder,
       unit_price_usd: line.unitPrice,
     }))
@@ -194,7 +227,7 @@ export async function generateProForma(tradeId: string, formData: FormData): Pro
 
   const { error: documentError } = await supabase.from("trade_documents").insert({
     document_category: "invoice",
-    document_type: "pro_forma",
+    document_type: invoiceType,
     file_name: fileName,
     file_size_bytes: pdfBuffer.length,
     notes: parsed.data.invoice.notes,
@@ -213,6 +246,18 @@ export async function generateProForma(tradeId: string, formData: FormData): Pro
 
   revalidatePath(`/trades/${tradeId}`);
   return { success: true, downloadUrl: uploaded.webUrl, invoiceId: invoice.id };
+}
+
+export async function generateProForma(tradeId: string, formData: FormData): Promise<ActionResult> {
+  return generateClientInvoice(tradeId, formData, "pro_forma");
+}
+
+export async function generateDepositInvoice(tradeId: string, formData: FormData): Promise<ActionResult> {
+  return generateClientInvoice(tradeId, formData, "deposit");
+}
+
+export async function generateFinalInvoice(tradeId: string, formData: FormData): Promise<ActionResult> {
+  return generateClientInvoice(tradeId, formData, "final");
 }
 
 export async function updateInvoiceStatus(

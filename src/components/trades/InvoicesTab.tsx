@@ -1,6 +1,6 @@
 "use client";
 
-import { MoreHorizontal } from "lucide-react";
+import { ChevronDown, FileText, MoreHorizontal } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useTransition } from "react";
 import { toast } from "sonner";
@@ -24,7 +24,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import type { ClientInvoice } from "@/types";
-import { GenerateProFormaDialog } from "./GenerateProFormaDialog";
+import { GenerateInvoiceDialog } from "./GenerateProFormaDialog";
 
 const typeLabels: Record<ClientInvoice["invoice_type"], string> = {
   deposit: "Deposit",
@@ -119,6 +119,41 @@ function InvoiceStatusDropdown({ invoice }: { invoice: ClientInvoice }) {
   );
 }
 
+function GenerateInvoiceMenu({ tradeId }: { tradeId: string }) {
+  return (
+    <div className="flex justify-end">
+      <GenerateInvoiceDialog tradeId={tradeId} type="pro_forma">
+        <Button className="rounded-r-none bg-[#0d1b34] hover:bg-[#13294d]">
+          <FileText className="mr-2 h-4 w-4" />
+          Generate Invoice
+        </Button>
+      </GenerateInvoiceDialog>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button
+            aria-label="Choose invoice type"
+            className="rounded-l-none border-l border-white/20 bg-[#0d1b34] px-3 hover:bg-[#13294d]"
+            type="button"
+          >
+            <ChevronDown className="h-4 w-4" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
+          <GenerateInvoiceDialog tradeId={tradeId} type="pro_forma">
+            <DropdownMenuItem onSelect={(event) => event.preventDefault()}>Pro-Forma Invoice</DropdownMenuItem>
+          </GenerateInvoiceDialog>
+          <GenerateInvoiceDialog tradeId={tradeId} type="deposit">
+            <DropdownMenuItem onSelect={(event) => event.preventDefault()}>Deposit Invoice</DropdownMenuItem>
+          </GenerateInvoiceDialog>
+          <GenerateInvoiceDialog tradeId={tradeId} type="final">
+            <DropdownMenuItem onSelect={(event) => event.preventDefault()}>Final Invoice</DropdownMenuItem>
+          </GenerateInvoiceDialog>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </div>
+  );
+}
+
 export function InvoicesTab({
   canManage,
   initialInvoices,
@@ -130,7 +165,7 @@ export function InvoicesTab({
 }) {
   return (
     <div className="space-y-4">
-      <div className="flex justify-end">{canManage ? <GenerateProFormaDialog tradeId={tradeId} /> : null}</div>
+      {canManage ? <GenerateInvoiceMenu tradeId={tradeId} /> : null}
 
       {initialInvoices.length ? (
         <Card className="border-slate-200 shadow-sm">

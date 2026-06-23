@@ -40,6 +40,7 @@ export function buildProFormaHtml({
   currency,
   invoiceDate,
   invoiceNumber,
+  invoiceType = "pro_forma",
   lines,
   notes,
   subtotal,
@@ -47,6 +48,7 @@ export function buildProFormaHtml({
 }: {
   invoiceNumber: string;
   invoiceDate: string;
+  invoiceType?: "pro_forma" | "deposit" | "final";
   clientName: string;
   clientAddress: string | null;
   lines: ProFormaLine[];
@@ -55,13 +57,18 @@ export function buildProFormaHtml({
   notes: string | null;
   currency: string;
 }): string {
+  const invoiceTypeLabel = {
+    deposit: "Deposit Invoice",
+    final: "Final Invoice",
+    pro_forma: "Pro-Forma Invoice",
+  }[invoiceType];
   const content = `
     <div class="document-shell">
       <div>
         <div class="header-block">
           <div>
             <div class="company-name">Rock Hill Innovation</div>
-            <div class="muted-title">Pro-Forma Invoice</div>
+            <div class="muted-title">${invoiceTypeLabel}</div>
           </div>
           <div class="invoice-meta">
             <div class="invoice-number">Invoice # ${escapeHtml(invoiceNumber)}</div>
