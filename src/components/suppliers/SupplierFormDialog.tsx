@@ -283,7 +283,7 @@ export function SupplierFormDialog({ mode, initialData, trigger }: SupplierFormD
 
           {error ? <p className="text-sm font-medium text-red-600">{error}</p> : null}
 
-          <div className="flex justify-end gap-2">
+          <div className="sticky bottom-0 -mx-6 -mb-6 flex justify-end gap-2 border-t border-slate-200 bg-white px-6 py-4">
             <Button disabled={isPending} onClick={() => setOpen(false)} type="button" variant="outline">
               Cancel
             </Button>
