@@ -4,7 +4,6 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -24,7 +23,7 @@ import {
 import type { Product } from "@/types";
 
 type PaymentFilter = "all" | "outsourced" | "produced";
-type ProductsTableMode = "products" | "sets";
+type ProductsTableMode = "products" | "sets" | "inactive";
 
 function StatusBadge({ status }: { status: Product["status"] }) {
   return (
@@ -60,6 +59,26 @@ function PaymentCategoryBadge({ category }: { category: Product["payment_categor
   );
 }
 
+function LinkedCell({
+  children,
+  className = "",
+  href,
+}: {
+  children: string | null | undefined;
+  className?: string;
+  href: string;
+}) {
+  if (!children) {
+    return <span className="text-slate-400">-</span>;
+  }
+
+  return (
+    <Link className={`transition-colors hover:text-blue-700 hover:underline ${className}`} href={href}>
+      {children}
+    </Link>
+  );
+}
+
 export function ProductsTable({ mode = "products", products }: { mode?: ProductsTableMode; products: Product[] }) {
   const [search, setSearch] = useState("");
   const [paymentFilter, setPaymentFilter] = useState<PaymentFilter>("all");
@@ -75,7 +94,7 @@ export function ProductsTable({ mode = "products", products }: { mode?: Products
         product.name_english.toLowerCase().includes(normalizedSearch) ||
         (product.name_chinese ?? "").toLowerCase().includes(normalizedSearch);
 
-      const matchesPayment = mode === "sets" || paymentFilter === "all" || product.payment_category === paymentFilter;
+      const matchesPayment = mode !== "products" || paymentFilter === "all" || product.payment_category === paymentFilter;
 
       return matchesSearch && matchesPayment;
     });
@@ -108,45 +127,53 @@ export function ProductsTable({ mode = "products", products }: { mode?: Products
         <TableHeader>
           <TableRow>
             <TableHead>Rock Hill Code</TableHead>
-            {mode === "products" ? <TableHead>Supplier Code</TableHead> : null}
+            {mode !== "sets" ? <TableHead>Supplier Code</TableHead> : null}
             <TableHead>English Name</TableHead>
             <TableHead>Chinese Name</TableHead>
-            {mode === "products" ? <TableHead>Supplier</TableHead> : null}
-            {mode === "products" ? <TableHead>Payment Category</TableHead> : <TableHead>Components</TableHead>}
+            {mode !== "sets" ? <TableHead>Supplier</TableHead> : null}
+            {mode === "sets" ? <TableHead>Components</TableHead> : <TableHead>Payment Category</TableHead>}
+            {mode === "inactive" ? <TableHead>Type</TableHead> : null}
             <TableHead>Status</TableHead>
-            <TableHead className="text-right">Actions</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {filteredProducts.length ? (
             filteredProducts.map((product) => (
               <TableRow key={product.id}>
-                <TableCell className="font-semibold text-[#0d1b34]">{product.code}</TableCell>
-                {mode === "products" ? <TableCell>{product.supplier_product_code ?? "-"}</TableCell> : null}
-                <TableCell>{product.name_english}</TableCell>
-                <TableCell>{product.name_chinese ?? "-"}</TableCell>
-                {mode === "products" ? <TableCell>{product.supplier?.code ?? "-"}</TableCell> : null}
-                {mode === "products" ? (
+                <TableCell className="font-semibold text-[#0d1b34]">
+                  <LinkedCell className="font-semibold" href={`/products/${product.id}`}>
+                    {product.code}
+                  </LinkedCell>
+                </TableCell>
+                {mode !== "sets" ? (
+                  <TableCell>
+                    <LinkedCell href={`/products/${product.id}`}>{product.supplier_product_code}</LinkedCell>
+                  </TableCell>
+                ) : null}
+                <TableCell>
+                  <LinkedCell href={`/products/${product.id}`}>{product.name_english}</LinkedCell>
+                </TableCell>
+                <TableCell>
+                  <LinkedCell href={`/products/${product.id}`}>{product.name_chinese}</LinkedCell>
+                </TableCell>
+                {mode !== "sets" ? <TableCell>{product.supplier?.code ?? "-"}</TableCell> : null}
+                {mode === "sets" ? (
+                  <TableCell>{product.components?.length ?? 0} products</TableCell>
+                ) : (
                   <TableCell>
                     <PaymentCategoryBadge category={product.payment_category} />
                   </TableCell>
-                ) : (
-                  <TableCell>{product.components?.length ?? 0} products</TableCell>
                 )}
+                {mode === "inactive" ? <TableCell>{product.product_type === "set" ? "Set" : "Product"}</TableCell> : null}
                 <TableCell>
                   <StatusBadge status={product.status} />
-                </TableCell>
-                <TableCell className="text-right">
-                  <Button asChild size="sm" variant="outline">
-                    <Link href={`/products/${product.id}`}>View</Link>
-                  </Button>
                 </TableCell>
               </TableRow>
             ))
           ) : (
             <TableRow>
-              <TableCell className="text-slate-500" colSpan={mode === "products" ? 8 : 6}>
-                {mode === "products" ? "No products yet." : "No sets yet."}
+              <TableCell className="text-slate-500" colSpan={mode === "sets" ? 5 : mode === "inactive" ? 8 : 7}>
+                {mode === "products" ? "No products yet." : mode === "sets" ? "No sets yet." : "No inactive items."}
               </TableCell>
             </TableRow>
           )}

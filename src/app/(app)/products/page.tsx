@@ -39,8 +39,10 @@ export default async function ProductsPage() {
   }
 
   const allProducts = (products ?? []) as Product[];
-  const standardProducts = allProducts.filter((product) => product.product_type === "part");
-  const setProducts = allProducts.filter((product) => product.product_type === "set");
+  const activeProducts = allProducts.filter((product) => product.status === "active");
+  const standardProducts = activeProducts.filter((product) => product.product_type === "part");
+  const setProducts = activeProducts.filter((product) => product.product_type === "set");
+  const inactiveProducts = allProducts.filter((product) => product.status === "inactive");
   const supplierOptions = (suppliers ?? []) as ProductSupplierOption[];
 
   return (
@@ -69,6 +71,7 @@ export default async function ProductsPage() {
         <TabsList>
           <TabsTrigger value="products">Products</TabsTrigger>
           <TabsTrigger value="sets">Sets</TabsTrigger>
+          <TabsTrigger value="inactive">Inactive Items</TabsTrigger>
         </TabsList>
 
         <TabsContent value="products">
@@ -89,6 +92,17 @@ export default async function ProductsPage() {
             </CardHeader>
             <CardContent>
               <ProductsTable mode="sets" products={setProducts} />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="inactive">
+          <Card className="border-slate-200 shadow-sm">
+            <CardHeader>
+              <CardTitle>Inactive Items</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ProductsTable mode="inactive" products={inactiveProducts} />
             </CardContent>
           </Card>
         </TabsContent>
