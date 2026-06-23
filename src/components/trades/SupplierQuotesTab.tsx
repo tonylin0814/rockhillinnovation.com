@@ -23,6 +23,7 @@ import type { SupplierQuoteLine, SupplierQuoteSession } from "@/types";
 import { NewQuoteSessionDialog } from "./NewQuoteSessionDialog";
 import { PriceHistoryDialog } from "./PriceHistoryDialog";
 import { QuoteLinesEditor } from "./QuoteLinesEditor";
+import { QuoteReviewDialog } from "./QuoteReviewDialog";
 
 type ProductOption = {
   id: string;
@@ -231,6 +232,7 @@ export function SupplierQuotesTab({
                     </div>
 
                     <div className="flex flex-wrap justify-end gap-2">
+                      {canManage ? <QuoteReviewDialog sessionId={session.id} /> : null}
                       {canManage && session.status === "draft" ? (
                         <Button
                           disabled={isSessionPending}
