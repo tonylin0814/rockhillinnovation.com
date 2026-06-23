@@ -103,6 +103,7 @@ export default async function ClientDetailPage({ params }: { params: { id: strin
                 <DetailRow label="Final %" value={`${client.final_pct}%`} />
               </div>
               <DetailRow label="Address" value={client.address} />
+              <DetailRow label="Shipping Address" value={client.shipping_address} />
               <DetailRow label="Notes" value={client.notes} />
             </CardContent>
           </Card>

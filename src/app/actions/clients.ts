@@ -18,6 +18,7 @@ const contactSchema = z.object({
   role: z.string().trim().default(""),
   email: z.string().trim().default(""),
   phone: z.string().trim().default(""),
+  cell_phone: z.string().trim().default(""),
 });
 
 const clientSchema = z.object({
@@ -29,6 +30,7 @@ const clientSchema = z.object({
   final_pct: z.coerce.number().min(0).max(100),
   contacts: z.array(contactSchema).default([]),
   address: z.string().trim().nullable(),
+  shipping_address: z.string().trim().nullable(),
   notes: z.string().trim().nullable(),
 });
 
@@ -70,6 +72,9 @@ function valuesFromForm(formData: FormData, fallback?: Client) {
     final_pct: formData.has("final_pct") ? formData.get("final_pct") : fallback?.final_pct,
     contacts: formData.has("contacts") ? parseContacts(formData.get("contacts")) : fallback?.contacts ?? [],
     address: formData.has("address") ? emptyToNull(formData.get("address")) : fallback?.address,
+    shipping_address: formData.has("shipping_address")
+      ? emptyToNull(formData.get("shipping_address"))
+      : fallback?.shipping_address,
     notes: formData.has("notes") ? emptyToNull(formData.get("notes")) : fallback?.notes,
   };
 }

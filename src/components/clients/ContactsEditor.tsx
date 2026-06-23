@@ -2,7 +2,7 @@
 
 import { Loader2, Plus, X } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { toast } from "sonner";
 
 import { updateClient } from "@/app/actions/clients";
@@ -23,13 +23,35 @@ const emptyContact: Contact = {
   role: "",
   email: "",
   phone: "",
+  cell_phone: "",
 };
+
+type ContactRow = Contact & { _key: string };
+
+function createContactRow(contact?: Partial<Contact>, index = 0): ContactRow {
+  return {
+    ...emptyContact,
+    ...contact,
+    _key: `${Date.now()}-${index}-${Math.random().toString(36).slice(2)}`,
+  };
+}
+
+function stripContactKey(contact: ContactRow): Contact {
+  const { _key, ...cleanContact } = contact;
+  return cleanContact;
+}
 
 export function ContactsEditor({ clientId, initialContacts }: { clientId: string; initialContacts: Contact[] }) {
   const router = useRouter();
   const [isEditing, setIsEditing] = useState(false);
-  const [contacts, setContacts] = useState<Contact[]>(initialContacts);
+  const [contacts, setContacts] = useState<ContactRow[]>(() => initialContacts.map(createContactRow));
   const [isPending, startTransition] = useTransition();
+
+  useEffect(() => {
+    if (!isEditing) {
+      setContacts(initialContacts.map(createContactRow));
+    }
+  }, [initialContacts, isEditing]);
 
   function updateContact(index: number, field: keyof Contact, value: string) {
     setContacts((current) =>
@@ -38,7 +60,7 @@ export function ContactsEditor({ clientId, initialContacts }: { clientId: string
   }
 
   function addContact() {
-    setContacts((current) => [...current, { ...emptyContact }]);
+    setContacts((current) => [...current, createContactRow(undefined, current.length)]);
   }
 
   function removeContact(index: number) {
@@ -46,13 +68,13 @@ export function ContactsEditor({ clientId, initialContacts }: { clientId: string
   }
 
   function cancelEdit() {
-    setContacts(initialContacts);
+    setContacts(initialContacts.map(createContactRow));
     setIsEditing(false);
   }
 
   function saveContacts() {
     const formData = new FormData();
-    formData.set("contacts", JSON.stringify(contacts));
+    formData.set("contacts", JSON.stringify(contacts.map(stripContactKey)));
 
     startTransition(async () => {
       const result = await updateClient(clientId, formData);
@@ -99,14 +121,15 @@ export function ContactsEditor({ clientId, initialContacts }: { clientId: string
             <TableHead>Role</TableHead>
             <TableHead>Email</TableHead>
             <TableHead>Phone</TableHead>
+            <TableHead>Cell Phone</TableHead>
             {isEditing ? <TableHead className="w-12" /> : null}
           </TableRow>
         </TableHeader>
         <TableBody>
           {contacts.length ? (
             contacts.map((contact, index) => (
-              <TableRow key={`${contact.email}-${index}`}>
-                {(["name", "role", "email", "phone"] as const).map((field) => (
+              <TableRow key={contact._key}>
+                {(["name", "role", "email", "phone", "cell_phone"] as const).map((field) => (
                   <TableCell key={field}>
                     {isEditing ? (
                       <Input
@@ -116,7 +139,7 @@ export function ContactsEditor({ clientId, initialContacts }: { clientId: string
                         value={contact[field]}
                       />
                     ) : (
-                      contact[field] || "—"
+                      contact[field] || "-"
                     )}
                   </TableCell>
                 ))}
@@ -138,7 +161,7 @@ export function ContactsEditor({ clientId, initialContacts }: { clientId: string
             ))
           ) : (
             <TableRow>
-              <TableCell className="text-slate-500" colSpan={isEditing ? 5 : 4}>
+              <TableCell className="text-slate-500" colSpan={isEditing ? 6 : 5}>
                 No contacts yet.
               </TableCell>
             </TableRow>

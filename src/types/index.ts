@@ -13,6 +13,7 @@ export type Contact = {
   role: string;
   email: string;
   phone: string;
+  cell_phone: string;
 };
 
 export type Client = {
@@ -25,6 +26,7 @@ export type Client = {
   final_pct: number;
   contacts: Contact[];
   address: string | null;
+  shipping_address: string | null;
   notes: string | null;
   status: "active" | "inactive";
   created_at: string;

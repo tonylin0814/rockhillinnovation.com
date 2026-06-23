@@ -32,6 +32,11 @@ export function ClientFormDialog({ mode, initialData, trigger }: ClientFormDialo
   const [error, setError] = useState<string | null>(null);
   const [depositPct, setDepositPct] = useState(initialData?.deposit_pct ?? 50);
   const [finalPct, setFinalPct] = useState(initialData?.final_pct ?? 50);
+  const [address, setAddress] = useState(initialData?.address ?? "");
+  const [shippingAddress, setShippingAddress] = useState(initialData?.shipping_address ?? "");
+  const [shippingSameAsAddress, setShippingSameAsAddress] = useState(
+    Boolean(initialData?.address && initialData?.shipping_address === initialData.address)
+  );
   const [isPending, startTransition] = useTransition();
 
   useEffect(() => {
@@ -39,6 +44,9 @@ export function ClientFormDialog({ mode, initialData, trigger }: ClientFormDialo
       setError(null);
       setDepositPct(initialData?.deposit_pct ?? 50);
       setFinalPct(initialData?.final_pct ?? 50);
+      setAddress(initialData?.address ?? "");
+      setShippingAddress(initialData?.shipping_address ?? "");
+      setShippingSameAsAddress(Boolean(initialData?.address && initialData?.shipping_address === initialData.address));
     }
   }, [initialData, open]);
 
@@ -59,6 +67,8 @@ export function ClientFormDialog({ mode, initialData, trigger }: ClientFormDialo
     const formData = new FormData(event.currentTarget);
     formData.set("deposit_pct", String(depositPct));
     formData.set("final_pct", String(finalPct));
+    formData.set("address", address);
+    formData.set("shipping_address", shippingSameAsAddress ? address : shippingAddress);
 
     startTransition(async () => {
       const result =
@@ -157,7 +167,47 @@ export function ClientFormDialog({ mode, initialData, trigger }: ClientFormDialo
 
           <div className="space-y-2">
             <Label htmlFor="address">Address</Label>
-            <Textarea defaultValue={initialData?.address ?? ""} disabled={isPending} id="address" name="address" />
+            <Textarea
+              disabled={isPending}
+              id="address"
+              name="address"
+              onChange={(event) => {
+                setAddress(event.currentTarget.value);
+                if (shippingSameAsAddress) {
+                  setShippingAddress(event.currentTarget.value);
+                }
+              }}
+              value={address}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <Label htmlFor="shipping_address">Shipping Address</Label>
+              <label className="flex items-center gap-2 text-sm text-slate-600">
+                <input
+                  checked={shippingSameAsAddress}
+                  className="h-4 w-4 rounded border-slate-300 text-[#0d1b34]"
+                  disabled={isPending}
+                  onChange={(event) => {
+                    const checked = event.currentTarget.checked;
+                    setShippingSameAsAddress(checked);
+                    if (checked) {
+                      setShippingAddress(address);
+                    }
+                  }}
+                  type="checkbox"
+                />
+                Same as address
+              </label>
+            </div>
+            <Textarea
+              disabled={isPending || shippingSameAsAddress}
+              id="shipping_address"
+              name="shipping_address"
+              onChange={(event) => setShippingAddress(event.currentTarget.value)}
+              value={shippingSameAsAddress ? address : shippingAddress}
+            />
           </div>
 
           <div className="space-y-2">
