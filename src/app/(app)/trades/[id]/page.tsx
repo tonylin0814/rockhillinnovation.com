@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 
 import { ClientQuotationsTab } from "@/components/trades/ClientQuotationsTab";
 import { DocumentsTab } from "@/components/trades/DocumentsTab";
+import { InvoicesTab } from "@/components/trades/InvoicesTab";
 import { ManagePartnersDialog } from "@/components/trades/ManagePartnersDialog";
 import { OrderLinesTab } from "@/components/trades/OrderLinesTab";
 import { ShareholderRulesEditor } from "@/components/trades/ShareholderRulesEditor";
@@ -17,6 +18,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { getCurrentUser } from "@/lib/auth";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import type {
+  ClientInvoice,
   ClientQuotationSession,
   ComponentDemand,
   ExpenseVendor,
@@ -112,6 +114,7 @@ export default async function TradeWorkspacePage({ params }: { params: { id: str
     { data: quoteSessions, error: quoteSessionsError },
     { data: quotationSessions, error: quotationSessionsError },
     { data: tradeDocuments, error: tradeDocumentsError },
+    { data: clientInvoices, error: clientInvoicesError },
   ] = await Promise.all([
     supabase
       .from("trades")
@@ -173,6 +176,11 @@ export default async function TradeWorkspacePage({ params }: { params: { id: str
       .select("*, uploader:users(id, name)")
       .eq("trade_id", params.id)
       .order("created_at", { ascending: false }),
+    supabase
+      .from("client_invoices")
+      .select("*")
+      .eq("trade_id", params.id)
+      .order("created_at", { ascending: false }),
   ]);
 
   if (
@@ -187,7 +195,8 @@ export default async function TradeWorkspacePage({ params }: { params: { id: str
     activeVendorsError ||
     quoteSessionsError ||
     quotationSessionsError ||
-    tradeDocumentsError
+    tradeDocumentsError ||
+    clientInvoicesError
   ) {
     return (
       <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm font-medium text-red-700">
@@ -202,7 +211,8 @@ export default async function TradeWorkspacePage({ params }: { params: { id: str
           activeVendorsError?.message ??
           quoteSessionsError?.message ??
           quotationSessionsError?.message ??
-          tradeDocumentsError?.message}
+          tradeDocumentsError?.message ??
+          clientInvoicesError?.message}
       </div>
     );
   }
@@ -223,6 +233,7 @@ export default async function TradeWorkspacePage({ params }: { params: { id: str
   const quoteSessionRows = (quoteSessions ?? []) as SupplierQuoteSession[];
   const quotationSessionRows = (quotationSessions ?? []) as ClientQuotationSession[];
   const tradeDocumentRows = (tradeDocuments ?? []) as TradeDocument[];
+  const clientInvoiceRows = (clientInvoices ?? []) as ClientInvoice[];
   const participantPartnerIds = tradeParticipants.map((participant) => participant.user_id);
 
   return (
@@ -330,7 +341,7 @@ export default async function TradeWorkspacePage({ params }: { params: { id: str
           <DocumentsTab initialDocuments={tradeDocumentRows} tradeCode={trade.trade_id} tradeId={trade.id} />
         </TabsContent>
         <TabsContent value="invoices">
-          <ComingSoonCard title="Invoices" />
+          <InvoicesTab canManage={canManage} initialInvoices={clientInvoiceRows} tradeId={trade.id} />
         </TabsContent>
         <TabsContent value="ledger">
           <ComingSoonCard title="Ledger" />

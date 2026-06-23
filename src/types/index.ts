@@ -243,3 +243,29 @@ export type TradeDocument = {
   created_at: string;
   uploader?: { id: string; name: string } | null;
 };
+
+export type ClientInvoice = {
+  id: string;
+  trade_id: string;
+  invoice_number: string;
+  invoice_type: "pro_forma" | "deposit" | "final";
+  invoice_date: string;
+  due_date: string | null;
+  status: "draft" | "sent" | "paid";
+  subtotal_usd: number;
+  total_usd: number;
+  pdf_onedrive_url: string | null;
+  notes: string | null;
+  created_at: string;
+};
+
+export type ClientInvoiceLine = {
+  id: string;
+  invoice_id: string;
+  order_line_id: string | null;
+  description: string | null;
+  quantity: number;
+  unit_price_usd: number;
+  total_usd: number;
+  sort_order: number;
+};
