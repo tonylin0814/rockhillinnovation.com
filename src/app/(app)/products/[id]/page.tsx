@@ -8,9 +8,17 @@ import { SetComponentsEditor } from "@/components/products/SetComponentsEditor";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { getCurrentUser } from "@/lib/auth";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
-import type { Product, ProductComponent } from "@/types";
+import type { Product, ProductComponent, ProductCostHistory } from "@/types";
 
 const productTypeClasses: Record<Product["product_type"], string> = {
   part: "border-slate-200 bg-slate-100 text-slate-700",
@@ -66,6 +74,17 @@ function DetailRow({ label, value }: { label: string; value: string | number | n
   );
 }
 
+function formatRmb(value: number | null | undefined) {
+  return typeof value === "number" ? `¥${value.toFixed(4)}` : "-";
+}
+
+function formatDate(value: string) {
+  return new Intl.DateTimeFormat("en-US", {
+    dateStyle: "medium",
+    timeZone: "UTC",
+  }).format(new Date(value));
+}
+
 export default async function ProductDetailPage({ params }: { params: { id: string } }) {
   const user = await getCurrentUser();
 
@@ -85,6 +104,7 @@ export default async function ProductDetailPage({ params }: { params: { id: stri
     { data, error },
     { data: suppliers, error: suppliersError },
     { data: availableProducts, error: availableProductsError },
+    { data: costHistory, error: costHistoryError },
   ] = await Promise.all([
     supabase.from("products").select("*, supplier:suppliers(id, name, code)").eq("id", params.id).maybeSingle(),
     supabase.from("suppliers").select("id, name, code").eq("status", "active").order("name", { ascending: true }),
@@ -94,12 +114,18 @@ export default async function ProductDetailPage({ params }: { params: { id: stri
       .eq("product_type", "part")
       .eq("status", "active")
       .order("code", { ascending: true }),
+    supabase
+      .from("product_cost_history")
+      .select("*, supplier:suppliers(id, code, name)")
+      .eq("product_id", params.id)
+      .order("quoted_date", { ascending: false })
+      .order("created_at", { ascending: false }),
   ]);
 
-  if (error || suppliersError || availableProductsError) {
+  if (error || suppliersError || availableProductsError || costHistoryError) {
     return (
       <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm font-medium text-red-700">
-        {error?.message ?? suppliersError?.message ?? availableProductsError?.message}
+        {error?.message ?? suppliersError?.message ?? availableProductsError?.message ?? costHistoryError?.message}
       </div>
     );
   }
@@ -111,6 +137,8 @@ export default async function ProductDetailPage({ params }: { params: { id: stri
   const product = data as Product;
   const supplierOptions = (suppliers ?? []) as ProductSupplierOption[];
   const availableProductOptions = (availableProducts ?? []) as Product[];
+  const costHistoryRows = (costHistory ?? []) as ProductCostHistory[];
+  const latestCost = costHistoryRows[0] ?? null;
   let setComponents: ProductComponent[] = [];
 
   if (product.product_type === "set") {
@@ -194,6 +222,65 @@ export default async function ProductDetailPage({ params }: { params: { id: stri
             </CardHeader>
             <CardContent>
               <ProductImagesEditor initialImages={product.product_images} productId={product.id} />
+            </CardContent>
+          </Card>
+
+          <Card className="border-slate-200 shadow-sm">
+            <CardHeader>
+              <CardTitle>Cost History</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid gap-4 rounded-lg border border-slate-200 bg-slate-50 p-4 sm:grid-cols-3">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Latest Cost</p>
+                  <p className="mt-1 text-2xl font-semibold text-[#0d1b34]">{formatRmb(latestCost?.unit_cost_rmb)}</p>
+                </div>
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Latest Date</p>
+                  <p className="mt-1 text-sm text-[#0d1b34]">
+                    {latestCost ? formatDate(latestCost.quoted_date) : "-"}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Source</p>
+                  <p className="mt-1 text-sm text-[#0d1b34]">{latestCost?.source ?? "-"}</p>
+                </div>
+              </div>
+
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Date</TableHead>
+                    <TableHead>Supplier</TableHead>
+                    <TableHead>Supplier Code</TableHead>
+                    <TableHead className="text-right">Unit Cost (RMB)</TableHead>
+                    <TableHead>Source</TableHead>
+                    <TableHead>Notes</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {costHistoryRows.length ? (
+                    costHistoryRows.map((row) => (
+                      <TableRow key={row.id}>
+                        <TableCell>{formatDate(row.quoted_date)}</TableCell>
+                        <TableCell>{row.supplier ? `${row.supplier.name} (${row.supplier.code})` : "-"}</TableCell>
+                        <TableCell>{row.supplier_product_code ?? "-"}</TableCell>
+                        <TableCell className="text-right font-medium text-[#0d1b34]">
+                          {formatRmb(row.unit_cost_rmb)}
+                        </TableCell>
+                        <TableCell>{row.source}</TableCell>
+                        <TableCell>{row.notes ?? "-"}</TableCell>
+                      </TableRow>
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell className="text-slate-500" colSpan={6}>
+                        No cost history yet.
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
             </CardContent>
           </Card>
 

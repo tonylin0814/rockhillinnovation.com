@@ -128,6 +128,19 @@ export type ProductImage = {
   url: string | null;
 };
 
+export type ProductCostHistory = {
+  id: string;
+  product_id: string;
+  supplier_id: string | null;
+  supplier_product_code: string | null;
+  quoted_date: string;
+  unit_cost_rmb: number;
+  source: string;
+  notes: string | null;
+  created_at: string;
+  supplier?: { id: string; code: string; name: string } | null;
+};
+
 export type ProductComponent = {
   id: string;
   set_product_id: string;
