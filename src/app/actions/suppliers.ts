@@ -34,10 +34,15 @@ const supplierSchema = z.object({
   address: z.string().trim().nullable(),
   bank_account_name: z.string().trim().nullable(),
   bank_account_number: z.string().trim().nullable(),
+  bank_currency: z.string().trim().nullable(),
   bank_name: z.string().trim().nullable(),
   bank_address: z.string().trim().nullable(),
+  bank_institution_no: z.string().trim().nullable(),
+  bank_transit_no: z.string().trim().nullable(),
   bank_cnaps_no: z.string().trim().nullable(),
   bank_swift_code: z.string().trim().nullable(),
+  bank_tel: z.string().trim().nullable(),
+  banking_instructions: z.string().trim().nullable(),
   notes: z.string().trim().nullable(),
 });
 
@@ -89,14 +94,27 @@ function valuesFromForm(formData: FormData, fallback?: Supplier) {
     bank_account_number: formData.has("bank_account_number")
       ? emptyToNull(formData.get("bank_account_number"))
       : fallback?.bank_account_number,
+    bank_currency: formData.has("bank_currency")
+      ? emptyToNull(formData.get("bank_currency"))
+      : fallback?.bank_currency,
     bank_name: formData.has("bank_name") ? emptyToNull(formData.get("bank_name")) : fallback?.bank_name,
     bank_address: formData.has("bank_address") ? emptyToNull(formData.get("bank_address")) : fallback?.bank_address,
+    bank_institution_no: formData.has("bank_institution_no")
+      ? emptyToNull(formData.get("bank_institution_no"))
+      : fallback?.bank_institution_no,
+    bank_transit_no: formData.has("bank_transit_no")
+      ? emptyToNull(formData.get("bank_transit_no"))
+      : fallback?.bank_transit_no,
     bank_cnaps_no: formData.has("bank_cnaps_no")
       ? emptyToNull(formData.get("bank_cnaps_no"))
       : fallback?.bank_cnaps_no,
     bank_swift_code: formData.has("bank_swift_code")
       ? emptyToNull(formData.get("bank_swift_code"))
       : fallback?.bank_swift_code,
+    bank_tel: formData.has("bank_tel") ? emptyToNull(formData.get("bank_tel")) : fallback?.bank_tel,
+    banking_instructions: formData.has("banking_instructions")
+      ? emptyToNull(formData.get("banking_instructions"))
+      : fallback?.banking_instructions,
     notes: formData.has("notes") ? emptyToNull(formData.get("notes")) : fallback?.notes,
   };
 }

@@ -190,12 +190,40 @@ export function SupplierFormDialog({ mode, initialData, trigger }: SupplierFormD
                 />
               </div>
               <div className="space-y-2">
+                <Label htmlFor="bank_currency">Currency</Label>
+                <Input
+                  defaultValue={initialData?.bank_currency ?? ""}
+                  disabled={isPending}
+                  id="bank_currency"
+                  name="bank_currency"
+                  placeholder="RMB, USD, CAD"
+                />
+              </div>
+              <div className="space-y-2">
                 <Label htmlFor="bank_name">Bank Name</Label>
                 <Input
                   defaultValue={initialData?.bank_name ?? ""}
                   disabled={isPending}
                   id="bank_name"
                   name="bank_name"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="bank_institution_no">Institution No.</Label>
+                <Input
+                  defaultValue={initialData?.bank_institution_no ?? ""}
+                  disabled={isPending}
+                  id="bank_institution_no"
+                  name="bank_institution_no"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="bank_transit_no">Transit / Branch No.</Label>
+                <Input
+                  defaultValue={initialData?.bank_transit_no ?? ""}
+                  disabled={isPending}
+                  id="bank_transit_no"
+                  name="bank_transit_no"
                 />
               </div>
               <div className="space-y-2">
@@ -207,13 +235,22 @@ export function SupplierFormDialog({ mode, initialData, trigger }: SupplierFormD
                   name="bank_cnaps_no"
                 />
               </div>
-              <div className="space-y-2 sm:col-span-2">
+              <div className="space-y-2">
                 <Label htmlFor="bank_swift_code">SWIFT Code</Label>
                 <Input
                   defaultValue={initialData?.bank_swift_code ?? ""}
                   disabled={isPending}
                   id="bank_swift_code"
                   name="bank_swift_code"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="bank_tel">Bank TEL</Label>
+                <Input
+                  defaultValue={initialData?.bank_tel ?? ""}
+                  disabled={isPending}
+                  id="bank_tel"
+                  name="bank_tel"
                 />
               </div>
             </div>
@@ -224,6 +261,17 @@ export function SupplierFormDialog({ mode, initialData, trigger }: SupplierFormD
                 disabled={isPending}
                 id="bank_address"
                 name="bank_address"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="banking_instructions">Banking Instructions</Label>
+              <Textarea
+                defaultValue={initialData?.banking_instructions ?? ""}
+                disabled={isPending}
+                id="banking_instructions"
+                name="banking_instructions"
+                placeholder="Paste country-specific wire instructions, intermediary bank details, ABA/BIC notes, or supplier-provided wording here."
+                rows={5}
               />
             </div>
           </div>

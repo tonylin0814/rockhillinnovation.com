@@ -65,10 +65,15 @@ export type Supplier = {
   address: string | null;
   bank_account_name: string | null;
   bank_account_number: string | null;
+  bank_currency: string | null;
   bank_name: string | null;
   bank_address: string | null;
+  bank_institution_no: string | null;
+  bank_transit_no: string | null;
   bank_cnaps_no: string | null;
   bank_swift_code: string | null;
+  bank_tel: string | null;
+  banking_instructions: string | null;
   notes: string | null;
   status: "active" | "inactive";
   created_at: string;

@@ -137,11 +137,16 @@ export default async function SupplierDetailPage({ params }: { params: { id: str
               <div className="grid gap-x-6 sm:grid-cols-2">
                 <DetailRow label="Account Name" value={supplier.bank_account_name} />
                 <DetailRow label="Account Number" value={supplier.bank_account_number} />
+                <DetailRow label="Currency" value={supplier.bank_currency} />
                 <DetailRow label="Bank Name" value={supplier.bank_name} />
+                <DetailRow label="Institution No." value={supplier.bank_institution_no} />
+                <DetailRow label="Transit / Branch No." value={supplier.bank_transit_no} />
                 <DetailRow label="CNAPS No." value={supplier.bank_cnaps_no} />
                 <DetailRow label="SWIFT Code" value={supplier.bank_swift_code} />
+                <DetailRow label="Bank TEL" value={supplier.bank_tel} />
               </div>
               <DetailRow label="Bank Address" value={supplier.bank_address} />
+              <DetailRow label="Banking Instructions" value={supplier.banking_instructions} />
             </CardContent>
           </Card>
 
