@@ -1,7 +1,65 @@
-export default function TradesPage() {
+import { NewTradeDialog, type TradeClientOption, type TradePartnerOption } from "@/components/trades/NewTradeDialog";
+import { TradesTable } from "@/components/trades/TradesTable";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { getCurrentUser } from "@/lib/auth";
+import { createServerSupabaseClient } from "@/lib/supabase/server";
+import type { Trade } from "@/types";
+
+export default async function TradesPage() {
+  const user = await getCurrentUser();
+  const supabase = createServerSupabaseClient();
+  const canCreateTrades = user?.role !== "partner";
+
+  const [{ data: trades, error: tradesError }, { data: clients, error: clientsError }, { data: partners, error: partnersError }] =
+    await Promise.all([
+      supabase
+        .from("trades")
+        .select("*, client:clients(id, name, code)")
+        .order("trade_date", { ascending: false }),
+      canCreateTrades
+        ? supabase.from("clients").select("id, name, code").eq("status", "active").order("name", { ascending: true })
+        : Promise.resolve({ data: [], error: null }),
+      canCreateTrades
+        ? supabase
+            .from("users")
+            .select("id, name, email")
+            .eq("role", "partner")
+            .eq("is_active", true)
+            .order("name", { ascending: true })
+        : Promise.resolve({ data: [], error: null }),
+    ]);
+
+  if (tradesError || clientsError || partnersError) {
+    return (
+      <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm font-medium text-red-700">
+        {tradesError?.message ?? clientsError?.message ?? partnersError?.message}
+      </div>
+    );
+  }
+
   return (
-    <div className="flex min-h-[calc(100vh-8rem)] items-center justify-center">
-      <h1 className="text-3xl font-semibold text-slate-950">Trades - coming soon</h1>
-    </div>
+    <section className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Operations</p>
+          <h1 className="mt-2 text-3xl font-semibold text-[#0d1b34]">Trades</h1>
+        </div>
+        {canCreateTrades ? (
+          <NewTradeDialog
+            clients={(clients ?? []) as TradeClientOption[]}
+            partners={(partners ?? []) as TradePartnerOption[]}
+          />
+        ) : null}
+      </div>
+
+      <Card className="border-slate-200 shadow-sm">
+        <CardHeader>
+          <CardTitle>Trade List</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <TradesTable trades={(trades ?? []) as Trade[]} />
+        </CardContent>
+      </Card>
+    </section>
   );
 }

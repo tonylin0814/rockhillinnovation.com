@@ -99,3 +99,27 @@ export type ProductComponent = {
   notes: string | null;
   component?: Product | null;
 };
+
+export type Trade = {
+  id: string;
+  trade_id: string;
+  order_number: string | null;
+  trade_date: string;
+  client_id: string;
+  status: "draft" | "active" | "settled" | "archived";
+  working_exchange_rate: number | null;
+  corporate_tax_rate: number;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+  client?: { id: string; name: string; code: string } | null;
+};
+
+export type TradeParticipant = {
+  id: string;
+  trade_id: string;
+  user_id: string;
+  added_at: string;
+  added_by: string | null;
+  user?: { id: string; name: string; email: string; role: string } | null;
+};
