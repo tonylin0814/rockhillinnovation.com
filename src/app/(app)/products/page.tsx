@@ -55,6 +55,7 @@ export default async function ProductsPage() {
         <div className="flex flex-wrap items-center justify-end gap-2">
           <ProductFormDialog defaultProductType="part" mode="create" suppliers={supplierOptions} />
           <ProductFormDialog
+            availableProducts={standardProducts}
             defaultProductType="set"
             mode="create"
             suppliers={supplierOptions}

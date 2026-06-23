@@ -1,11 +1,11 @@
 "use client";
 
-import { Loader2, Plus } from "lucide-react";
+import { Loader2, Plus, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { FormEvent, ReactNode, useEffect, useState, useTransition } from "react";
 import { toast } from "sonner";
 
-import { createProduct, updateProduct } from "@/app/actions/products";
+import { createProduct, saveSetComponents, updateProduct } from "@/app/actions/products";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -25,6 +25,14 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import type { Product } from "@/types";
 
 export type ProductSupplierOption = {
@@ -36,12 +44,21 @@ export type ProductSupplierOption = {
 type ProductFormDialogProps = {
   mode: "create" | "edit";
   suppliers: ProductSupplierOption[];
+  availableProducts?: Product[];
   defaultProductType?: Product["product_type"];
   initialData?: Product;
   trigger?: ReactNode;
 };
 
+type SetComponentDraft = {
+  rowKey: string;
+  component_product_id: string;
+  quantity_per_set: number;
+  component: Product | null;
+};
+
 export function ProductFormDialog({
+  availableProducts = [],
   mode,
   suppliers,
   defaultProductType = "part",
@@ -61,6 +78,7 @@ export function ProductFormDialog({
   const [packagingRequired, setPackagingRequired] = useState(initialData?.packaging_required ?? false);
   const [qtyPerCarton, setQtyPerCarton] = useState(initialData?.qty_per_carton?.toString() ?? "");
   const [cartonsPerPallet, setCartonsPerPallet] = useState(initialData?.cartons_per_pallet?.toString() ?? "");
+  const [setComponentRows, setSetComponentRows] = useState<SetComponentDraft[]>([]);
   const [isPending, startTransition] = useTransition();
   const qtyItemsPerPallet = Number(qtyPerCarton) > 0 && Number(cartonsPerPallet) > 0
     ? Number(qtyPerCarton) * Number(cartonsPerPallet)
@@ -75,8 +93,68 @@ export function ProductFormDialog({
       setPackagingRequired(initialData?.packaging_required ?? false);
       setQtyPerCarton(initialData?.qty_per_carton?.toString() ?? "");
       setCartonsPerPallet(initialData?.cartons_per_pallet?.toString() ?? "");
+      setSetComponentRows([]);
     }
   }, [defaultProductType, initialData, open]);
+
+  function addSetComponentRow() {
+    setSetComponentRows((currentRows) => [
+      ...currentRows,
+      {
+        rowKey: crypto.randomUUID(),
+        component: null,
+        component_product_id: "",
+        quantity_per_set: 1,
+      },
+    ]);
+  }
+
+  function updateSetComponent(index: number, productId: string) {
+    const product = availableProducts.find((availableProduct) => availableProduct.id === productId) ?? null;
+
+    setSetComponentRows((currentRows) =>
+      currentRows.map((row, rowIndex) =>
+        rowIndex === index
+          ? {
+              ...row,
+              component: product,
+              component_product_id: product?.id ?? "",
+            }
+          : row
+      )
+    );
+  }
+
+  function updateSetComponentQty(index: number, quantity: number) {
+    setSetComponentRows((currentRows) =>
+      currentRows.map((row, rowIndex) =>
+        rowIndex === index ? { ...row, quantity_per_set: quantity > 0 ? quantity : 1 } : row
+      )
+    );
+  }
+
+  function removeSetComponentRow(index: number) {
+    setSetComponentRows((currentRows) => currentRows.filter((_, rowIndex) => rowIndex !== index));
+  }
+
+  function validateSetComponents() {
+    if (productType !== "set" || mode !== "create" || !setComponentRows.length) {
+      return null;
+    }
+
+    const selectedIds = setComponentRows.map((row) => row.component_product_id).filter(Boolean);
+    const uniqueIds = new Set(selectedIds);
+
+    if (selectedIds.length !== setComponentRows.length) {
+      return "Select an English name for every component row";
+    }
+
+    if (uniqueIds.size !== selectedIds.length) {
+      return "A component can only be added once";
+    }
+
+    return null;
+  }
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -89,12 +167,35 @@ export function ProductFormDialog({
     formData.set("packaging_required", packagingRequired ? "true" : "false");
 
     startTransition(async () => {
+      const componentError = validateSetComponents();
+
+      if (componentError) {
+        setError(componentError);
+        return;
+      }
+
       const result =
         mode === "create" ? await createProduct(formData) : await updateProduct(initialData?.id ?? "", formData);
 
       if (result.error) {
         setError(result.error);
         return;
+      }
+
+      if (mode === "create" && productType === "set" && result.id && setComponentRows.length) {
+        const componentResult = await saveSetComponents(
+          result.id,
+          setComponentRows.map((row, index) => ({
+            component_product_id: row.component_product_id,
+            quantity_per_set: row.quantity_per_set,
+            sort_order: index + 1,
+          }))
+        );
+
+        if (componentResult.error) {
+          setError(componentResult.error);
+          return;
+        }
       }
 
       setOpen(false);
@@ -117,7 +218,7 @@ export function ProductFormDialog({
           </Button>
         )}
       </DialogTrigger>
-      <DialogContent className="sm:max-w-2xl">
+      <DialogContent className="sm:max-w-5xl">
         <DialogHeader>
           <DialogTitle>{mode === "create" ? "Add Product" : "Edit Product"}</DialogTitle>
           <DialogDescription>
@@ -231,6 +332,107 @@ export function ProductFormDialog({
               <Textarea defaultValue={initialData?.notes ?? ""} disabled={isPending} id="notes" name="notes" />
             </div>
           </section>
+
+          {mode === "create" && productType === "set" ? (
+            <section className="space-y-4 rounded-lg border-2 border-slate-300 p-4">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <h3 className="text-sm font-semibold uppercase tracking-wide text-blue-700">Set Components</h3>
+                  <p className="text-xs text-slate-500">Select each product in the set and enter the quantity needed.</p>
+                </div>
+                <Button
+                  disabled={isPending || setComponentRows.length >= availableProducts.length}
+                  onClick={addSetComponentRow}
+                  type="button"
+                  variant="outline"
+                >
+                  <Plus className="mr-2 h-4 w-4" />
+                  Add Component Row
+                </Button>
+              </div>
+
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Rock Hill Code</TableHead>
+                    <TableHead>Product English Name</TableHead>
+                    <TableHead>Supplier</TableHead>
+                    <TableHead className="w-32">Qty Needed</TableHead>
+                    <TableHead className="w-16 text-right">Remove</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {setComponentRows.length ? (
+                    setComponentRows.map((row, index) => (
+                      <TableRow key={row.rowKey}>
+                        <TableCell className="font-semibold text-[#0d1b34]">{row.component?.code ?? "-"}</TableCell>
+                        <TableCell>
+                          <Select
+                            disabled={isPending}
+                            onValueChange={(value) => updateSetComponent(index, value)}
+                            value={row.component_product_id}
+                          >
+                            <SelectTrigger className="min-w-64 bg-white">
+                              <SelectValue placeholder="Select product" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {availableProducts
+                                .filter((product) => {
+                                  if (product.id === row.component_product_id) {
+                                    return true;
+                                  }
+
+                                  return !setComponentRows.some(
+                                    (existingRow, rowIndex) =>
+                                      rowIndex !== index && existingRow.component_product_id === product.id
+                                  );
+                                })
+                                .map((product) => (
+                                  <SelectItem key={product.id} value={product.id}>
+                                    {product.name_english}
+                                  </SelectItem>
+                                ))}
+                            </SelectContent>
+                          </Select>
+                        </TableCell>
+                        <TableCell>{row.component?.supplier?.code ?? "-"}</TableCell>
+                        <TableCell>
+                          <Input
+                            className="w-24"
+                            disabled={isPending}
+                            min={1}
+                            onChange={(event) =>
+                              updateSetComponentQty(index, Number(event.currentTarget.value) || 1)
+                            }
+                            type="number"
+                            value={row.quantity_per_set}
+                          />
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Button
+                            aria-label="Remove component"
+                            disabled={isPending}
+                            onClick={() => removeSetComponentRow(index)}
+                            size="icon"
+                            type="button"
+                            variant="ghost"
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell className="text-slate-500" colSpan={5}>
+                        No components added yet.
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </section>
+          ) : null}
 
           <section className="space-y-3 rounded-lg border-2 border-slate-300 p-4">
             <div className="flex flex-wrap items-center justify-between gap-3">
