@@ -29,3 +29,26 @@ export type Client = {
   status: "active" | "inactive";
   created_at: string;
 };
+
+export type SupplierContact = {
+  name: string;
+  role: string;
+  email: string;
+  wechat: string;
+  phone: string;
+};
+
+export type Supplier = {
+  id: string;
+  code: string;
+  name: string;
+  name_chinese: string | null;
+  country: string | null;
+  currency: string;
+  invoice_format: "image" | "excel";
+  contacts: SupplierContact[];
+  address: string | null;
+  notes: string | null;
+  status: "active" | "inactive";
+  created_at: string;
+};
