@@ -110,7 +110,7 @@ export function NewTradeDialog({
                 <SelectContent>
                   {clients.map((client) => (
                     <SelectItem key={client.id} value={client.id}>
-                      {client.name} ({client.code})
+                      {client.code}
                     </SelectItem>
                   ))}
                 </SelectContent>

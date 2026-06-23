@@ -125,7 +125,7 @@ export function ProductsTable({ mode = "products", products }: { mode?: Products
                 {mode === "products" ? <TableCell>{product.supplier_product_code ?? "-"}</TableCell> : null}
                 <TableCell>{product.name_english}</TableCell>
                 <TableCell>{product.name_chinese ?? "-"}</TableCell>
-                {mode === "products" ? <TableCell>{product.supplier?.name ?? "-"}</TableCell> : null}
+                {mode === "products" ? <TableCell>{product.supplier?.code ?? "-"}</TableCell> : null}
                 {mode === "products" ? (
                   <TableCell>
                     <PaymentCategoryBadge category={product.payment_category} />

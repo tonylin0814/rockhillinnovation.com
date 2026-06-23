@@ -73,7 +73,7 @@ export default async function ClientDetailPage({ params }: { params: { id: strin
           ← Clients
         </Link>
         <div className="mt-4 flex flex-wrap items-center gap-3">
-          <h1 className="text-3xl font-semibold text-[#0d1b34]">{client.name}</h1>
+          <h1 className="text-3xl font-semibold text-[#0d1b34]">{client.code}</h1>
           <StatusBadge status={client.status} />
         </div>
       </div>

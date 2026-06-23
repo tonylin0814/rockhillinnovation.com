@@ -107,7 +107,7 @@ export default async function ProductDetailPage({ params }: { params: { id: stri
     { data: costHistory, error: costHistoryError },
   ] = await Promise.all([
     supabase.from("products").select("*, supplier:suppliers(id, name, code)").eq("id", params.id).maybeSingle(),
-    supabase.from("suppliers").select("id, name, code").eq("status", "active").order("name", { ascending: true }),
+    supabase.from("suppliers").select("id, name, code").eq("status", "active").order("code", { ascending: true }),
     supabase
       .from("products")
       .select("*, supplier:suppliers(id, name, code)")
@@ -203,7 +203,7 @@ export default async function ProductDetailPage({ params }: { params: { id: stri
                 </div>
                 <DetailRow
                   label="Supplier"
-                  value={product.supplier ? `${product.supplier.name} (${product.supplier.code})` : null}
+                  value={product.supplier?.code ?? null}
                 />
                 <div className="border-b border-slate-100 py-3">
                   <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Payment Category</p>

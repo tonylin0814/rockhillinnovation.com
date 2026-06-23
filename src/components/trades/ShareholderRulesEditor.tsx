@@ -204,7 +204,7 @@ export function ShareholderRulesEditor({
                           Yes
                         </label>
                       ) : row.invoices_through_entity ? (
-                        vendor ? `Yes (${vendor.name})` : "Yes"
+                        vendor ? `Yes (${vendor.code})` : "Yes"
                       ) : (
                         "No"
                       )}
@@ -222,13 +222,13 @@ export function ShareholderRulesEditor({
                             <SelectItem value="none">None</SelectItem>
                             {availableVendors.map((availableVendor) => (
                               <SelectItem key={availableVendor.id} value={availableVendor.id}>
-                                {availableVendor.name} ({availableVendor.code})
+                                {availableVendor.code}
                               </SelectItem>
                             ))}
                           </SelectContent>
                         </Select>
                       ) : vendor ? (
-                        `${vendor.name} (${vendor.code})`
+                        vendor.code
                       ) : (
                         "-"
                       )}

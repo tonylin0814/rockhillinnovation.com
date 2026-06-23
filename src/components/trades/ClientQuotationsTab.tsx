@@ -139,7 +139,7 @@ export function ClientQuotationsTab({
                       </div>
                       {session.client ? (
                         <p className="mt-2 text-sm text-slate-500">
-                          Client: {session.client.name} ({session.client.code})
+                          Client: {session.client.code}
                         </p>
                       ) : null}
                       {session.notes ? <p className="mt-2 text-sm text-slate-500">{session.notes}</p> : null}

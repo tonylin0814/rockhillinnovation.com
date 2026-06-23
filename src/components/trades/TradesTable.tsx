@@ -65,6 +65,7 @@ export function TradesTable({ trades }: { trades: Trade[] }) {
       const matchesSearch =
         !normalizedSearch ||
         trade.trade_id.toLowerCase().includes(normalizedSearch) ||
+        (trade.client?.code ?? "").toLowerCase().includes(normalizedSearch) ||
         (trade.order_number ?? "").toLowerCase().includes(normalizedSearch);
 
       return matchesStatus && matchesSearch;
@@ -121,8 +122,7 @@ export function TradesTable({ trades }: { trades: Trade[] }) {
                 <TableCell>
                   {trade.client ? (
                     <span>
-                      <span className="font-medium text-[#0d1b34]">{trade.client.name}</span>
-                      <span className="ml-2 text-xs text-slate-500">{trade.client.code}</span>
+                      <span className="font-medium text-[#0d1b34]">{trade.client.code}</span>
                     </span>
                   ) : (
                     "-"

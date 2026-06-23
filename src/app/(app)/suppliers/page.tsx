@@ -61,7 +61,7 @@ export default async function SuppliersPage() {
   }
 
   const supabase = createServerSupabaseClient();
-  const { data: suppliers, error } = await supabase.from("suppliers").select("*").order("name", { ascending: true });
+  const { data: suppliers, error } = await supabase.from("suppliers").select("*").order("code", { ascending: true });
 
   if (error) {
     return (
@@ -90,7 +90,6 @@ export default async function SuppliersPage() {
             <TableHeader>
               <TableRow>
                 <TableHead>Code</TableHead>
-                <TableHead>Name</TableHead>
                 <TableHead>Chinese Name</TableHead>
                 <TableHead>Country</TableHead>
                 <TableHead>Invoice Format</TableHead>
@@ -103,7 +102,6 @@ export default async function SuppliersPage() {
                 (suppliers as Supplier[]).map((supplier) => (
                   <TableRow key={supplier.id}>
                     <TableCell className="font-semibold text-[#0d1b34]">{supplier.code}</TableCell>
-                    <TableCell>{supplier.name}</TableCell>
                     <TableCell>{supplier.name_chinese ?? "—"}</TableCell>
                     <TableCell>{supplier.country ?? "—"}</TableCell>
                     <TableCell>
@@ -121,7 +119,7 @@ export default async function SuppliersPage() {
                 ))
               ) : (
                 <TableRow>
-                  <TableCell className="text-slate-500" colSpan={7}>
+                  <TableCell className="text-slate-500" colSpan={6}>
                     No suppliers yet.
                   </TableCell>
                 </TableRow>

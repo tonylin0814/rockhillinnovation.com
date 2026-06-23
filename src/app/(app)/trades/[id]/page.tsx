@@ -149,7 +149,7 @@ export default async function TradeWorkspacePage({ params }: { params: { id: str
           .select("id, name, email")
           .eq("role", "partner")
           .eq("is_active", true)
-          .order("name", { ascending: true })
+          .order("code", { ascending: true })
       : Promise.resolve({ data: [], error: null }),
     supabase
       .from("order_lines")
@@ -175,7 +175,7 @@ export default async function TradeWorkspacePage({ params }: { params: { id: str
       .from("expense_vendors")
       .select("id, name, code")
       .eq("status", "active")
-      .order("name", { ascending: true }),
+      .order("code", { ascending: true }),
     supabase
       .from("supplier_quote_sessions")
       .select("*")
@@ -346,7 +346,7 @@ export default async function TradeWorkspacePage({ params }: { params: { id: str
                   <DetailRow label="Trade Date" value={formatDate(trade.trade_date)} />
                   <DetailRow
                     label="Client"
-                    value={trade.client ? `${trade.client.name} (${trade.client.code})` : null}
+                    value={trade.client?.code ?? null}
                   />
                   <DetailRow label="Working Exchange Rate" value={formatRate(trade.working_exchange_rate)} />
                   <DetailRow label="Corporate Tax Rate" value={formatTaxPercent(trade.corporate_tax_rate)} />

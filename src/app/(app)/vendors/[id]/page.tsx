@@ -96,7 +96,7 @@ export default async function VendorDetailPage({ params }: { params: { id: strin
           ← Vendors
         </Link>
         <div className="mt-4 flex flex-wrap items-center gap-3">
-          <h1 className="text-3xl font-semibold text-[#0d1b34]">{vendor.name}</h1>
+          <h1 className="text-3xl font-semibold text-[#0d1b34]">{vendor.code}</h1>
           <StatusBadge status={vendor.status} />
         </div>
       </div>

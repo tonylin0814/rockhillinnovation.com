@@ -71,7 +71,7 @@ export default async function VendorsPage() {
   const { data: vendors, error } = await supabase
     .from("expense_vendors")
     .select("*")
-    .order("name", { ascending: true });
+    .order("code", { ascending: true });
 
   if (error) {
     return (
@@ -100,7 +100,6 @@ export default async function VendorsPage() {
             <TableHeader>
               <TableRow>
                 <TableHead>Code</TableHead>
-                <TableHead>Name</TableHead>
                 <TableHead>Type</TableHead>
                 <TableHead>Country</TableHead>
                 <TableHead>Letterhead</TableHead>
@@ -113,7 +112,6 @@ export default async function VendorsPage() {
                 (vendors as ExpenseVendor[]).map((vendor) => (
                   <TableRow key={vendor.id}>
                     <TableCell className="font-semibold text-[#0d1b34]">{vendor.code}</TableCell>
-                    <TableCell>{vendor.name}</TableCell>
                     <TableCell>
                       <VendorTypeBadge type={vendor.vendor_type} />
                     </TableCell>
@@ -137,7 +135,7 @@ export default async function VendorsPage() {
                 ))
               ) : (
                 <TableRow>
-                  <TableCell className="text-slate-500" colSpan={7}>
+                  <TableCell className="text-slate-500" colSpan={6}>
                     No vendors yet.
                   </TableCell>
                 </TableRow>

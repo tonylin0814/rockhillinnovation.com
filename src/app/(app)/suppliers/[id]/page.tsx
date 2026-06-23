@@ -88,7 +88,7 @@ export default async function SupplierDetailPage({ params }: { params: { id: str
           ← Suppliers
         </Link>
         <div className="mt-4 flex flex-wrap items-center gap-3">
-          <h1 className="text-3xl font-semibold text-[#0d1b34]">{supplier.name}</h1>
+          <h1 className="text-3xl font-semibold text-[#0d1b34]">{supplier.code}</h1>
           <StatusBadge status={supplier.status} />
         </div>
       </div>

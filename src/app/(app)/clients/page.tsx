@@ -46,7 +46,7 @@ export default async function ClientsPage() {
   }
 
   const supabase = createServerSupabaseClient();
-  const { data: clients, error } = await supabase.from("clients").select("*").order("name", { ascending: true });
+  const { data: clients, error } = await supabase.from("clients").select("*").order("code", { ascending: true });
 
   if (error) {
     return (
@@ -75,7 +75,6 @@ export default async function ClientsPage() {
             <TableHeader>
               <TableRow>
                 <TableHead>Code</TableHead>
-                <TableHead>Name</TableHead>
                 <TableHead>Country</TableHead>
                 <TableHead>Currency</TableHead>
                 <TableHead>Payment Terms</TableHead>
@@ -88,7 +87,6 @@ export default async function ClientsPage() {
                 (clients as Client[]).map((client) => (
                   <TableRow key={client.id}>
                     <TableCell className="font-semibold text-[#0d1b34]">{client.code}</TableCell>
-                    <TableCell>{client.name}</TableCell>
                     <TableCell>{client.country ?? "—"}</TableCell>
                     <TableCell>{client.currency}</TableCell>
                     <TableCell>
@@ -106,7 +104,7 @@ export default async function ClientsPage() {
                 ))
               ) : (
                 <TableRow>
-                  <TableCell className="text-slate-500" colSpan={7}>
+                  <TableCell className="text-slate-500" colSpan={6}>
                     No clients yet.
                   </TableCell>
                 </TableRow>

@@ -188,7 +188,7 @@ export function ProductFormDialog({
                   <SelectItem value="none">None</SelectItem>
                   {suppliers.map((supplier) => (
                     <SelectItem key={supplier.id} value={supplier.id}>
-                      {supplier.name} ({supplier.code})
+                      {supplier.code}
                     </SelectItem>
                   ))}
                 </SelectContent>
