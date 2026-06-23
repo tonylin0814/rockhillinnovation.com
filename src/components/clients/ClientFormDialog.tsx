@@ -134,6 +134,16 @@ export function ClientFormDialog({ mode, initialData, trigger }: ClientFormDialo
               <Input defaultValue={initialData?.dba_name ?? ""} disabled={isPending} id="dba_name" name="dba_name" />
             </div>
             <div className="space-y-2">
+              <Label htmlFor="website">Website</Label>
+              <Input
+                defaultValue={initialData?.website ?? ""}
+                disabled={isPending}
+                id="website"
+                name="website"
+                placeholder="https://example.com"
+              />
+            </div>
+            <div className="space-y-2">
               <Label htmlFor="country">Country</Label>
               <Input defaultValue={initialData?.country ?? ""} disabled={isPending} id="country" name="country" />
             </div>

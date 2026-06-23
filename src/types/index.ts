@@ -23,6 +23,7 @@ export type Client = {
   code: string;
   name: string;
   dba_name: string | null;
+  website: string | null;
   country: string | null;
   currency: string;
   deposit_pct: number;

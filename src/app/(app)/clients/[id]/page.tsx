@@ -98,6 +98,7 @@ export default async function ClientDetailPage({ params }: { params: { id: strin
                 <DetailRow label="Company Name" value={client.name} />
                 <DetailRow label="Client Code" value={client.code} />
                 <DetailRow label="DBA Name" value={client.dba_name} />
+                <DetailRow label="Website" value={client.website} />
                 <DetailRow label="Country" value={client.country} />
                 <DetailRow label="Currency" value={client.currency} />
                 <DetailRow label="Deposit %" value={`${client.deposit_pct}%`} />
