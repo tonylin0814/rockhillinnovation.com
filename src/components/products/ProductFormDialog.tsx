@@ -214,6 +214,87 @@ export function ProductFormDialog({
             ) : null}
           </div>
 
+          <div className="space-y-3">
+            <div>
+              <h3 className="text-sm font-semibold text-[#0d1b34]">Packaging Information</h3>
+              <p className="text-xs text-slate-500">Carton and pallet details for shipping and production planning.</p>
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              <div className="space-y-2">
+                <Label htmlFor="qty_per_carton">Qty per Carton</Label>
+                <Input
+                  defaultValue={initialData?.qty_per_carton ?? ""}
+                  disabled={isPending}
+                  id="qty_per_carton"
+                  min="0"
+                  name="qty_per_carton"
+                  step="1"
+                  type="number"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="carton_height_cm">Carton Height (cm)</Label>
+                <Input
+                  defaultValue={initialData?.carton_height_cm ?? ""}
+                  disabled={isPending}
+                  id="carton_height_cm"
+                  min="0"
+                  name="carton_height_cm"
+                  step="0.01"
+                  type="number"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="carton_width_cm">Carton Width (cm)</Label>
+                <Input
+                  defaultValue={initialData?.carton_width_cm ?? ""}
+                  disabled={isPending}
+                  id="carton_width_cm"
+                  min="0"
+                  name="carton_width_cm"
+                  step="0.01"
+                  type="number"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="carton_length_cm">Carton Length (cm)</Label>
+                <Input
+                  defaultValue={initialData?.carton_length_cm ?? ""}
+                  disabled={isPending}
+                  id="carton_length_cm"
+                  min="0"
+                  name="carton_length_cm"
+                  step="0.01"
+                  type="number"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="carton_weight_kg">Carton Weight (kg)</Label>
+                <Input
+                  defaultValue={initialData?.carton_weight_kg ?? ""}
+                  disabled={isPending}
+                  id="carton_weight_kg"
+                  min="0"
+                  name="carton_weight_kg"
+                  step="0.01"
+                  type="number"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="cartons_per_pallet">Cartons per Pallet</Label>
+                <Input
+                  defaultValue={initialData?.cartons_per_pallet ?? ""}
+                  disabled={isPending}
+                  id="cartons_per_pallet"
+                  min="0"
+                  name="cartons_per_pallet"
+                  step="1"
+                  type="number"
+                />
+              </div>
+            </div>
+          </div>
+
           <div className="space-y-2">
             <Label htmlFor="notes">Notes</Label>
             <Textarea defaultValue={initialData?.notes ?? ""} disabled={isPending} id="notes" name="notes" />

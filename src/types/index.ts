@@ -114,6 +114,12 @@ export type Product = {
   payment_category: "outsourced" | "produced" | null;
   status: "active" | "inactive";
   notes: string | null;
+  qty_per_carton: number | null;
+  carton_height_cm: number | null;
+  carton_width_cm: number | null;
+  carton_length_cm: number | null;
+  carton_weight_kg: number | null;
+  cartons_per_pallet: number | null;
   product_images: ProductImage[];
   created_at: string;
   updated_at: string;
@@ -135,6 +141,9 @@ export type ProductCostHistory = {
   supplier_product_code: string | null;
   quoted_date: string;
   unit_cost_rmb: number;
+  moq: string | null;
+  quality: string | null;
+  carton_box_packaging: string | null;
   source: string;
   notes: string | null;
   created_at: string;

@@ -78,6 +78,14 @@ function formatRmb(value: number | null | undefined) {
   return typeof value === "number" ? `¥${value.toFixed(4)}` : "-";
 }
 
+function formatPackagingValue(value: number | null | undefined, suffix = "") {
+  if (typeof value !== "number") {
+    return "-";
+  }
+
+  return `${Number.isInteger(value) ? value.toFixed(0) : value.toString()}${suffix}`;
+}
+
 function formatDate(value: string) {
   return new Intl.DateTimeFormat("en-US", {
     dateStyle: "medium",
@@ -145,7 +153,7 @@ export default async function ProductDetailPage({ params }: { params: { id: stri
     const { data: components, error: componentsError } = await supabase
       .from("product_components")
       .select(
-        "*, component:products(id, code, supplier_product_code, name_english, name_chinese, product_type, supplier_id, payment_category, status, notes, created_at, updated_at, supplier:suppliers(id, name, code))"
+        "*, component:products(id, code, supplier_product_code, name_english, name_chinese, product_type, supplier_id, payment_category, status, notes, qty_per_carton, carton_height_cm, carton_width_cm, carton_length_cm, carton_weight_kg, cartons_per_pallet, product_images, created_at, updated_at, supplier:suppliers(id, name, code))"
       )
       .eq("set_product_id", params.id)
       .order("sort_order", { ascending: true });
@@ -216,6 +224,37 @@ export default async function ProductDetailPage({ params }: { params: { id: stri
             </CardContent>
           </Card>
 
+          {product.product_type === "set" ? (
+            <Card className="border-slate-200 shadow-sm">
+              <CardHeader>
+                <CardTitle>Set Builder</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <SetComponentsEditor
+                  availableProducts={availableProductOptions}
+                  initialComponents={setComponents}
+                  setProductId={product.id}
+                />
+              </CardContent>
+            </Card>
+          ) : null}
+
+          <Card className="border-slate-200 shadow-sm">
+            <CardHeader>
+              <CardTitle>Packaging Information</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid gap-x-6 sm:grid-cols-2">
+                <DetailRow label="Qty per Carton" value={formatPackagingValue(product.qty_per_carton)} />
+                <DetailRow label="Carton Height" value={formatPackagingValue(product.carton_height_cm, " cm")} />
+                <DetailRow label="Carton Width" value={formatPackagingValue(product.carton_width_cm, " cm")} />
+                <DetailRow label="Carton Length" value={formatPackagingValue(product.carton_length_cm, " cm")} />
+                <DetailRow label="Carton Weight" value={formatPackagingValue(product.carton_weight_kg, " kg")} />
+                <DetailRow label="Cartons per Pallet" value={formatPackagingValue(product.cartons_per_pallet)} />
+              </div>
+            </CardContent>
+          </Card>
+
           <Card className="border-slate-200 shadow-sm">
             <CardHeader>
               <CardTitle>Product Images</CardTitle>
@@ -252,8 +291,11 @@ export default async function ProductDetailPage({ params }: { params: { id: stri
                   <TableRow>
                     <TableHead>Date</TableHead>
                     <TableHead>Supplier Code</TableHead>
+                    <TableHead>MOQ</TableHead>
+                    <TableHead>Quality</TableHead>
+                    <TableHead>Carton Box Packaging</TableHead>
                     <TableHead className="text-right">Unit Cost (RMB)</TableHead>
-                    <TableHead className="min-w-[18rem]">Notes</TableHead>
+                    <TableHead className="min-w-[20rem]">Notes</TableHead>
                     <TableHead>Source</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -263,6 +305,9 @@ export default async function ProductDetailPage({ params }: { params: { id: stri
                       <TableRow key={row.id}>
                         <TableCell>{formatDate(row.quoted_date)}</TableCell>
                         <TableCell>{row.supplier_product_code ?? "-"}</TableCell>
+                        <TableCell>{row.moq ?? "-"}</TableCell>
+                        <TableCell>{row.quality ?? "-"}</TableCell>
+                        <TableCell>{row.carton_box_packaging ?? "-"}</TableCell>
                         <TableCell className="text-right font-medium text-[#0d1b34]">
                           {formatRmb(row.unit_cost_rmb)}
                         </TableCell>
@@ -272,7 +317,7 @@ export default async function ProductDetailPage({ params }: { params: { id: stri
                     ))
                   ) : (
                     <TableRow>
-                      <TableCell className="text-slate-500" colSpan={5}>
+                      <TableCell className="text-slate-500" colSpan={8}>
                         No cost history yet.
                       </TableCell>
                     </TableRow>
@@ -281,21 +326,6 @@ export default async function ProductDetailPage({ params }: { params: { id: stri
               </Table>
             </CardContent>
           </Card>
-
-          {product.product_type === "set" ? (
-            <Card className="border-slate-200 shadow-sm">
-              <CardHeader>
-                <CardTitle>Set Builder</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <SetComponentsEditor
-                  availableProducts={availableProductOptions}
-                  initialComponents={setComponents}
-                  setProductId={product.id}
-                />
-              </CardContent>
-            </Card>
-          ) : null}
         </div>
 
         <div>

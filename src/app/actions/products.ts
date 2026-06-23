@@ -31,6 +31,12 @@ const productSchema = z
     payment_category: z.enum(["outsourced", "produced"]).nullable(),
     status: z.enum(["active", "inactive"]).default("active"),
     notes: z.string().trim().nullable(),
+    qty_per_carton: nullableNonNegativeNumber(),
+    carton_height_cm: nullableNonNegativeNumber(),
+    carton_width_cm: nullableNonNegativeNumber(),
+    carton_length_cm: nullableNonNegativeNumber(),
+    carton_weight_kg: nullableNonNegativeNumber(),
+    cartons_per_pallet: nullableNonNegativeNumber(),
   })
   .superRefine((value, context) => {
     if (value.product_type === "part" && !value.payment_category) {
@@ -73,6 +79,23 @@ function emptyToNull(value: FormDataEntryValue | null) {
   return trimmed.length && trimmed !== "none" ? trimmed : null;
 }
 
+function nullableNonNegativeNumber() {
+  return z.preprocess(
+    (value) => {
+      if (value === null || typeof value === "undefined") {
+        return null;
+      }
+
+      if (typeof value === "string" && value.trim() === "") {
+        return null;
+      }
+
+      return value;
+    },
+    z.coerce.number().nonnegative("Value cannot be negative").nullable()
+  );
+}
+
 function valuesFromForm(formData: FormData, fallback?: Product) {
   const productType = formData.has("product_type")
     ? formData.get("product_type") || "part"
@@ -95,6 +118,22 @@ function valuesFromForm(formData: FormData, fallback?: Product) {
         : null,
     status: formData.has("status") ? formData.get("status") || "active" : fallback?.status ?? "active",
     notes: formData.has("notes") ? emptyToNull(formData.get("notes")) : fallback?.notes,
+    qty_per_carton: formData.has("qty_per_carton") ? formData.get("qty_per_carton") : fallback?.qty_per_carton ?? null,
+    carton_height_cm: formData.has("carton_height_cm")
+      ? formData.get("carton_height_cm")
+      : fallback?.carton_height_cm ?? null,
+    carton_width_cm: formData.has("carton_width_cm")
+      ? formData.get("carton_width_cm")
+      : fallback?.carton_width_cm ?? null,
+    carton_length_cm: formData.has("carton_length_cm")
+      ? formData.get("carton_length_cm")
+      : fallback?.carton_length_cm ?? null,
+    carton_weight_kg: formData.has("carton_weight_kg")
+      ? formData.get("carton_weight_kg")
+      : fallback?.carton_weight_kg ?? null,
+    cartons_per_pallet: formData.has("cartons_per_pallet")
+      ? formData.get("cartons_per_pallet")
+      : fallback?.cartons_per_pallet ?? null,
   };
 }
 
