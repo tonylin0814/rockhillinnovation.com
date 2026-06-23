@@ -225,3 +225,21 @@ export type ClientQuotationLine = {
   notes: string | null;
   product?: { id: string; code: string; name_english: string } | null;
 };
+
+export type TradeDocument = {
+  id: string;
+  trade_id: string;
+  document_category: "design" | "shipping" | "supplier_quote" | "client_quotation" | "invoice" | "approval" | "other";
+  document_type: string | null;
+  file_name: string;
+  version: number;
+  status: "draft" | "sent" | "approved" | "sent_to_printer" | "archived";
+  related_party: "client" | "supplier" | "internal" | null;
+  onedrive_url: string | null;
+  onedrive_file_id: string | null;
+  file_size_bytes: number | null;
+  uploaded_by: string | null;
+  notes: string | null;
+  created_at: string;
+  uploader?: { id: string; name: string } | null;
+};
