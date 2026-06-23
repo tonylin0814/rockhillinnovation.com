@@ -34,10 +34,6 @@ type EditableComponent = {
   component: Product | null;
 };
 
-function PaymentCategory({ category }: { category: Product["payment_category"] }) {
-  return <span className="text-sm text-slate-600">{category ?? "-"}</span>;
-}
-
 function rowsFromComponents(components: ProductComponent[]): EditableComponent[] {
   return components
     .map((component, index) => ({
@@ -130,7 +126,7 @@ export function SetComponentsEditor({
     const uniqueIds = new Set(selectedIds);
 
     if (selectedIds.length !== rows.length) {
-      toast.error("Select a Rock Hill code for every component row");
+      toast.error("Select an English name for every component row");
       return;
     }
 
@@ -177,11 +173,9 @@ export function SetComponentsEditor({
             {isEditing ? <TableHead className="w-10" /> : null}
             <TableHead className="w-14">#</TableHead>
             <TableHead>Rock Hill Code</TableHead>
-            <TableHead>English Name</TableHead>
-            <TableHead>Chinese Name</TableHead>
-            <TableHead>Payment Category</TableHead>
-            <TableHead className="w-28">Qty / Set</TableHead>
-            <TableHead>Notes</TableHead>
+            <TableHead>Product English Name</TableHead>
+            <TableHead>Supplier</TableHead>
+            <TableHead className="w-32">Qty Needed</TableHead>
             {isEditing ? <TableHead className="text-right">Actions</TableHead> : null}
           </TableRow>
         </TableHeader>
@@ -195,11 +189,12 @@ export function SetComponentsEditor({
                   </TableCell>
                 ) : null}
                 <TableCell>{index + 1}</TableCell>
-                <TableCell className="font-semibold text-[#0d1b34]">
+                <TableCell className="font-semibold text-[#0d1b34]">{row.component?.code ?? "-"}</TableCell>
+                <TableCell>
                   {isEditing ? (
                     <Select onValueChange={(value) => updateComponent(index, value)} value={row.component_product_id}>
-                      <SelectTrigger className="min-w-40 bg-white">
-                        <SelectValue placeholder="Select code" />
+                      <SelectTrigger className="min-w-64 bg-white">
+                        <SelectValue placeholder="Select product" />
                       </SelectTrigger>
                       <SelectContent>
                         {availableProducts
@@ -215,20 +210,16 @@ export function SetComponentsEditor({
                           })
                           .map((product) => (
                             <SelectItem key={product.id} value={product.id}>
-                              {product.code}
+                              {product.name_english}
                             </SelectItem>
                           ))}
                       </SelectContent>
                     </Select>
                   ) : (
-                    row.component?.code ?? "-"
+                    row.component?.name_english ?? "-"
                   )}
                 </TableCell>
-                <TableCell>{row.component?.name_english ?? "-"}</TableCell>
-                <TableCell>{row.component?.name_chinese ?? "-"}</TableCell>
-                <TableCell>
-                  <PaymentCategory category={row.component?.payment_category ?? null} />
-                </TableCell>
+                <TableCell>{row.component?.supplier?.code ?? "-"}</TableCell>
                 <TableCell>
                   {isEditing ? (
                     <Input
@@ -242,16 +233,6 @@ export function SetComponentsEditor({
                     />
                   ) : (
                     row.quantity_per_set
-                  )}
-                </TableCell>
-                <TableCell>
-                  {isEditing ? (
-                    <Input
-                      onChange={(event) => updateRow(index, { notes: event.currentTarget.value })}
-                      value={row.notes}
-                    />
-                  ) : (
-                    row.notes || "-"
                   )}
                 </TableCell>
                 {isEditing ? (
@@ -293,7 +274,7 @@ export function SetComponentsEditor({
             ))
           ) : (
             <TableRow>
-              <TableCell className="text-slate-500" colSpan={isEditing ? 9 : 7}>
+              <TableCell className="text-slate-500" colSpan={isEditing ? 6 : 5}>
                 No components added yet.
               </TableCell>
             </TableRow>
