@@ -32,15 +32,15 @@ function StatusBadge({ status }: { status: Supplier["status"] }) {
 }
 
 function InvoiceFormatBadge({ format }: { format: Supplier["invoice_format"] }) {
+  const classes = {
+    image: "border-slate-200 bg-slate-100 text-slate-700",
+    excel: "border-blue-200 bg-blue-50 text-blue-700",
+    pdf: "border-red-200 bg-red-50 text-red-700",
+    word: "border-violet-200 bg-violet-50 text-violet-700",
+  }[format];
+
   return (
-    <Badge
-      className={
-        format === "image"
-          ? "border-slate-200 bg-slate-100 text-slate-700"
-          : "border-blue-200 bg-blue-50 text-blue-700"
-      }
-      variant="outline"
-    >
+    <Badge className={classes} variant="outline">
       {format}
     </Badge>
   );

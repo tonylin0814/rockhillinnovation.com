@@ -29,7 +29,7 @@ const supplierSchema = z.object({
   website: z.string().trim().nullable(),
   tel: z.string().trim().nullable(),
   currency: z.literal("RMB").default("RMB"),
-  invoice_format: z.enum(["image", "excel"]).default("image"),
+  invoice_format: z.enum(["image", "excel", "pdf", "word"]).default("image"),
   contacts: z.array(supplierContactSchema).default([]),
   address: z.string().trim().nullable(),
   bank_account_name: z.string().trim().nullable(),

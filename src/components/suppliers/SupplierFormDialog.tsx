@@ -155,6 +155,8 @@ export function SupplierFormDialog({ mode, initialData, trigger }: SupplierFormD
                 <SelectContent>
                   <SelectItem value="image">Image</SelectItem>
                   <SelectItem value="excel">Excel</SelectItem>
+                  <SelectItem value="pdf">PDF</SelectItem>
+                  <SelectItem value="word">Word</SelectItem>
                 </SelectContent>
               </Select>
             </div>

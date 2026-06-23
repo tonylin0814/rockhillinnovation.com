@@ -60,7 +60,7 @@ export type Supplier = {
   website: string | null;
   tel: string | null;
   currency: string;
-  invoice_format: "image" | "excel";
+  invoice_format: "image" | "excel" | "pdf" | "word";
   contacts: SupplierContact[];
   address: string | null;
   bank_account_name: string | null;
