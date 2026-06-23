@@ -73,3 +73,28 @@ export type ExpenseVendor = {
   status: "active" | "inactive";
   created_at: string;
 };
+
+export type Product = {
+  id: string;
+  code: string;
+  name_english: string;
+  name_chinese: string | null;
+  product_type: "part" | "set";
+  supplier_id: string | null;
+  payment_category: "outsourced" | "produced" | null;
+  status: "active" | "inactive";
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+  supplier?: { id: string; name: string; code: string } | null;
+};
+
+export type ProductComponent = {
+  id: string;
+  set_product_id: string;
+  component_product_id: string;
+  quantity_per_set: number;
+  sort_order: number;
+  notes: string | null;
+  component?: Product | null;
+};

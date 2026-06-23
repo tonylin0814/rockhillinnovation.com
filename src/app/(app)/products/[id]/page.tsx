@@ -1,0 +1,201 @@
+import Link from "next/link";
+import { notFound } from "next/navigation";
+
+import { ProductFormDialog, type ProductSupplierOption } from "@/components/products/ProductFormDialog";
+import { ProductStatusButton } from "@/components/products/ProductStatusButton";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { getCurrentUser } from "@/lib/auth";
+import { createServerSupabaseClient } from "@/lib/supabase/server";
+import type { Product } from "@/types";
+
+const productTypeClasses: Record<Product["product_type"], string> = {
+  part: "border-slate-200 bg-slate-100 text-slate-700",
+  set: "border-blue-200 bg-blue-50 text-blue-700",
+};
+
+const paymentCategoryClasses: Record<NonNullable<Product["payment_category"]>, string> = {
+  outsourced: "border-blue-200 bg-blue-50 text-blue-700",
+  produced: "border-violet-200 bg-violet-50 text-violet-700",
+};
+
+function StatusBadge({ status }: { status: Product["status"] }) {
+  return (
+    <Badge
+      className={
+        status === "active"
+          ? "border-green-200 bg-green-50 text-green-700"
+          : "border-red-200 bg-red-50 text-red-700"
+      }
+      variant="outline"
+    >
+      {status}
+    </Badge>
+  );
+}
+
+function ProductTypeBadge({ type }: { type: Product["product_type"] }) {
+  return (
+    <Badge className={productTypeClasses[type]} variant="outline">
+      {type}
+    </Badge>
+  );
+}
+
+function PaymentCategoryBadge({ category }: { category: Product["payment_category"] }) {
+  if (!category) {
+    return <span className="text-sm text-slate-400">-</span>;
+  }
+
+  return (
+    <Badge className={paymentCategoryClasses[category]} variant="outline">
+      {category}
+    </Badge>
+  );
+}
+
+function DetailRow({ label, value }: { label: string; value: string | number | null }) {
+  return (
+    <div className="border-b border-slate-100 py-3 last:border-0">
+      <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{label}</p>
+      <p className="mt-1 text-sm text-[#0d1b34]">{value || "-"}</p>
+    </div>
+  );
+}
+
+export default async function ProductDetailPage({ params }: { params: { id: string } }) {
+  const user = await getCurrentUser();
+
+  if (user?.role === "partner") {
+    return (
+      <div className="flex min-h-[calc(100vh-8rem)] items-center justify-center">
+        <div className="text-center">
+          <h1 className="text-2xl font-semibold text-[#0d1b34]">Access denied</h1>
+          <p className="mt-2 text-sm text-slate-500">Products are available to admins and managers only.</p>
+        </div>
+      </div>
+    );
+  }
+
+  const supabase = createServerSupabaseClient();
+  const [{ data, error }, { data: suppliers, error: suppliersError }] = await Promise.all([
+    supabase.from("products").select("*, supplier:suppliers(id, name, code)").eq("id", params.id).maybeSingle(),
+    supabase.from("suppliers").select("id, name, code").eq("status", "active").order("name", { ascending: true }),
+  ]);
+
+  if (error || suppliersError) {
+    return (
+      <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm font-medium text-red-700">
+        {error?.message ?? suppliersError?.message}
+      </div>
+    );
+  }
+
+  if (!data) {
+    notFound();
+  }
+
+  const product = data as Product;
+  const supplierOptions = (suppliers ?? []) as ProductSupplierOption[];
+
+  return (
+    <section className="space-y-6">
+      <div>
+        <Link className="text-sm font-medium text-slate-500 transition-colors hover:text-[#0d1b34]" href="/products">
+          Back to Products
+        </Link>
+        <div className="mt-4 flex flex-wrap items-center gap-3">
+          <h1 className="text-3xl font-semibold text-[#0d1b34]">{product.name_english}</h1>
+          <StatusBadge status={product.status} />
+        </div>
+      </div>
+
+      <div className="grid gap-6 lg:grid-cols-3">
+        <div className="space-y-6 lg:col-span-2">
+          <Card className="border-slate-200 shadow-sm">
+            <CardHeader className="flex flex-row items-center justify-between">
+              <CardTitle>Main Info</CardTitle>
+              <ProductFormDialog
+                initialData={product}
+                mode="edit"
+                suppliers={supplierOptions}
+                trigger={
+                  <Button size="sm" variant="outline">
+                    Edit
+                  </Button>
+                }
+              />
+            </CardHeader>
+            <CardContent>
+              <div className="grid gap-x-6 sm:grid-cols-2">
+                <DetailRow label="Product Code" value={product.code} />
+                <DetailRow label="English Name" value={product.name_english} />
+                <DetailRow label="Chinese Name" value={product.name_chinese} />
+                <div className="border-b border-slate-100 py-3">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Product Type</p>
+                  <div className="mt-1">
+                    <ProductTypeBadge type={product.product_type} />
+                  </div>
+                </div>
+                <DetailRow
+                  label="Supplier"
+                  value={product.supplier ? `${product.supplier.name} (${product.supplier.code})` : null}
+                />
+                <div className="border-b border-slate-100 py-3">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Payment Category</p>
+                  <div className="mt-1">
+                    <PaymentCategoryBadge category={product.payment_category} />
+                  </div>
+                </div>
+              </div>
+              <DetailRow label="Notes" value={product.notes} />
+            </CardContent>
+          </Card>
+
+          {product.product_type === "set" ? (
+            <Card className="border-slate-200 shadow-sm">
+              <CardHeader>
+                <CardTitle>Set Builder</CardTitle>
+              </CardHeader>
+              <CardContent className="text-sm text-slate-500">Set builder - coming in 2-E.</CardContent>
+            </Card>
+          ) : null}
+        </div>
+
+        <div>
+          <Card className="border-slate-200 shadow-sm">
+            <CardHeader>
+              <CardTitle>Profile</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-5">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Status</p>
+                <div className="mt-2 flex items-center justify-between gap-3">
+                  <StatusBadge status={product.status} />
+                  <ProductStatusButton productId={product.id} status={product.status} />
+                </div>
+              </div>
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Created</p>
+                <p className="mt-1 text-sm text-[#0d1b34]">
+                  {new Intl.DateTimeFormat("en-US", {
+                    dateStyle: "medium",
+                  }).format(new Date(product.created_at))}
+                </p>
+              </div>
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Updated</p>
+                <p className="mt-1 text-sm text-[#0d1b34]">
+                  {new Intl.DateTimeFormat("en-US", {
+                    dateStyle: "medium",
+                  }).format(new Date(product.updated_at))}
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    </section>
+  );
+}
