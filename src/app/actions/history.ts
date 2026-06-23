@@ -3,7 +3,6 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
-import { expandComponentDemand } from "@/app/actions/order-lines";
 import { getCurrentUser } from "@/lib/auth";
 import { createServerSupabaseAdmin } from "@/lib/supabase/server";
 
@@ -39,15 +38,9 @@ const costHistorySchema = z.object({
 const quoteHistorySchema = z.object({
   session_id: z.string().uuid("Quote session is required"),
   product_id: nullableUuid,
-  item_name_chinese: nullableText,
-  item_name_english: nullableText,
+  item_description: nullableText,
   quantity: z.coerce.number().positive("Quantity must be greater than 0"),
-  unit_price_rmb: z.coerce.number().min(0, "Unit price must be zero or greater"),
-  payment_category: z.preprocess(
-    (value) => (typeof value === "string" && value !== "none" ? value : null),
-    z.enum(["outsourced", "produced", "misc_expense"]).nullable()
-  ),
-  sort_order: z.coerce.number().int().min(0).default(0),
+  unit_price_usd: z.coerce.number().min(0, "Quote must be zero or greater"),
   notes: nullableText,
 });
 
@@ -64,8 +57,8 @@ async function requireHistoryManager() {
 async function getSessionTradeId(sessionId: string) {
   const supabase = createServerSupabaseAdmin();
   const { data, error } = await supabase
-    .from("supplier_quote_sessions")
-    .select("trade_id, status")
+    .from("client_quotation_sessions")
+    .select("trade_id")
     .eq("id", sessionId)
     .maybeSingle();
 
@@ -77,14 +70,10 @@ async function getSessionTradeId(sessionId: string) {
     return { error: "Quote session not found" };
   }
 
-  return { tradeId: data.trade_id as string, status: data.status as string };
+  return { tradeId: data.trade_id as string };
 }
 
-async function refreshHistoryAndTrade(tradeId?: string, confirmed?: boolean) {
-  if (tradeId && confirmed) {
-    await expandComponentDemand(tradeId);
-  }
-
+async function refreshHistoryAndTrade(tradeId?: string) {
   revalidatePath("/history");
 
   if (tradeId) {
@@ -197,13 +186,13 @@ export async function createQuoteHistory(formData: FormData): Promise<ActionResu
   }
 
   const supabase = createServerSupabaseAdmin();
-  const { data, error } = await supabase.from("supplier_quote_lines").insert(parsed.data).select("id").single();
+  const { data, error } = await supabase.from("client_quotation_lines").insert(parsed.data).select("id").single();
 
   if (error) {
     return { error: error.message };
   }
 
-  await refreshHistoryAndTrade(sessionResult.tradeId, sessionResult.status === "confirmed");
+  await refreshHistoryAndTrade(sessionResult.tradeId);
   return { success: true, id: data.id };
 }
 
@@ -233,13 +222,13 @@ export async function updateQuoteHistory(id: string, formData: FormData): Promis
   }
 
   const supabase = createServerSupabaseAdmin();
-  const { error } = await supabase.from("supplier_quote_lines").update(parsed.data).eq("id", id);
+  const { error } = await supabase.from("client_quotation_lines").update(parsed.data).eq("id", id);
 
   if (error) {
     return { error: error.message };
   }
 
-  await refreshHistoryAndTrade(sessionResult.tradeId, sessionResult.status === "confirmed");
+  await refreshHistoryAndTrade(sessionResult.tradeId);
   return { success: true };
 }
 
@@ -267,15 +256,12 @@ export async function deleteQuoteHistory(id: string, sessionId?: string): Promis
   }
 
   const supabase = createServerSupabaseAdmin();
-  const { error } = await supabase.from("supplier_quote_lines").delete().eq("id", id);
+  const { error } = await supabase.from("client_quotation_lines").delete().eq("id", id);
 
   if (error) {
     return { error: error.message };
   }
 
-  await refreshHistoryAndTrade(
-    sessionResult && "tradeId" in sessionResult ? sessionResult.tradeId : undefined,
-    sessionResult && "status" in sessionResult ? sessionResult.status === "confirmed" : false
-  );
+  await refreshHistoryAndTrade(sessionResult && "tradeId" in sessionResult ? sessionResult.tradeId : undefined);
   return { success: true };
 }

@@ -35,9 +35,9 @@ export default async function HistoryPage() {
       .order("created_at", { ascending: false })
       .limit(300),
     supabase
-      .from("supplier_quote_lines")
+      .from("client_quotation_lines")
       .select(
-        "*, product:products(id, code, supplier_product_code, name_english, name_chinese), session:supplier_quote_sessions(id, session_number, quote_date, status, trade:trades(id, trade_id))"
+        "*, product:products(id, code, supplier_product_code, name_english, name_chinese), session:client_quotation_sessions(id, session_number, quote_date, status, trade:trades(id, trade_id))"
       )
       .limit(300),
     supabase
@@ -46,7 +46,7 @@ export default async function HistoryPage() {
       .order("code", { ascending: true }),
     supabase.from("suppliers").select("id, code, name").order("code", { ascending: true }),
     supabase
-      .from("supplier_quote_sessions")
+      .from("client_quotation_sessions")
       .select("id, session_number, quote_date, status, trade:trades(id, trade_id)")
       .order("quote_date", { ascending: false })
       .limit(300),
