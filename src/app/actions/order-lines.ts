@@ -70,7 +70,7 @@ export async function expandComponentDemand(tradeId: string) {
   const { data: orderLines, error: orderLinesError } = await supabase
     .from("order_lines")
     .select(
-      "id, product_id, quantity, product:products(id, product_type, components:product_components(component_product_id, quantity_per_set))"
+      "id, product_id, quantity, product:products(id, product_type, components:product_components!product_components_set_product_id_fkey(component_product_id, quantity_per_set))"
     )
     .eq("trade_id", tradeId)
     .order("sort_order", { ascending: true });
