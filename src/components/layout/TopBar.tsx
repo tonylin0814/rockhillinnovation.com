@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
 export function TopBar({ userName }: { userName: string }) {
@@ -10,14 +12,19 @@ export function TopBar({ userName }: { userName: string }) {
   return (
     <header className="flex h-16 items-center justify-between border-b border-slate-200/80 bg-white/95 px-8 backdrop-blur">
       <p className="text-sm font-semibold text-[#0d1b34]">Rock Hill Innovation</p>
-      <div className="flex items-center gap-3">
+      <Link
+        className="flex items-center gap-3 rounded-lg p-1.5 transition-colors hover:bg-slate-100"
+        href="/account"
+        title="Account settings"
+      >
         <div className="hidden text-right text-sm sm:block">
           <p className="font-medium text-[#0d1b34]">{userName}</p>
+          <p className="text-xs text-slate-500">Account settings</p>
         </div>
         <Avatar>
           <AvatarFallback className="bg-[#0d1b34] text-white">{initial || "R"}</AvatarFallback>
         </Avatar>
-      </div>
+      </Link>
     </header>
   );
 }
