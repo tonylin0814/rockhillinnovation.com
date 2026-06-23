@@ -26,6 +26,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import type { SupplierQuoteLine, SupplierQuoteSession } from "@/types";
+import { PriceHistoryDialog } from "./PriceHistoryDialog";
 
 type ProductOption = {
   id: string;
@@ -223,6 +224,7 @@ export function QuoteLinesEditor({
             <TableHead>Total (RMB)</TableHead>
             <TableHead>Category</TableHead>
             <TableHead>Notes</TableHead>
+            {!isEditing ? <TableHead className="text-right">History</TableHead> : null}
             {isEditing ? <TableHead className="text-right">Actions</TableHead> : null}
           </TableRow>
         </TableHeader>
@@ -339,6 +341,19 @@ export function QuoteLinesEditor({
                       row.notes || "-"
                     )}
                   </TableCell>
+                  {!isEditing ? (
+                    <TableCell>
+                      <div className="flex justify-end">
+                        {product ? (
+                          <PriceHistoryDialog
+                            productCode={product.code}
+                            productId={product.id}
+                            productName={product.name_english}
+                          />
+                        ) : null}
+                      </div>
+                    </TableCell>
+                  ) : null}
                   {isEditing ? (
                     <TableCell>
                       <div className="flex justify-end gap-1">
@@ -379,7 +394,7 @@ export function QuoteLinesEditor({
             })
           ) : (
             <TableRow>
-              <TableCell className="text-slate-500" colSpan={isEditing ? 10 : 9}>
+              <TableCell className="text-slate-500" colSpan={isEditing ? 10 : 10}>
                 No lines yet.
               </TableCell>
             </TableRow>
@@ -391,7 +406,7 @@ export function QuoteLinesEditor({
               Total
             </TableCell>
             <TableCell className="font-semibold">{formatRmb(runningTotal)}</TableCell>
-            <TableCell colSpan={isEditing ? 3 : 2} />
+            <TableCell colSpan={isEditing ? 3 : 3} />
           </TableRow>
         </TableFooter>
       </Table>

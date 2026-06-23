@@ -1,6 +1,6 @@
 "use client";
 
-import { CheckCircle2, RotateCcw } from "lucide-react";
+import { BarChart2, CheckCircle2, ChevronsUpDown, RotateCcw } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
@@ -9,9 +9,19 @@ import { updateQuoteSessionStatus } from "@/app/actions/supplier-quotes";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { SupplierQuoteLine, SupplierQuoteSession } from "@/types";
 import { NewQuoteSessionDialog } from "./NewQuoteSessionDialog";
+import { PriceHistoryDialog } from "./PriceHistoryDialog";
 import { QuoteLinesEditor } from "./QuoteLinesEditor";
 
 type ProductOption = {
@@ -84,6 +94,8 @@ export function SupplierQuotesTab({
   const [pendingSessionId, setPendingSessionId] = useState<string | null>(null);
   const [loadedLines, setLoadedLines] = useState<Record<string, LoadedQuoteLines>>({});
   const [loadingSessionId, setLoadingSessionId] = useState<string | null>(null);
+  const [priceLookupOpen, setPriceLookupOpen] = useState(false);
+  const [selectedHistoryProduct, setSelectedHistoryProduct] = useState<ProductOption | null>(null);
   const [isPending, startTransition] = useTransition();
 
   function updateStatus(sessionId: string, status: SupplierQuoteSession["status"]) {
@@ -139,7 +151,64 @@ export function SupplierQuotesTab({
 
   return (
     <div className="space-y-4">
-      <div className="flex justify-end">{canManage ? <NewQuoteSessionDialog tradeId={tradeId} /> : null}</div>
+      <div className="flex flex-col gap-3 rounded-lg border border-slate-200 bg-white p-4 shadow-sm lg:flex-row lg:items-end lg:justify-between">
+        <div className="space-y-2">
+          <p className="text-sm font-medium text-[#0d1b34]">Look up price history for any product</p>
+          <Popover open={priceLookupOpen} onOpenChange={setPriceLookupOpen}>
+            <PopoverTrigger asChild>
+              <Button className="w-full justify-between lg:w-96" role="combobox" type="button" variant="outline">
+                <span className="flex min-w-0 items-center gap-2">
+                  <BarChart2 className="h-4 w-4 text-slate-500" />
+                  <span className="truncate">Search product code or name</span>
+                </span>
+                <ChevronsUpDown className="h-4 w-4 text-slate-400" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent align="start" className="w-[min(24rem,calc(100vw-2rem))] p-0">
+              <Command>
+                <CommandInput placeholder="Search products..." />
+                <CommandList>
+                  <CommandEmpty>No products found.</CommandEmpty>
+                  <CommandGroup>
+                    {availableProducts.map((product) => (
+                      <CommandItem
+                        key={product.id}
+                        onSelect={() => {
+                          setSelectedHistoryProduct(product);
+                          setPriceLookupOpen(false);
+                        }}
+                        value={`${product.code} ${product.name_english}`}
+                      >
+                        <div className="min-w-0">
+                          <div className="font-medium text-[#0d1b34]">{product.code}</div>
+                          <div className="truncate text-xs text-slate-500">{product.name_english}</div>
+                        </div>
+                      </CommandItem>
+                    ))}
+                  </CommandGroup>
+                </CommandList>
+              </Command>
+            </PopoverContent>
+          </Popover>
+        </div>
+
+        <div className="flex justify-end">{canManage ? <NewQuoteSessionDialog tradeId={tradeId} /> : null}</div>
+      </div>
+
+      {selectedHistoryProduct ? (
+        <PriceHistoryDialog
+          onOpenChange={(nextOpen) => {
+            if (!nextOpen) {
+              setSelectedHistoryProduct(null);
+            }
+          }}
+          open={Boolean(selectedHistoryProduct)}
+          productCode={selectedHistoryProduct.code}
+          productId={selectedHistoryProduct.id}
+          productName={selectedHistoryProduct.name_english}
+          trigger={null}
+        />
+      ) : null}
 
       {initialSessions.length ? (
         <div className="grid gap-4">
