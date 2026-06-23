@@ -8,6 +8,7 @@ import {
   Briefcase,
   Building2,
   Factory,
+  History,
   LayoutDashboard,
   LogOut,
   Package,
@@ -25,6 +26,7 @@ const navItems = [
   { label: "Suppliers", href: "/suppliers", icon: Factory },
   { label: "Vendors", href: "/vendors", icon: Briefcase },
   { label: "Products", href: "/products", icon: Package },
+  { label: "History", href: "/history", icon: History },
   { label: "Admin", href: "/admin/users", icon: ShieldCheck },
 ];
 
@@ -32,7 +34,11 @@ type SidebarUser = Pick<CurrentUser, "name" | "role">;
 
 export function Sidebar({ currentUser }: { currentUser: SidebarUser }) {
   const pathname = usePathname();
-  const visibleNavItems = navItems.filter((item) => item.label !== "Admin" || currentUser.role === "admin");
+  const visibleNavItems = navItems.filter(
+    (item) =>
+      (item.label !== "Admin" || currentUser.role === "admin") &&
+      (item.label !== "History" || currentUser.role !== "partner")
+  );
 
   return (
     <aside className="sticky top-0 flex h-screen w-[240px] shrink-0 flex-col bg-[#0d1b34] text-white shadow-2xl shadow-slate-950/20">
