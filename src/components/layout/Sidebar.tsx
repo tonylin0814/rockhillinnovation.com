@@ -36,15 +36,16 @@ export function Sidebar({ currentUser }: { currentUser: SidebarUser }) {
 
   return (
     <aside className="fixed inset-y-0 left-0 flex w-[240px] flex-col bg-[#0d1b34] text-white shadow-2xl shadow-slate-950/20">
-      <div className="flex h-24 items-center border-b border-white/10 px-4 pt-2">
-        <div className="flex h-14 w-full items-center justify-center overflow-hidden rounded-md bg-white px-3">
+      <div className="flex h-[118px] items-center border-b border-white/10 px-4">
+        <div className="flex h-[74px] w-full items-center justify-center overflow-hidden rounded-lg bg-white px-3 shadow-sm">
           <Image
-            src="/brand/rockhill-logo-wide-cropped.png"
+            src="/brand/rockhill-logo-nav.png"
             alt="Rock Hill Innovation"
-            width={1134}
-            height={257}
-            className="h-auto w-[184px] object-contain"
+            width={1581}
+            height={995}
+            className="h-auto w-[206px] object-contain"
             priority
+            unoptimized
           />
         </div>
       </div>
