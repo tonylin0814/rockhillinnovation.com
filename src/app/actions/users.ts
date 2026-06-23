@@ -2,59 +2,74 @@
 
 import { randomBytes } from "crypto";
 import { revalidatePath } from "next/cache";
-import { Resend } from "resend";
 import { z } from "zod";
 
+import { getCurrentUser } from "@/lib/auth";
 import { createServerSupabaseAdmin } from "@/lib/supabase/server";
 import type { UserRole } from "@/types";
 
+export type ActionResult = { success?: true; error?: string };
+export type ResetResult = { success?: true; resetLink?: string; error?: string };
+export type CreateUserRole = UserRole;
+
 const roleSchema = z.enum(["admin", "manager", "partner"]);
 
-const createUserSchema = z.object({
-  name: z.string().trim().min(1, "Full name is required"),
-  email: z.string().trim().email("A valid email is required"),
-  role: roleSchema,
-});
+async function requireAdmin() {
+  const user = await getCurrentUser();
 
-type ActionResult = {
-  success?: true;
-  error?: string;
-};
+  if (!user) {
+    return { error: "Unauthorized" };
+  }
+
+  if (user.role !== "admin") {
+    return { error: "Admin access required" };
+  }
+
+  return { user };
+}
 
 function createTemporaryPassword() {
   return randomBytes(9).toString("base64url").slice(0, 12);
 }
 
-async function sendInvitationEmail(email: string, temporaryPassword: string) {
+async function sendEmail(to: string, subject: string, text: string) {
   const apiKey = process.env.RESEND_API_KEY;
+  const from = process.env.RESEND_FROM_EMAIL ?? "no-reply@rockhillinnovation.com";
 
   if (!apiKey) {
-    console.log(`Invitation email skipped for ${email}. Temporary password: ${temporaryPassword}`);
+    console.log(`[email skipped] To: ${to}\n${text}`);
     return;
   }
 
+  const { Resend } = await import("resend");
   const resend = new Resend(apiKey);
-
-  await resend.emails.send({
-    from: "Rock Hill Innovation <sales@rockhillinnovation.com>",
-    to: email,
-    subject: "You've been invited to Rock Hill Innovation",
-    text: `Your account has been created.\n\nEmail: ${email}\nTemporary password: ${temporaryPassword}\n\nPlease log in at https://www.rockhillinnovation.com and change your password.`,
-  });
+  await resend.emails.send({ from, subject, text, to });
 }
 
 export async function createUser(formData: FormData): Promise<ActionResult> {
-  const parsed = createUserSchema.safeParse({
-    name: formData.get("name"),
-    email: formData.get("email"),
-    role: formData.get("role"),
-  });
+  const access = await requireAdmin();
 
-  if (!parsed.success) {
-    return { error: parsed.error.issues[0]?.message ?? "Invalid user details" };
+  if ("error" in access) {
+    return { error: access.error };
   }
 
-  const { name, email, role } = parsed.data;
+  const parsed = z
+    .object({
+      email: z.string().trim().email("A valid email is required"),
+      name: z.string().trim().min(1, "Full name is required"),
+      role: roleSchema,
+    })
+    .safeParse({
+      email: formData.get("email"),
+      name: formData.get("name"),
+      role: formData.get("role"),
+    });
+
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "Invalid details" };
+  }
+
+  const { email, name, role } = parsed.data;
   const temporaryPassword = createTemporaryPassword();
   const supabase = createServerSupabaseAdmin();
 
@@ -63,8 +78,8 @@ export async function createUser(formData: FormData): Promise<ActionResult> {
     error: authError,
   } = await supabase.auth.admin.createUser({
     email,
-    password: temporaryPassword,
     email_confirm: true,
+    password: temporaryPassword,
   });
 
   if (authError || !user) {
@@ -72,11 +87,11 @@ export async function createUser(formData: FormData): Promise<ActionResult> {
   }
 
   const { error: insertError } = await supabase.from("users").insert({
-    id: user.id,
     email,
+    id: user.id,
+    is_active: true,
     name,
     role,
-    is_active: true,
   });
 
   if (insertError) {
@@ -85,7 +100,11 @@ export async function createUser(formData: FormData): Promise<ActionResult> {
   }
 
   try {
-    await sendInvitationEmail(email, temporaryPassword);
+    await sendEmail(
+      email,
+      "You've been invited to Rock Hill Innovation",
+      `Your account has been created.\n\nEmail: ${email}\nTemporary password: ${temporaryPassword}\n\nPlease log in at https://www.rockhillinnovation.com and change your password.`
+    );
   } catch (error) {
     console.error("Invitation email failed", error);
   }
@@ -94,11 +113,62 @@ export async function createUser(formData: FormData): Promise<ActionResult> {
   return { success: true };
 }
 
-export async function setUserActive(userId: string, is_active: boolean): Promise<ActionResult> {
-  const id = z.string().uuid().safeParse(userId);
+export async function updateUser(userId: string, formData: FormData): Promise<ActionResult> {
+  const access = await requireAdmin();
 
-  if (!id.success) {
+  if ("error" in access) {
+    return { error: access.error };
+  }
+
+  const parsed = z
+    .object({
+      name: z.string().trim().min(1, "Name is required"),
+      role: roleSchema,
+      userId: z.string().uuid(),
+    })
+    .safeParse({
+      name: formData.get("name"),
+      role: formData.get("role"),
+      userId,
+    });
+
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "Invalid data" };
+  }
+
+  if (parsed.data.userId === access.user.id && parsed.data.role !== "admin") {
+    return { error: "You cannot change your own role" };
+  }
+
+  const supabase = createServerSupabaseAdmin();
+  const { error } = await supabase
+    .from("users")
+    .update({ name: parsed.data.name, role: parsed.data.role })
+    .eq("id", parsed.data.userId);
+
+  if (error) {
+    return { error: error.message };
+  }
+
+  revalidatePath("/admin/users");
+  return { success: true };
+}
+
+export async function setUserActive(userId: string, is_active: boolean): Promise<ActionResult> {
+  const access = await requireAdmin();
+
+  if ("error" in access) {
+    return { error: access.error };
+  }
+
+  const parsed = z.string().uuid().safeParse(userId);
+
+  if (!parsed.success) {
     return { error: "Invalid user ID" };
+  }
+
+  if (parsed.data === access.user.id) {
+    return { error: "You cannot deactivate your own account" };
   }
 
   const supabase = createServerSupabaseAdmin();
@@ -112,4 +182,74 @@ export async function setUserActive(userId: string, is_active: boolean): Promise
   return { success: true };
 }
 
-export type CreateUserRole = UserRole;
+export async function resetUserPassword(userId: string): Promise<ResetResult> {
+  const access = await requireAdmin();
+
+  if ("error" in access) {
+    return { error: access.error };
+  }
+
+  const parsed = z.string().uuid().safeParse(userId);
+
+  if (!parsed.success) {
+    return { error: "Invalid user ID" };
+  }
+
+  const supabase = createServerSupabaseAdmin();
+  const { data: userRow } = await supabase.from("users").select("email, name").eq("id", userId).maybeSingle();
+
+  if (!userRow) {
+    return { error: "User not found" };
+  }
+
+  const { data: linkData, error: linkError } = await supabase.auth.admin.generateLink({
+    email: userRow.email,
+    type: "recovery",
+  });
+
+  if (linkError || !linkData?.properties?.action_link) {
+    return { error: linkError?.message ?? "Could not generate reset link" };
+  }
+
+  const resetLink = linkData.properties.action_link;
+
+  try {
+    await sendEmail(
+      userRow.email,
+      "Rock Hill Innovation - Password Reset",
+      `Hi ${userRow.name},\n\nA password reset was requested for your account.\n\nClick the link below to reset your password (expires in 1 hour):\n${resetLink}\n\nIf you did not request this, please contact your administrator.`
+    );
+
+    return { success: true };
+  } catch {
+    return { resetLink, success: true };
+  }
+}
+
+export async function deleteUser(userId: string): Promise<ActionResult> {
+  const access = await requireAdmin();
+
+  if ("error" in access) {
+    return { error: access.error };
+  }
+
+  const parsed = z.string().uuid().safeParse(userId);
+
+  if (!parsed.success) {
+    return { error: "Invalid user ID" };
+  }
+
+  if (parsed.data === access.user.id) {
+    return { error: "You cannot delete your own account" };
+  }
+
+  const supabase = createServerSupabaseAdmin();
+  const { error } = await supabase.auth.admin.deleteUser(parsed.data);
+
+  if (error) {
+    return { error: error.message };
+  }
+
+  revalidatePath("/admin/users");
+  return { success: true };
+}

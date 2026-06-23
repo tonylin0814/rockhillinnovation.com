@@ -1,23 +1,17 @@
+import { CreateUserDialog } from "@/components/admin/CreateUserDialog";
+import { DeleteUserButton } from "@/components/admin/DeleteUserButton";
+import { EditUserDialog } from "@/components/admin/EditUserDialog";
+import { ResetPasswordButton } from "@/components/admin/ResetPasswordButton";
+import { UserActiveButton } from "@/components/admin/UserActiveButton";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { CreateUserDialog } from "@/components/admin/CreateUserDialog";
-import { UserActiveButton } from "@/components/admin/UserActiveButton";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { getCurrentUser } from "@/lib/auth";
 import { createServerSupabaseAdmin } from "@/lib/supabase/server";
 import { cn } from "@/lib/utils";
 import type { CurrentUser, UserRole } from "@/types";
 
-type UserRow = CurrentUser & {
-  created_at: string;
-};
+type UserRow = CurrentUser & { created_at: string };
 
 const roleBadgeClasses: Record<UserRole, string> = {
   admin: "border-slate-200 bg-slate-100 text-slate-700",
@@ -65,9 +59,9 @@ export default async function UserManagementPage() {
 
       <Card className="border-slate-200 shadow-sm">
         <CardHeader>
-          <CardTitle>Users</CardTitle>
+          <CardTitle>Users ({users?.length ?? 0})</CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-0">
           <Table>
             <TableHeader>
               <TableRow>
@@ -79,34 +73,55 @@ export default async function UserManagementPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {(users as UserRow[]).map((user) => (
-                <TableRow key={user.id}>
-                  <TableCell className="font-medium text-[#0d1b34]">{user.name}</TableCell>
-                  <TableCell>{user.email}</TableCell>
-                  <TableCell>
-                    <Badge className={cn("capitalize", roleBadgeClasses[user.role])} variant="outline">
-                      {user.role}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <Badge
-                      className={
-                        user.is_active
-                          ? "border-green-200 bg-green-50 text-green-700"
-                          : "border-red-200 bg-red-50 text-red-700"
-                      }
-                      variant="outline"
-                    >
-                      {user.is_active ? "active" : "inactive"}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    {user.id !== currentUser.id ? (
-                      <UserActiveButton isActive={user.is_active} userId={user.id} />
-                    ) : null}
-                  </TableCell>
-                </TableRow>
-              ))}
+              {(users as UserRow[]).map((user) => {
+                const isSelf = user.id === currentUser.id;
+
+                return (
+                  <TableRow key={user.id}>
+                    <TableCell className="font-medium text-[#0d1b34]">
+                      <span className="flex items-center gap-2">
+                        {user.name}
+                        {isSelf ? (
+                          <Badge className="border-slate-200 bg-slate-100 text-slate-500" variant="outline">
+                            You
+                          </Badge>
+                        ) : null}
+                      </span>
+                    </TableCell>
+                    <TableCell className="text-slate-600">{user.email}</TableCell>
+                    <TableCell>
+                      <Badge className={cn("capitalize", roleBadgeClasses[user.role])} variant="outline">
+                        {user.role}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <Badge
+                        className={
+                          user.is_active
+                            ? "border-green-200 bg-green-50 text-green-700"
+                            : "border-red-200 bg-red-50 text-red-700"
+                        }
+                        variant="outline"
+                      >
+                        {user.is_active ? "Active" : "Inactive"}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center justify-end gap-1">
+                        <EditUserDialog
+                          initialName={user.name}
+                          initialRole={user.role}
+                          isSelf={isSelf}
+                          userId={user.id}
+                        />
+                        <ResetPasswordButton userId={user.id} />
+                        {!isSelf ? <UserActiveButton isActive={user.is_active} userId={user.id} /> : null}
+                        {!isSelf ? <DeleteUserButton userId={user.id} userName={user.name} /> : null}
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
             </TableBody>
           </Table>
         </CardContent>
