@@ -101,7 +101,7 @@ export function ClientFormDialog({ mode, initialData, trigger }: ClientFormDialo
           </Button>
         )}
       </DialogTrigger>
-      <DialogContent className="sm:max-w-2xl">
+      <DialogContent className="sm:max-w-3xl">
         <DialogHeader>
           <DialogTitle>{mode === "create" ? "Add Client" : "Edit Client"}</DialogTitle>
           <DialogDescription>
