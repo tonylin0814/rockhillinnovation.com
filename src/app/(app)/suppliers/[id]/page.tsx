@@ -114,6 +114,8 @@ export default async function SupplierDetailPage({ params }: { params: { id: str
                 <DetailRow label="English Name" value={supplier.name} />
                 <DetailRow label="Chinese Name" value={supplier.name_chinese} />
                 <DetailRow label="Country" value={supplier.country} />
+                <DetailRow label="Website" value={supplier.website} />
+                <DetailRow label="TEL" value={supplier.tel} />
                 <DetailRow label="Currency" value={supplier.currency} />
                 <div className="border-b border-slate-100 py-3">
                   <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Invoice Format</p>

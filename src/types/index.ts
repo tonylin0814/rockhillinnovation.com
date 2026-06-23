@@ -57,6 +57,8 @@ export type Supplier = {
   name: string;
   name_chinese: string | null;
   country: string | null;
+  website: string | null;
+  tel: string | null;
   currency: string;
   invoice_format: "image" | "excel";
   contacts: SupplierContact[];

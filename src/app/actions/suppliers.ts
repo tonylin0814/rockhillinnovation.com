@@ -26,6 +26,8 @@ const supplierSchema = z.object({
   name: z.string().trim().min(1, "English name is required"),
   name_chinese: z.string().trim().nullable(),
   country: z.string().trim().nullable(),
+  website: z.string().trim().nullable(),
+  tel: z.string().trim().nullable(),
   currency: z.literal("RMB").default("RMB"),
   invoice_format: z.enum(["image", "excel"]).default("image"),
   contacts: z.array(supplierContactSchema).default([]),
@@ -67,6 +69,8 @@ function valuesFromForm(formData: FormData, fallback?: Supplier) {
     name: formData.has("name") ? formData.get("name") : fallback?.name,
     name_chinese: formData.has("name_chinese") ? emptyToNull(formData.get("name_chinese")) : fallback?.name_chinese,
     country: formData.has("country") ? emptyToNull(formData.get("country")) : fallback?.country,
+    website: formData.has("website") ? emptyToNull(formData.get("website")) : fallback?.website,
+    tel: formData.has("tel") ? emptyToNull(formData.get("tel")) : fallback?.tel,
     currency: "RMB",
     invoice_format: formData.has("invoice_format")
       ? formData.get("invoice_format") || "image"

@@ -128,6 +128,20 @@ export function SupplierFormDialog({ mode, initialData, trigger }: SupplierFormD
               <Label htmlFor="country">Country</Label>
               <Input defaultValue={initialData?.country ?? ""} disabled={isPending} id="country" name="country" />
             </div>
+            <div className="space-y-2">
+              <Label htmlFor="website">Website</Label>
+              <Input
+                defaultValue={initialData?.website ?? ""}
+                disabled={isPending}
+                id="website"
+                name="website"
+                placeholder="https://example.com"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="tel">TEL</Label>
+              <Input defaultValue={initialData?.tel ?? ""} disabled={isPending} id="tel" name="tel" />
+            </div>
             <div className="space-y-2 sm:col-span-2">
               <Label htmlFor="invoice_format">Invoice Format</Label>
               <Select
