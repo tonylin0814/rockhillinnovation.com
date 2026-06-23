@@ -208,6 +208,7 @@ export function SetComponentsEditor({
                                 rowIndex !== index && existingRow.component_product_id === product.id
                             );
                           })
+                          .sort((a, b) => a.name_english.localeCompare(b.name_english))
                           .map((product) => (
                             <SelectItem key={product.id} value={product.id}>
                               {product.name_english}
