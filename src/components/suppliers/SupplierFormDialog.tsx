@@ -87,7 +87,7 @@ export function SupplierFormDialog({ mode, initialData, trigger }: SupplierFormD
           </Button>
         )}
       </DialogTrigger>
-      <DialogContent className="sm:max-w-2xl">
+      <DialogContent className="sm:max-w-3xl">
         <DialogHeader>
           <DialogTitle>{mode === "create" ? "Add Supplier" : "Edit Supplier"}</DialogTitle>
           <DialogDescription>
