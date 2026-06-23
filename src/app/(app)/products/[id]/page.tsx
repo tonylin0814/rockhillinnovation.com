@@ -251,10 +251,9 @@ export default async function ProductDetailPage({ params }: { params: { id: stri
                 <TableHeader>
                   <TableRow>
                     <TableHead>Date</TableHead>
-                    <TableHead>Supplier</TableHead>
                     <TableHead>Supplier Code</TableHead>
                     <TableHead className="text-right">Unit Cost (RMB)</TableHead>
-                    <TableHead>Notes</TableHead>
+                    <TableHead className="min-w-[18rem]">Notes</TableHead>
                     <TableHead>Source</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -263,7 +262,6 @@ export default async function ProductDetailPage({ params }: { params: { id: stri
                     costHistoryRows.map((row) => (
                       <TableRow key={row.id}>
                         <TableCell>{formatDate(row.quoted_date)}</TableCell>
-                        <TableCell>{row.supplier?.code ?? "-"}</TableCell>
                         <TableCell>{row.supplier_product_code ?? "-"}</TableCell>
                         <TableCell className="text-right font-medium text-[#0d1b34]">
                           {formatRmb(row.unit_cost_rmb)}
@@ -274,7 +272,7 @@ export default async function ProductDetailPage({ params }: { params: { id: stri
                     ))
                   ) : (
                     <TableRow>
-                      <TableCell className="text-slate-500" colSpan={6}>
+                      <TableCell className="text-slate-500" colSpan={5}>
                         No cost history yet.
                       </TableCell>
                     </TableRow>
