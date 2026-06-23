@@ -32,7 +32,7 @@ export function Sidebar({ role }: { role: UserRole }) {
 
   return (
     <aside className="fixed inset-y-0 left-0 flex w-[240px] flex-col bg-[#0d1b34] text-white shadow-2xl shadow-slate-950/20">
-      <div className="flex h-20 items-center border-b border-white/10 px-5">
+      <div className="flex h-28 items-start border-b border-white/10 px-5 pt-5">
         <div className="flex h-11 w-full items-center rounded-md bg-white px-3">
           <Image
             src="/brand/rockhill-logo.png"
