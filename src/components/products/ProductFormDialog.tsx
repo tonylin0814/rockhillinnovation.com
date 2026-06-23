@@ -103,7 +103,7 @@ export function ProductFormDialog({
         {trigger ?? (
           <Button className="bg-[#0d1b34] hover:bg-[#13294d]">
             <Plus className="mr-2 h-4 w-4" />
-            Add Product
+            {defaultProductType === "set" ? "Add Set" : "Add Part"}
           </Button>
         )}
       </DialogTrigger>

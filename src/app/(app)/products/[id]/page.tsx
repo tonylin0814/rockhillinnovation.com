@@ -3,12 +3,13 @@ import { notFound } from "next/navigation";
 
 import { ProductFormDialog, type ProductSupplierOption } from "@/components/products/ProductFormDialog";
 import { ProductStatusButton } from "@/components/products/ProductStatusButton";
+import { SetComponentsEditor } from "@/components/products/SetComponentsEditor";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { getCurrentUser } from "@/lib/auth";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
-import type { Product } from "@/types";
+import type { Product, ProductComponent } from "@/types";
 
 const productTypeClasses: Record<Product["product_type"], string> = {
   part: "border-slate-200 bg-slate-100 text-slate-700",
@@ -79,15 +80,25 @@ export default async function ProductDetailPage({ params }: { params: { id: stri
   }
 
   const supabase = createServerSupabaseClient();
-  const [{ data, error }, { data: suppliers, error: suppliersError }] = await Promise.all([
+  const [
+    { data, error },
+    { data: suppliers, error: suppliersError },
+    { data: availableParts, error: availablePartsError },
+  ] = await Promise.all([
     supabase.from("products").select("*, supplier:suppliers(id, name, code)").eq("id", params.id).maybeSingle(),
     supabase.from("suppliers").select("id, name, code").eq("status", "active").order("name", { ascending: true }),
+    supabase
+      .from("products")
+      .select("*, supplier:suppliers(id, name, code)")
+      .eq("product_type", "part")
+      .eq("status", "active")
+      .order("code", { ascending: true }),
   ]);
 
-  if (error || suppliersError) {
+  if (error || suppliersError || availablePartsError) {
     return (
       <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm font-medium text-red-700">
-        {error?.message ?? suppliersError?.message}
+        {error?.message ?? suppliersError?.message ?? availablePartsError?.message}
       </div>
     );
   }
@@ -98,6 +109,28 @@ export default async function ProductDetailPage({ params }: { params: { id: stri
 
   const product = data as Product;
   const supplierOptions = (suppliers ?? []) as ProductSupplierOption[];
+  const availablePartOptions = (availableParts ?? []) as Product[];
+  let setComponents: ProductComponent[] = [];
+
+  if (product.product_type === "set") {
+    const { data: components, error: componentsError } = await supabase
+      .from("product_components")
+      .select(
+        "*, component:products(id, code, name_english, name_chinese, product_type, supplier_id, payment_category, status, notes, created_at, updated_at, supplier:suppliers(id, name, code))"
+      )
+      .eq("set_product_id", params.id)
+      .order("sort_order", { ascending: true });
+
+    if (componentsError) {
+      return (
+        <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm font-medium text-red-700">
+          {componentsError.message}
+        </div>
+      );
+    }
+
+    setComponents = (components ?? []) as ProductComponent[];
+  }
 
   return (
     <section className="space-y-6">
@@ -158,7 +191,13 @@ export default async function ProductDetailPage({ params }: { params: { id: stri
               <CardHeader>
                 <CardTitle>Set Builder</CardTitle>
               </CardHeader>
-              <CardContent className="text-sm text-slate-500">Set builder - coming in 2-E.</CardContent>
+              <CardContent>
+                <SetComponentsEditor
+                  availableParts={availablePartOptions}
+                  initialComponents={setComponents}
+                  setProductId={product.id}
+                />
+              </CardContent>
             </Card>
           ) : null}
         </div>

@@ -1,5 +1,6 @@
 import { ProductFormDialog, type ProductSupplierOption } from "@/components/products/ProductFormDialog";
 import { ProductsTable } from "@/components/products/ProductsTable";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { getCurrentUser } from "@/lib/auth";
@@ -24,7 +25,7 @@ export default async function ProductsPage() {
   const [{ data: products, error: productsError }, { data: suppliers, error: suppliersError }] = await Promise.all([
     supabase
       .from("products")
-      .select("*, supplier:suppliers(id, name, code)")
+      .select("*, supplier:suppliers(id, name, code), components:product_components(id)")
       .order("code", { ascending: true }),
     supabase.from("suppliers").select("id, name, code").eq("status", "active").order("name", { ascending: true }),
   ]);
@@ -39,6 +40,7 @@ export default async function ProductsPage() {
 
   const allProducts = (products ?? []) as Product[];
   const partProducts = allProducts.filter((product) => product.product_type === "part");
+  const setProducts = allProducts.filter((product) => product.product_type === "set");
   const supplierOptions = (suppliers ?? []) as ProductSupplierOption[];
 
   return (
@@ -48,7 +50,19 @@ export default async function ProductsPage() {
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Catalog</p>
           <h1 className="mt-2 text-3xl font-semibold text-[#0d1b34]">Products</h1>
         </div>
-        <ProductFormDialog defaultProductType="part" mode="create" suppliers={supplierOptions} />
+        <div className="flex flex-wrap items-center justify-end gap-2">
+          <ProductFormDialog defaultProductType="part" mode="create" suppliers={supplierOptions} />
+          <ProductFormDialog
+            defaultProductType="set"
+            mode="create"
+            suppliers={supplierOptions}
+            trigger={
+              <Button variant="outline">
+                Add Set
+              </Button>
+            }
+          />
+        </div>
       </div>
 
       <Tabs className="space-y-4" defaultValue="parts">
@@ -63,14 +77,19 @@ export default async function ProductsPage() {
               <CardTitle>Part Products</CardTitle>
             </CardHeader>
             <CardContent>
-              <ProductsTable products={partProducts} />
+              <ProductsTable mode="parts" products={partProducts} />
             </CardContent>
           </Card>
         </TabsContent>
 
         <TabsContent value="sets">
           <Card className="border-slate-200 shadow-sm">
-            <CardContent className="py-10 text-sm text-slate-500">Coming soon.</CardContent>
+            <CardHeader>
+              <CardTitle>Set Products</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ProductsTable mode="sets" products={setProducts} />
+            </CardContent>
           </Card>
         </TabsContent>
       </Tabs>

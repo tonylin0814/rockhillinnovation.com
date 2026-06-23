@@ -24,6 +24,7 @@ import {
 import type { Product } from "@/types";
 
 type PaymentFilter = "all" | "outsourced" | "produced";
+type ProductsTableMode = "parts" | "sets";
 
 function StatusBadge({ status }: { status: Product["status"] }) {
   return (
@@ -59,7 +60,7 @@ function PaymentCategoryBadge({ category }: { category: Product["payment_categor
   );
 }
 
-export function ProductsTable({ products }: { products: Product[] }) {
+export function ProductsTable({ mode = "parts", products }: { mode?: ProductsTableMode; products: Product[] }) {
   const [search, setSearch] = useState("");
   const [paymentFilter, setPaymentFilter] = useState<PaymentFilter>("all");
 
@@ -73,11 +74,11 @@ export function ProductsTable({ products }: { products: Product[] }) {
         product.name_english.toLowerCase().includes(normalizedSearch) ||
         (product.name_chinese ?? "").toLowerCase().includes(normalizedSearch);
 
-      const matchesPayment = paymentFilter === "all" || product.payment_category === paymentFilter;
+      const matchesPayment = mode === "sets" || paymentFilter === "all" || product.payment_category === paymentFilter;
 
       return matchesSearch && matchesPayment;
     });
-  }, [paymentFilter, products, search]);
+  }, [mode, paymentFilter, products, search]);
 
   return (
     <div className="space-y-4">
@@ -88,16 +89,18 @@ export function ProductsTable({ products }: { products: Product[] }) {
           placeholder="Search code or name..."
           value={search}
         />
-        <Select onValueChange={(value: PaymentFilter) => setPaymentFilter(value)} value={paymentFilter}>
-          <SelectTrigger className="sm:w-56">
-            <SelectValue placeholder="Payment category" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All</SelectItem>
-            <SelectItem value="outsourced">Outsourced</SelectItem>
-            <SelectItem value="produced">Produced</SelectItem>
-          </SelectContent>
-        </Select>
+        {mode === "parts" ? (
+          <Select onValueChange={(value: PaymentFilter) => setPaymentFilter(value)} value={paymentFilter}>
+            <SelectTrigger className="sm:w-56">
+              <SelectValue placeholder="Payment category" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All</SelectItem>
+              <SelectItem value="outsourced">Outsourced</SelectItem>
+              <SelectItem value="produced">Produced</SelectItem>
+            </SelectContent>
+          </Select>
+        ) : null}
       </div>
 
       <Table>
@@ -106,8 +109,8 @@ export function ProductsTable({ products }: { products: Product[] }) {
             <TableHead>Code</TableHead>
             <TableHead>English Name</TableHead>
             <TableHead>Chinese Name</TableHead>
-            <TableHead>Supplier</TableHead>
-            <TableHead>Payment Category</TableHead>
+            {mode === "parts" ? <TableHead>Supplier</TableHead> : null}
+            {mode === "parts" ? <TableHead>Payment Category</TableHead> : <TableHead>Components</TableHead>}
             <TableHead>Status</TableHead>
             <TableHead className="text-right">Actions</TableHead>
           </TableRow>
@@ -119,10 +122,14 @@ export function ProductsTable({ products }: { products: Product[] }) {
                 <TableCell className="font-semibold text-[#0d1b34]">{product.code}</TableCell>
                 <TableCell>{product.name_english}</TableCell>
                 <TableCell>{product.name_chinese ?? "-"}</TableCell>
-                <TableCell>{product.supplier?.name ?? "-"}</TableCell>
-                <TableCell>
-                  <PaymentCategoryBadge category={product.payment_category} />
-                </TableCell>
+                {mode === "parts" ? <TableCell>{product.supplier?.name ?? "-"}</TableCell> : null}
+                {mode === "parts" ? (
+                  <TableCell>
+                    <PaymentCategoryBadge category={product.payment_category} />
+                  </TableCell>
+                ) : (
+                  <TableCell>{product.components?.length ?? 0} parts</TableCell>
+                )}
                 <TableCell>
                   <StatusBadge status={product.status} />
                 </TableCell>
@@ -135,8 +142,8 @@ export function ProductsTable({ products }: { products: Product[] }) {
             ))
           ) : (
             <TableRow>
-              <TableCell className="text-slate-500" colSpan={7}>
-                No parts yet.
+              <TableCell className="text-slate-500" colSpan={mode === "parts" ? 7 : 6}>
+                {mode === "parts" ? "No parts yet." : "No sets yet."}
               </TableCell>
             </TableRow>
           )}

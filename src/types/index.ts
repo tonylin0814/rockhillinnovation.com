@@ -87,6 +87,7 @@ export type Product = {
   created_at: string;
   updated_at: string;
   supplier?: { id: string; name: string; code: string } | null;
+  components?: { id: string }[] | null;
 };
 
 export type ProductComponent = {

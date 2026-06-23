@@ -13,6 +13,13 @@ type ActionResult = {
   error?: string;
 };
 
+type ComponentInput = {
+  component_product_id: string;
+  quantity_per_set: number;
+  sort_order: number;
+  notes?: string;
+};
+
 const productSchema = z
   .object({
     code: z.string().trim().min(1, "Product code is required").transform((value) => value.toUpperCase()),
@@ -37,6 +44,13 @@ const productSchema = z
     ...value,
     payment_category: value.product_type === "part" ? value.payment_category : null,
   }));
+
+const componentInputSchema = z.object({
+  component_product_id: z.string().uuid("Invalid component product"),
+  quantity_per_set: z.coerce.number().positive("Quantity per set must be greater than 0"),
+  sort_order: z.coerce.number().int().min(0),
+  notes: z.string().trim().optional(),
+});
 
 async function requireProductManager() {
   const user = await getCurrentUser();
@@ -175,5 +189,69 @@ export async function setProductStatus(id: string, status: "active" | "inactive"
 
   revalidatePath("/products");
   revalidatePath(`/products/${id}`);
+  return { success: true };
+}
+
+export async function saveSetComponents(
+  setProductId: string,
+  components: ComponentInput[]
+): Promise<ActionResult> {
+  const access = await requireProductManager();
+
+  if ("error" in access) {
+    return { error: access.error };
+  }
+
+  const setIdCheck = z.string().uuid().safeParse(setProductId);
+
+  if (!setIdCheck.success) {
+    return { error: "Invalid set product ID" };
+  }
+
+  const parsedComponents = z.array(componentInputSchema).safeParse(components);
+
+  if (!parsedComponents.success) {
+    return { error: parsedComponents.error.issues[0]?.message ?? "Invalid set components" };
+  }
+
+  const supabase = createServerSupabaseClient();
+  const { data: product, error: productError } = await supabase
+    .from("products")
+    .select("id, product_type")
+    .eq("id", setProductId)
+    .maybeSingle();
+
+  if (productError) {
+    return { error: productError.message };
+  }
+
+  if (!product || product.product_type !== "set") {
+    return { error: "Set product not found" };
+  }
+
+  const { error: deleteError } = await supabase.from("product_components").delete().eq("set_product_id", setProductId);
+
+  if (deleteError) {
+    return { error: deleteError.message };
+  }
+
+  if (parsedComponents.data.length) {
+    const rows = parsedComponents.data.map((component, index) => ({
+      set_product_id: setProductId,
+      component_product_id: component.component_product_id,
+      quantity_per_set: component.quantity_per_set,
+      sort_order: index + 1,
+      notes: component.notes?.trim() || null,
+    }));
+
+    const { error: insertError } = await supabase.from("product_components").insert(rows);
+
+    if (insertError) {
+      return { error: insertError.message };
+    }
+  }
+
+  revalidatePath("/products");
+  revalidatePath(`/products/${setProductId}`);
   return { success: true };
 }
