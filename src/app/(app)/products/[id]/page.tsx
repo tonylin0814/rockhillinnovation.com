@@ -254,8 +254,8 @@ export default async function ProductDetailPage({ params }: { params: { id: stri
                     <TableHead>Supplier</TableHead>
                     <TableHead>Supplier Code</TableHead>
                     <TableHead className="text-right">Unit Cost (RMB)</TableHead>
-                    <TableHead>Source</TableHead>
                     <TableHead>Notes</TableHead>
+                    <TableHead>Source</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -263,13 +263,13 @@ export default async function ProductDetailPage({ params }: { params: { id: stri
                     costHistoryRows.map((row) => (
                       <TableRow key={row.id}>
                         <TableCell>{formatDate(row.quoted_date)}</TableCell>
-                        <TableCell>{row.supplier ? `${row.supplier.name} (${row.supplier.code})` : "-"}</TableCell>
+                        <TableCell>{row.supplier?.code ?? "-"}</TableCell>
                         <TableCell>{row.supplier_product_code ?? "-"}</TableCell>
                         <TableCell className="text-right font-medium text-[#0d1b34]">
                           {formatRmb(row.unit_cost_rmb)}
                         </TableCell>
-                        <TableCell>{row.source}</TableCell>
                         <TableCell>{row.notes ?? "-"}</TableCell>
+                        <TableCell>{row.source}</TableCell>
                       </TableRow>
                     ))
                   ) : (
