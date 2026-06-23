@@ -227,7 +227,7 @@ export function ProductFormDialog({
             </Button>
             <Button className="bg-[#0d1b34] hover:bg-[#13294d]" disabled={isPending} type="submit">
               {isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-              {mode === "create" ? "Create Product" : "Save Changes"}
+              {mode === "create" ? (productType === "set" ? "Create Set" : "Create Product") : "Save Changes"}
             </Button>
           </div>
         </form>

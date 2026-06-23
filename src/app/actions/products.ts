@@ -23,7 +23,7 @@ type ComponentInput = {
 const productSchema = z
   .object({
     code: z.string().trim().min(1, "Product code is required").transform((value) => value.toUpperCase()),
-    supplier_product_code: z.string().trim().nullable(),
+    supplier_product_code: z.string().trim().nullish(),
     name_english: z.string().trim().min(1, "English name is required"),
     name_chinese: z.string().trim().nullable(),
     product_type: z.enum(["part", "set"]).default("part"),
@@ -43,7 +43,7 @@ const productSchema = z
   })
   .transform((value) => ({
     ...value,
-    supplier_product_code: value.product_type === "part" ? value.supplier_product_code : null,
+    supplier_product_code: value.product_type === "part" ? value.supplier_product_code ?? null : null,
     payment_category: value.product_type === "part" ? value.payment_category : null,
   }));
 
