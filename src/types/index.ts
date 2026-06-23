@@ -10,6 +10,8 @@ export type CurrentUser = {
 
 export type Contact = {
   name: string;
+  first_name: string;
+  last_name: string;
   role: string;
   email: string;
   phone: string;
@@ -20,6 +22,7 @@ export type Client = {
   id: string;
   code: string;
   name: string;
+  dba_name: string | null;
   country: string | null;
   currency: string;
   deposit_pct: number;
@@ -27,6 +30,13 @@ export type Client = {
   contacts: Contact[];
   address: string | null;
   shipping_address: string | null;
+  bank_name: string | null;
+  bank_branch: string | null;
+  bank_account_name: string | null;
+  bank_account_number: string | null;
+  bank_swift_code: string | null;
+  bank_address: string | null;
+  bank_tel: string | null;
   notes: string | null;
   status: "active" | "inactive";
   created_at: string;

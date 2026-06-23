@@ -130,6 +130,10 @@ export function ClientFormDialog({ mode, initialData, trigger }: ClientFormDialo
               <Input defaultValue={initialData?.name ?? ""} disabled={isPending} id="name" name="name" required />
             </div>
             <div className="space-y-2">
+              <Label htmlFor="dba_name">DBA Name</Label>
+              <Input defaultValue={initialData?.dba_name ?? ""} disabled={isPending} id="dba_name" name="dba_name" />
+            </div>
+            <div className="space-y-2">
               <Label htmlFor="country">Country</Label>
               <Input defaultValue={initialData?.country ?? ""} disabled={isPending} id="country" name="country" />
             </div>
@@ -208,6 +212,78 @@ export function ClientFormDialog({ mode, initialData, trigger }: ClientFormDialo
               onChange={(event) => setShippingAddress(event.currentTarget.value)}
               value={shippingSameAsAddress ? address : shippingAddress}
             />
+          </div>
+
+          <div className="space-y-4 rounded-lg border border-slate-200 p-4">
+            <div>
+              <h3 className="text-sm font-semibold text-[#0d1b34]">Banking Information</h3>
+              <p className="mt-1 text-xs text-slate-500">Optional details used for client payment records.</p>
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="bank_name">Bank Name</Label>
+                <Input
+                  defaultValue={initialData?.bank_name ?? ""}
+                  disabled={isPending}
+                  id="bank_name"
+                  name="bank_name"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="bank_branch">Bank Branch</Label>
+                <Input
+                  defaultValue={initialData?.bank_branch ?? ""}
+                  disabled={isPending}
+                  id="bank_branch"
+                  name="bank_branch"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="bank_account_name">Account Name</Label>
+                <Input
+                  defaultValue={initialData?.bank_account_name ?? ""}
+                  disabled={isPending}
+                  id="bank_account_name"
+                  name="bank_account_name"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="bank_account_number">Account Number</Label>
+                <Input
+                  defaultValue={initialData?.bank_account_number ?? ""}
+                  disabled={isPending}
+                  id="bank_account_number"
+                  name="bank_account_number"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="bank_swift_code">SWIFT Code</Label>
+                <Input
+                  defaultValue={initialData?.bank_swift_code ?? ""}
+                  disabled={isPending}
+                  id="bank_swift_code"
+                  name="bank_swift_code"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="bank_tel">Bank TEL</Label>
+                <Input
+                  defaultValue={initialData?.bank_tel ?? ""}
+                  disabled={isPending}
+                  id="bank_tel"
+                  name="bank_tel"
+                />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="bank_address">Bank Address</Label>
+              <Textarea
+                defaultValue={initialData?.bank_address ?? ""}
+                disabled={isPending}
+                id="bank_address"
+                name="bank_address"
+              />
+            </div>
           </div>
 
           <div className="space-y-2">

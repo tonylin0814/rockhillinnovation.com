@@ -20,6 +20,8 @@ import type { Contact } from "@/types";
 
 const emptyContact: Contact = {
   name: "",
+  first_name: "",
+  last_name: "",
   role: "",
   email: "",
   phone: "",
@@ -29,16 +31,26 @@ const emptyContact: Contact = {
 type ContactRow = Contact & { _key: string };
 
 function createContactRow(contact?: Partial<Contact>, index = 0): ContactRow {
+  const existingName = contact?.name?.trim() ?? "";
+  const firstName = contact?.first_name ?? (existingName ? existingName.split(" ")[0] ?? "" : "");
+  const lastName = contact?.last_name ?? (existingName ? existingName.split(" ").slice(1).join(" ") : "");
+
   return {
     ...emptyContact,
     ...contact,
+    first_name: firstName,
+    last_name: lastName,
+    name: contact?.name || [firstName, lastName].filter(Boolean).join(" "),
     _key: `${Date.now()}-${index}-${Math.random().toString(36).slice(2)}`,
   };
 }
 
 function stripContactKey(contact: ContactRow): Contact {
   const { _key, ...cleanContact } = contact;
-  return cleanContact;
+  return {
+    ...cleanContact,
+    name: [cleanContact.first_name, cleanContact.last_name].filter(Boolean).join(" "),
+  };
 }
 
 export function ContactsEditor({ clientId, initialContacts }: { clientId: string; initialContacts: Contact[] }) {
@@ -117,7 +129,8 @@ export function ContactsEditor({ clientId, initialContacts }: { clientId: string
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>Name</TableHead>
+            <TableHead>First Name</TableHead>
+            <TableHead>Last Name</TableHead>
             <TableHead>Role</TableHead>
             <TableHead>Email</TableHead>
             <TableHead>Phone</TableHead>
@@ -129,7 +142,7 @@ export function ContactsEditor({ clientId, initialContacts }: { clientId: string
           {contacts.length ? (
             contacts.map((contact, index) => (
               <TableRow key={contact._key}>
-                {(["name", "role", "email", "phone", "cell_phone"] as const).map((field) => (
+                {(["first_name", "last_name", "role", "email", "phone", "cell_phone"] as const).map((field) => (
                   <TableCell key={field}>
                     {isEditing ? (
                       <Input
@@ -161,7 +174,7 @@ export function ContactsEditor({ clientId, initialContacts }: { clientId: string
             ))
           ) : (
             <TableRow>
-              <TableCell className="text-slate-500" colSpan={isEditing ? 6 : 5}>
+              <TableCell className="text-slate-500" colSpan={isEditing ? 7 : 6}>
                 No contacts yet.
               </TableCell>
             </TableRow>

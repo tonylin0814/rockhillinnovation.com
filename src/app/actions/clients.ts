@@ -15,6 +15,8 @@ type ActionResult = {
 
 const contactSchema = z.object({
   name: z.string().trim().default(""),
+  first_name: z.string().trim().default(""),
+  last_name: z.string().trim().default(""),
   role: z.string().trim().default(""),
   email: z.string().trim().default(""),
   phone: z.string().trim().default(""),
@@ -24,6 +26,7 @@ const contactSchema = z.object({
 const clientSchema = z.object({
   code: z.string().trim().min(1, "Client code is required").transform((value) => value.toUpperCase()),
   name: z.string().trim().min(1, "Company name is required"),
+  dba_name: z.string().trim().nullable(),
   country: z.string().trim().nullable(),
   currency: z.string().trim().min(1).default("USD"),
   deposit_pct: z.coerce.number().min(0).max(100),
@@ -31,6 +34,13 @@ const clientSchema = z.object({
   contacts: z.array(contactSchema).default([]),
   address: z.string().trim().nullable(),
   shipping_address: z.string().trim().nullable(),
+  bank_name: z.string().trim().nullable(),
+  bank_branch: z.string().trim().nullable(),
+  bank_account_name: z.string().trim().nullable(),
+  bank_account_number: z.string().trim().nullable(),
+  bank_swift_code: z.string().trim().nullable(),
+  bank_address: z.string().trim().nullable(),
+  bank_tel: z.string().trim().nullable(),
   notes: z.string().trim().nullable(),
 });
 
@@ -59,13 +69,17 @@ function parseContacts(value: FormDataEntryValue | null): Contact[] {
   }
 
   const parsed = JSON.parse(value);
-  return z.array(contactSchema).parse(parsed);
+  return z.array(contactSchema).parse(parsed).map((contact) => ({
+    ...contact,
+    name: contact.name || [contact.first_name, contact.last_name].filter(Boolean).join(" "),
+  }));
 }
 
 function valuesFromForm(formData: FormData, fallback?: Client) {
   return {
     code: formData.has("code") ? formData.get("code") : fallback?.code,
     name: formData.has("name") ? formData.get("name") : fallback?.name,
+    dba_name: formData.has("dba_name") ? emptyToNull(formData.get("dba_name")) : fallback?.dba_name,
     country: formData.has("country") ? emptyToNull(formData.get("country")) : fallback?.country,
     currency: formData.has("currency") ? formData.get("currency") || "USD" : fallback?.currency ?? "USD",
     deposit_pct: formData.has("deposit_pct") ? formData.get("deposit_pct") : fallback?.deposit_pct,
@@ -75,6 +89,19 @@ function valuesFromForm(formData: FormData, fallback?: Client) {
     shipping_address: formData.has("shipping_address")
       ? emptyToNull(formData.get("shipping_address"))
       : fallback?.shipping_address,
+    bank_name: formData.has("bank_name") ? emptyToNull(formData.get("bank_name")) : fallback?.bank_name,
+    bank_branch: formData.has("bank_branch") ? emptyToNull(formData.get("bank_branch")) : fallback?.bank_branch,
+    bank_account_name: formData.has("bank_account_name")
+      ? emptyToNull(formData.get("bank_account_name"))
+      : fallback?.bank_account_name,
+    bank_account_number: formData.has("bank_account_number")
+      ? emptyToNull(formData.get("bank_account_number"))
+      : fallback?.bank_account_number,
+    bank_swift_code: formData.has("bank_swift_code")
+      ? emptyToNull(formData.get("bank_swift_code"))
+      : fallback?.bank_swift_code,
+    bank_address: formData.has("bank_address") ? emptyToNull(formData.get("bank_address")) : fallback?.bank_address,
+    bank_tel: formData.has("bank_tel") ? emptyToNull(formData.get("bank_tel")) : fallback?.bank_tel,
     notes: formData.has("notes") ? emptyToNull(formData.get("notes")) : fallback?.notes,
   };
 }

@@ -97,6 +97,7 @@ export default async function ClientDetailPage({ params }: { params: { id: strin
               <div className="grid gap-x-6 sm:grid-cols-2">
                 <DetailRow label="Company Name" value={client.name} />
                 <DetailRow label="Client Code" value={client.code} />
+                <DetailRow label="DBA Name" value={client.dba_name} />
                 <DetailRow label="Country" value={client.country} />
                 <DetailRow label="Currency" value={client.currency} />
                 <DetailRow label="Deposit %" value={`${client.deposit_pct}%`} />
@@ -105,6 +106,23 @@ export default async function ClientDetailPage({ params }: { params: { id: strin
               <DetailRow label="Address" value={client.address} />
               <DetailRow label="Shipping Address" value={client.shipping_address} />
               <DetailRow label="Notes" value={client.notes} />
+            </CardContent>
+          </Card>
+
+          <Card className="border-slate-200 shadow-sm">
+            <CardHeader>
+              <CardTitle>Banking Information</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid gap-x-6 sm:grid-cols-2">
+                <DetailRow label="Bank Name" value={client.bank_name} />
+                <DetailRow label="Bank Branch" value={client.bank_branch} />
+                <DetailRow label="Account Name" value={client.bank_account_name} />
+                <DetailRow label="Account Number" value={client.bank_account_number} />
+                <DetailRow label="SWIFT Code" value={client.bank_swift_code} />
+                <DetailRow label="Bank TEL" value={client.bank_tel} />
+              </div>
+              <DetailRow label="Bank Address" value={client.bank_address} />
             </CardContent>
           </Card>
 
