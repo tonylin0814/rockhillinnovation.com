@@ -26,6 +26,7 @@ import {
 import type { Product, ProductComponent } from "@/types";
 
 type EditableComponent = {
+  rowKey: string;
   component_product_id: string;
   quantity_per_set: number;
   sort_order: number;
@@ -40,6 +41,7 @@ function PaymentCategory({ category }: { category: Product["payment_category"] }
 function rowsFromComponents(components: ProductComponent[]): EditableComponent[] {
   return components
     .map((component, index) => ({
+      rowKey: component.id ?? component.component_product_id,
       component_product_id: component.component_product_id,
       quantity_per_set: component.quantity_per_set,
       sort_order: component.sort_order || index + 1,
@@ -62,7 +64,6 @@ export function SetComponentsEditor({
   const router = useRouter();
   const [isEditing, setIsEditing] = useState(false);
   const [rows, setRows] = useState<EditableComponent[]>(() => rowsFromComponents(initialComponents));
-  const [selectedProductId, setSelectedProductId] = useState("");
   const [isPending, startTransition] = useTransition();
 
   const availableToAdd = useMemo(() => {
@@ -72,7 +73,6 @@ export function SetComponentsEditor({
 
   function resetRows() {
     setRows(rowsFromComponents(initialComponents));
-    setSelectedProductId("");
   }
 
   function renumber(nextRows: EditableComponent[]) {
@@ -97,26 +97,28 @@ export function SetComponentsEditor({
     setRows((currentRows) => currentRows.map((row, rowIndex) => (rowIndex === index ? { ...row, ...patch } : row)));
   }
 
-  function addComponent() {
-    const product = availableProducts.find((availableProduct) => availableProduct.id === selectedProductId);
+  function updateComponent(index: number, productId: string) {
+    const product = availableProducts.find((availableProduct) => availableProduct.id === productId) ?? null;
+    updateRow(index, {
+      component: product,
+      component_product_id: product?.id ?? "",
+    });
+  }
 
-    if (!product) {
-      return;
-    }
-
+  function addComponentRow() {
     setRows((currentRows) =>
       renumber([
         ...currentRows,
         {
-          component_product_id: product.id,
+          rowKey: crypto.randomUUID(),
+          component_product_id: "",
           quantity_per_set: 1,
           sort_order: currentRows.length + 1,
           notes: "",
-          component: product,
+          component: null,
         },
       ])
     );
-    setSelectedProductId("");
   }
 
   function removeRow(index: number) {
@@ -124,6 +126,19 @@ export function SetComponentsEditor({
   }
 
   function handleSave() {
+    const selectedIds = rows.map((row) => row.component_product_id).filter(Boolean);
+    const uniqueIds = new Set(selectedIds);
+
+    if (selectedIds.length !== rows.length) {
+      toast.error("Select a Rock Hill code for every component row");
+      return;
+    }
+
+    if (uniqueIds.size !== selectedIds.length) {
+      toast.error("A component can only be added once");
+      return;
+    }
+
     startTransition(async () => {
       const result = await saveSetComponents(
         setProductId,
@@ -161,11 +176,11 @@ export function SetComponentsEditor({
           <TableRow>
             {isEditing ? <TableHead className="w-10" /> : null}
             <TableHead className="w-14">#</TableHead>
-            <TableHead>Code</TableHead>
+            <TableHead>Rock Hill Code</TableHead>
             <TableHead>English Name</TableHead>
             <TableHead>Chinese Name</TableHead>
             <TableHead>Payment Category</TableHead>
-            <TableHead>Qty / Set</TableHead>
+            <TableHead className="w-28">Qty / Set</TableHead>
             <TableHead>Notes</TableHead>
             {isEditing ? <TableHead className="text-right">Actions</TableHead> : null}
           </TableRow>
@@ -173,14 +188,42 @@ export function SetComponentsEditor({
         <TableBody>
           {rows.length ? (
             rows.map((row, index) => (
-              <TableRow key={row.component_product_id}>
+              <TableRow key={row.rowKey}>
                 {isEditing ? (
                   <TableCell>
                     <GripVertical className="h-4 w-4 text-slate-400" />
                   </TableCell>
                 ) : null}
                 <TableCell>{index + 1}</TableCell>
-                <TableCell className="font-semibold text-[#0d1b34]">{row.component?.code ?? "-"}</TableCell>
+                <TableCell className="font-semibold text-[#0d1b34]">
+                  {isEditing ? (
+                    <Select onValueChange={(value) => updateComponent(index, value)} value={row.component_product_id}>
+                      <SelectTrigger className="min-w-40 bg-white">
+                        <SelectValue placeholder="Select code" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {availableProducts
+                          .filter((product) => {
+                            if (product.id === row.component_product_id) {
+                              return true;
+                            }
+
+                            return !rows.some(
+                              (existingRow, rowIndex) =>
+                                rowIndex !== index && existingRow.component_product_id === product.id
+                            );
+                          })
+                          .map((product) => (
+                            <SelectItem key={product.id} value={product.id}>
+                              {product.code}
+                            </SelectItem>
+                          ))}
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    row.component?.code ?? "-"
+                  )}
+                </TableCell>
                 <TableCell>{row.component?.name_english ?? "-"}</TableCell>
                 <TableCell>{row.component?.name_chinese ?? "-"}</TableCell>
                 <TableCell>
@@ -260,28 +303,10 @@ export function SetComponentsEditor({
 
       {isEditing ? (
         <div className="space-y-4 rounded-lg border border-slate-200 bg-slate-50 p-4">
-          <div className="flex flex-col gap-3 sm:flex-row">
-            <Select onValueChange={setSelectedProductId} value={selectedProductId}>
-              <SelectTrigger className="bg-white sm:max-w-md">
-                <SelectValue placeholder="Select a product to add" />
-              </SelectTrigger>
-              <SelectContent>
-                {availableToAdd.length ? (
-                  availableToAdd.map((product) => (
-                    <SelectItem key={product.id} value={product.id}>
-                      {product.code} - {product.name_english}
-                    </SelectItem>
-                  ))
-                ) : (
-                  <SelectItem disabled value="none">
-                    No active products available
-                  </SelectItem>
-                )}
-              </SelectContent>
-            </Select>
-            <Button disabled={!selectedProductId} onClick={addComponent} type="button" variant="outline">
+          <div className="flex justify-start">
+            <Button disabled={!availableToAdd.length} onClick={addComponentRow} type="button" variant="outline">
               <Plus className="mr-2 h-4 w-4" />
-              Add Component
+              Add Component Row
             </Button>
           </div>
 
