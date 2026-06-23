@@ -5,6 +5,7 @@ import { ClientQuotationsTab } from "@/components/trades/ClientQuotationsTab";
 import { DocumentsTab } from "@/components/trades/DocumentsTab";
 import { ExchangeRatesCard } from "@/components/trades/ExchangeRatesCard";
 import { InvoicesTab } from "@/components/trades/InvoicesTab";
+import { LedgerTab } from "@/components/trades/LedgerTab";
 import { ManagePartnersDialog } from "@/components/trades/ManagePartnersDialog";
 import { OrderLinesTab } from "@/components/trades/OrderLinesTab";
 import { ShareholderRulesEditor } from "@/components/trades/ShareholderRulesEditor";
@@ -32,6 +33,7 @@ import type {
   SupplierInvoiceOutgoing,
   Trade,
   TradeDocument,
+  TradeLedgerEntry,
   TradeParticipant,
   TradeShareholder,
   UserRole,
@@ -123,6 +125,7 @@ export default async function TradeWorkspacePage({ params }: { params: { id: str
     { data: supplierInvoicesOutgoing, error: supplierInvoicesOutgoingError },
     { data: vendorInvoices, error: vendorInvoicesError },
     { data: exchangeRates, error: exchangeRatesError },
+    { data: ledgerEntries, error: ledgerEntriesError },
   ] = await Promise.all([
     supabase
       .from("trades")
@@ -200,6 +203,13 @@ export default async function TradeWorkspacePage({ params }: { params: { id: str
       .eq("trade_id", params.id)
       .order("created_at", { ascending: false }),
     supabase.from("exchange_rates").select("*").eq("trade_id", params.id),
+    supabase
+      .from("trade_ledger")
+      .select(
+        "*, client_invoice:client_invoices(id, invoice_number), supplier_invoice:supplier_invoices_outgoing(id, invoice_number), vendor_invoice:expense_vendor_invoices(id, invoice_number), recorder:users(id, name)"
+      )
+      .eq("trade_id", params.id)
+      .order("entry_date", { ascending: false }),
   ]);
 
   if (
@@ -218,7 +228,8 @@ export default async function TradeWorkspacePage({ params }: { params: { id: str
     clientInvoicesError ||
     supplierInvoicesOutgoingError ||
     vendorInvoicesError ||
-    exchangeRatesError
+    exchangeRatesError ||
+    ledgerEntriesError
   ) {
     return (
       <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm font-medium text-red-700">
@@ -237,7 +248,8 @@ export default async function TradeWorkspacePage({ params }: { params: { id: str
           clientInvoicesError?.message ??
           supplierInvoicesOutgoingError?.message ??
           vendorInvoicesError?.message ??
-          exchangeRatesError?.message}
+          exchangeRatesError?.message ??
+          ledgerEntriesError?.message}
       </div>
     );
   }
@@ -262,6 +274,7 @@ export default async function TradeWorkspacePage({ params }: { params: { id: str
   const supplierInvoiceOutgoingRows = (supplierInvoicesOutgoing ?? []) as SupplierInvoiceOutgoing[];
   const vendorInvoiceRows = (vendorInvoices ?? []) as ExpenseVendorInvoice[];
   const exchangeRateRows = (exchangeRates ?? []) as ExchangeRate[];
+  const ledgerEntryRows = (ledgerEntries ?? []) as TradeLedgerEntry[];
   const participantPartnerIds = tradeParticipants.map((participant) => participant.user_id);
 
   return (
@@ -379,7 +392,15 @@ export default async function TradeWorkspacePage({ params }: { params: { id: str
           />
         </TabsContent>
         <TabsContent value="ledger">
-          <ComingSoonCard title="Ledger" />
+          <LedgerTab
+            canManage={canManage}
+            clientInvoices={clientInvoiceRows}
+            exchangeRates={exchangeRateRows}
+            initialEntries={ledgerEntryRows}
+            supplierInvoices={supplierInvoiceOutgoingRows}
+            tradeId={trade.id}
+            vendorInvoices={vendorInvoiceRows}
+          />
         </TabsContent>
 
         <TabsContent value="shareholders">

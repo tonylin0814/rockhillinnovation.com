@@ -316,3 +316,33 @@ export type ExpenseVendorInvoice = {
   notes: string | null;
   created_at: string;
 };
+
+export type TradeLedgerEntry = {
+  id: string;
+  trade_id: string;
+  entry_date: string;
+  entry_type:
+    | "client_payment_received"
+    | "supplier_payment_sent"
+    | "expense_vendor_payment"
+    | "bank_fee"
+    | "reimbursement"
+    | "misc";
+  direction: "in" | "out";
+  amount_usd: number | null;
+  amount_rmb: number | null;
+  exchange_rate_id: string | null;
+  reference_number: string | null;
+  bank_fee_usd: number;
+  client_invoice_id: string | null;
+  supplier_invoice_id: string | null;
+  expense_vendor_invoice_id: string | null;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+  recorded_by: string | null;
+  client_invoice?: { id: string; invoice_number: string } | null;
+  supplier_invoice?: { id: string; invoice_number: string } | null;
+  vendor_invoice?: { id: string; invoice_number: string } | null;
+  recorder?: { id: string; name: string } | null;
+};
