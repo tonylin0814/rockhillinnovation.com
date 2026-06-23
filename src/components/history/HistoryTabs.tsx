@@ -516,9 +516,9 @@ export function HistoryTabs({
                 <TableHead>Date</TableHead>
                 <TableHead>Rock Hill Code</TableHead>
                 <TableHead>Supplier Code</TableHead>
-                <TableHead>MOQ</TableHead>
+                <TableHead className="w-[6ch]">MOQ</TableHead>
                 <TableHead className="text-right">Unit (RMB)</TableHead>
-                <TableHead>Quality</TableHead>
+                <TableHead className="min-w-[16rem]">Quality</TableHead>
                 <TableHead>Carton</TableHead>
                 <TableHead>Source</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
