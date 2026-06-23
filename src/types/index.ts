@@ -172,7 +172,13 @@ export type TradeShareholder = {
   split_pct: number;
   invoices_through_entity: boolean;
   expense_vendor_id: string | null;
-  expense_vendor?: { id: string; name: string; code: string } | null;
+  expense_vendor?: {
+    id: string;
+    name: string;
+    code: string;
+    address: string | null;
+    letterhead_onedrive_url: string | null;
+  } | null;
 };
 
 export type SupplierQuoteSession = {
@@ -268,4 +274,45 @@ export type ClientInvoiceLine = {
   unit_price_usd: number;
   total_usd: number;
   sort_order: number;
+};
+
+export type ExchangeRate = {
+  id: string;
+  trade_id: string;
+  payment_type: "deposit" | "final";
+  rate_rmb_per_usd: number;
+  rate_date: string;
+  reference_rate: number | null;
+  notes: string | null;
+  created_at: string;
+};
+
+export type SupplierInvoiceOutgoing = {
+  id: string;
+  trade_id: string;
+  invoice_number: string;
+  invoice_type: "deposit" | "final";
+  invoice_date: string;
+  status: "draft" | "sent" | "paid";
+  total_rmb: number;
+  exchange_rate_id: string | null;
+  total_usd: number | null;
+  pdf_onedrive_url: string | null;
+  notes: string | null;
+  created_at: string;
+};
+
+export type ExpenseVendorInvoice = {
+  id: string;
+  vendor_id: string;
+  trade_id: string | null;
+  invoice_number: string | null;
+  invoice_date: string;
+  amount_usd: number;
+  description: string | null;
+  status: "draft" | "sent" | "paid";
+  trade_shareholder_id: string | null;
+  pdf_onedrive_url: string | null;
+  notes: string | null;
+  created_at: string;
 };

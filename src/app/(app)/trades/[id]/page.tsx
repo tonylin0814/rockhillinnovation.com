@@ -10,6 +10,7 @@ import { ShareholderRulesEditor } from "@/components/trades/ShareholderRulesEdit
 import { SupplierQuotesTab } from "@/components/trades/SupplierQuotesTab";
 import { TradeEditDialog } from "@/components/trades/TradeEditDialog";
 import { TradeStatusDropdown } from "@/components/trades/TradeStatusDropdown";
+import { VendorInvoicesCard } from "@/components/trades/VendorInvoicesCard";
 import type { TradeClientOption, TradePartnerOption } from "@/components/trades/NewTradeDialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -21,10 +22,12 @@ import type {
   ClientInvoice,
   ClientQuotationSession,
   ComponentDemand,
+  ExpenseVendorInvoice,
   ExpenseVendor,
   OrderLine,
   Product,
   SupplierQuoteSession,
+  SupplierInvoiceOutgoing,
   Trade,
   TradeDocument,
   TradeParticipant,
@@ -115,6 +118,8 @@ export default async function TradeWorkspacePage({ params }: { params: { id: str
     { data: quotationSessions, error: quotationSessionsError },
     { data: tradeDocuments, error: tradeDocumentsError },
     { data: clientInvoices, error: clientInvoicesError },
+    { data: supplierInvoicesOutgoing, error: supplierInvoicesOutgoingError },
+    { data: vendorInvoices, error: vendorInvoicesError },
   ] = await Promise.all([
     supabase
       .from("trades")
@@ -153,7 +158,7 @@ export default async function TradeWorkspacePage({ params }: { params: { id: str
       .order("code", { ascending: true }),
     supabase
       .from("trade_shareholders")
-      .select("*, expense_vendor:expense_vendors(id, name, code)")
+      .select("*, expense_vendor:expense_vendors(id, name, code, address, letterhead_onedrive_url)")
       .eq("trade_id", params.id)
       .order("person_name", { ascending: true }),
     supabase
@@ -181,6 +186,16 @@ export default async function TradeWorkspacePage({ params }: { params: { id: str
       .select("*")
       .eq("trade_id", params.id)
       .order("created_at", { ascending: false }),
+    supabase
+      .from("supplier_invoices_outgoing")
+      .select("*")
+      .eq("trade_id", params.id)
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("expense_vendor_invoices")
+      .select("*")
+      .eq("trade_id", params.id)
+      .order("created_at", { ascending: false }),
   ]);
 
   if (
@@ -196,7 +211,9 @@ export default async function TradeWorkspacePage({ params }: { params: { id: str
     quoteSessionsError ||
     quotationSessionsError ||
     tradeDocumentsError ||
-    clientInvoicesError
+    clientInvoicesError ||
+    supplierInvoicesOutgoingError ||
+    vendorInvoicesError
   ) {
     return (
       <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm font-medium text-red-700">
@@ -212,7 +229,9 @@ export default async function TradeWorkspacePage({ params }: { params: { id: str
           quoteSessionsError?.message ??
           quotationSessionsError?.message ??
           tradeDocumentsError?.message ??
-          clientInvoicesError?.message}
+          clientInvoicesError?.message ??
+          supplierInvoicesOutgoingError?.message ??
+          vendorInvoicesError?.message}
       </div>
     );
   }
@@ -234,6 +253,8 @@ export default async function TradeWorkspacePage({ params }: { params: { id: str
   const quotationSessionRows = (quotationSessions ?? []) as ClientQuotationSession[];
   const tradeDocumentRows = (tradeDocuments ?? []) as TradeDocument[];
   const clientInvoiceRows = (clientInvoices ?? []) as ClientInvoice[];
+  const supplierInvoiceOutgoingRows = (supplierInvoicesOutgoing ?? []) as SupplierInvoiceOutgoing[];
+  const vendorInvoiceRows = (vendorInvoices ?? []) as ExpenseVendorInvoice[];
   const participantPartnerIds = tradeParticipants.map((participant) => participant.user_id);
 
   return (
@@ -341,7 +362,12 @@ export default async function TradeWorkspacePage({ params }: { params: { id: str
           <DocumentsTab initialDocuments={tradeDocumentRows} tradeCode={trade.trade_id} tradeId={trade.id} />
         </TabsContent>
         <TabsContent value="invoices">
-          <InvoicesTab canManage={canManage} initialInvoices={clientInvoiceRows} tradeId={trade.id} />
+          <InvoicesTab
+            canManage={canManage}
+            initialInvoices={clientInvoiceRows}
+            initialSupplierInvoices={supplierInvoiceOutgoingRows}
+            tradeId={trade.id}
+          />
         </TabsContent>
         <TabsContent value="ledger">
           <ComingSoonCard title="Ledger" />
@@ -389,6 +415,12 @@ export default async function TradeWorkspacePage({ params }: { params: { id: str
             availableVendors={activeVendorOptions}
             canManage={canManage}
             initialShareholders={tradeShareholderRows}
+            tradeId={trade.id}
+          />
+          <VendorInvoicesCard
+            canManage={canManage}
+            existingInvoices={vendorInvoiceRows}
+            shareholders={tradeShareholderRows}
             tradeId={trade.id}
           />
         </TabsContent>

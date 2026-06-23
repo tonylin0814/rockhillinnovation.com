@@ -84,3 +84,46 @@ export async function getOneDriveFileUrl(fileId: string): Promise<string | null>
     return null;
   }
 }
+
+/**
+ * Download a file from OneDrive by its web URL (sharing URL).
+ * Uses the Graph API /shares endpoint to resolve the file and get a
+ * pre-authenticated download URL.
+ * Returns null in mock mode (no ONEDRIVE_DRIVE_ID) or on any error.
+ */
+export async function downloadFromOneDrive(webUrl: string): Promise<{ buffer: Buffer; mimeType: string } | null> {
+  const driveId = process.env.ONEDRIVE_DRIVE_ID;
+
+  if (!driveId) {
+    return null;
+  }
+
+  try {
+    const client = await getGraphClient();
+    const base64 = Buffer.from(webUrl)
+      .toString("base64")
+      .replace(/\+/g, "-")
+      .replace(/\//g, "_")
+      .replace(/=/g, "");
+    const encodedUrl = `u!${base64}`;
+    const item = await client.api(`/shares/${encodedUrl}/driveItem`).get();
+    const downloadUrl: string | undefined = item["@microsoft.graph.downloadUrl"];
+
+    if (!downloadUrl) {
+      return null;
+    }
+
+    const response = await fetch(downloadUrl);
+
+    if (!response.ok) {
+      return null;
+    }
+
+    const mimeType = response.headers.get("Content-Type") ?? "application/octet-stream";
+    const arrayBuffer = await response.arrayBuffer();
+
+    return { buffer: Buffer.from(arrayBuffer), mimeType };
+  } catch {
+    return null;
+  }
+}
