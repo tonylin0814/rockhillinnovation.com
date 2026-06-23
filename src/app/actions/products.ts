@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
 import { getCurrentUser } from "@/lib/auth";
-import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { createServerSupabaseAdmin, createServerSupabaseClient } from "@/lib/supabase/server";
 import type { Product } from "@/types";
 
 type ActionResult = {
@@ -18,6 +18,17 @@ type ComponentInput = {
   quantity_per_set: number;
   sort_order: number;
   notes?: string;
+};
+
+type SetCostComponentInput = {
+  component_product_id: string;
+  code: string;
+  name: string;
+  quantity_per_set: number;
+  unit_cost_rmb: number;
+  extended_cost_rmb: number;
+  cost_date: string | null;
+  source: string | null;
 };
 
 const productSchema = z
@@ -65,6 +76,17 @@ const componentInputSchema = z.object({
   quantity_per_set: z.coerce.number().positive("Quantity per set must be greater than 0"),
   sort_order: z.coerce.number().int().min(0),
   notes: z.string().trim().optional(),
+});
+
+const setCostComponentSchema = z.object({
+  component_product_id: z.string().uuid(),
+  code: z.string().trim().min(1),
+  name: z.string().trim().min(1),
+  quantity_per_set: z.coerce.number().positive(),
+  unit_cost_rmb: z.coerce.number().min(0),
+  extended_cost_rmb: z.coerce.number().min(0),
+  cost_date: z.string().nullable(),
+  source: z.string().trim().nullable(),
 });
 
 async function requireProductManager() {
@@ -316,4 +338,76 @@ export async function saveSetComponents(
   revalidatePath("/products");
   revalidatePath(`/products/${setProductId}`);
   return { success: true };
+}
+
+export async function saveSetCostSnapshot(
+  setProductId: string,
+  totalCostRmb: number,
+  components: SetCostComponentInput[]
+): Promise<ActionResult> {
+  const access = await requireProductManager();
+
+  if ("error" in access) {
+    return { error: access.error };
+  }
+
+  const parsed = z
+    .object({
+      setProductId: z.string().uuid(),
+      totalCostRmb: z.coerce.number().min(0),
+      components: z.array(setCostComponentSchema).min(1, "Set needs at least one component"),
+    })
+    .safeParse({ setProductId, totalCostRmb, components });
+
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "Invalid set cost snapshot" };
+  }
+
+  const supabase = createServerSupabaseAdmin();
+  const { data: product, error: productError } = await supabase
+    .from("products")
+    .select("id, code, product_type")
+    .eq("id", parsed.data.setProductId)
+    .maybeSingle();
+
+  if (productError) {
+    return { error: productError.message };
+  }
+
+  if (!product || product.product_type !== "set") {
+    return { error: "Set product not found" };
+  }
+
+  const today = new Date().toISOString().slice(0, 10);
+  const breakdown = parsed.data.components
+    .map((component) => {
+      const costDate = component.cost_date ? `, date ${component.cost_date}` : "";
+      const source = component.source ? `, source ${component.source}` : "";
+
+      return `${component.code} ${component.name}: ${component.quantity_per_set} x RMB ${component.unit_cost_rmb.toFixed(
+        4
+      )} = RMB ${component.extended_cost_rmb.toFixed(4)}${costDate}${source}`;
+    })
+    .join("\n");
+
+  const { data, error } = await supabase
+    .from("product_cost_history")
+    .insert({
+      product_id: parsed.data.setProductId,
+      quoted_date: today,
+      unit_cost_rmb: Number(parsed.data.totalCostRmb.toFixed(4)),
+      source: "set cost snapshot",
+      notes: `Calculated from Set Builder components on ${today}\n${breakdown}`,
+    })
+    .select("id")
+    .single();
+
+  if (error) {
+    return { error: error.message };
+  }
+
+  revalidatePath("/products");
+  revalidatePath(`/products/${parsed.data.setProductId}`);
+  revalidatePath("/history");
+  return { success: true, id: data.id };
 }

@@ -5,6 +5,7 @@ import { ProductFormDialog, type ProductSupplierOption } from "@/components/prod
 import { ProductImagesEditor } from "@/components/products/ProductImagesEditor";
 import { ProductStatusButton } from "@/components/products/ProductStatusButton";
 import { SetComponentsEditor } from "@/components/products/SetComponentsEditor";
+import { SetCostCalculator } from "@/components/products/SetCostCalculator";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -160,6 +161,7 @@ export default async function ProductDetailPage({ params }: { params: { id: stri
   const costHistoryRows = (costHistory ?? []) as ProductCostHistory[];
   const latestCost = costHistoryRows[0] ?? null;
   let setComponents: ProductComponent[] = [];
+  let latestCostsByProductId: Record<string, ProductCostHistory | null> = {};
 
   if (product.product_type === "set") {
     const { data: components, error: componentsError } = await supabase
@@ -179,6 +181,34 @@ export default async function ProductDetailPage({ params }: { params: { id: stri
     }
 
     setComponents = (components ?? []) as ProductComponent[];
+    const componentIds = Array.from(new Set(setComponents.map((component) => component.component_product_id)));
+
+    if (componentIds.length) {
+      const { data: componentCosts, error: componentCostsError } = await supabase
+        .from("product_cost_history")
+        .select("*, supplier:suppliers(id, code, name), product:products(id, code, name_english)")
+        .in("product_id", componentIds)
+        .order("quoted_date", { ascending: false })
+        .order("created_at", { ascending: false });
+
+      if (componentCostsError) {
+        return (
+          <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm font-medium text-red-700">
+            {componentCostsError.message}
+          </div>
+        );
+      }
+
+      for (const cost of (componentCosts ?? []) as ProductCostHistory[]) {
+        if (!latestCostsByProductId[cost.product_id]) {
+          latestCostsByProductId[cost.product_id] = cost;
+        }
+      }
+
+      for (const componentId of componentIds) {
+        latestCostsByProductId[componentId] ??= null;
+      }
+    }
   }
 
   return (
@@ -246,18 +276,33 @@ export default async function ProductDetailPage({ params }: { params: { id: stri
           </Card>
 
           {product.product_type === "set" ? (
-            <Card className="border-slate-200 shadow-sm">
-              <CardHeader>
-                <CardTitle>Set Builder</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <SetComponentsEditor
-                  availableProducts={availableProductOptions}
-                  initialComponents={setComponents}
-                  setProductId={product.id}
-                />
-              </CardContent>
-            </Card>
+            <>
+              <Card className="border-slate-200 shadow-sm">
+                <CardHeader>
+                  <CardTitle>Set Builder</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <SetComponentsEditor
+                    availableProducts={availableProductOptions}
+                    initialComponents={setComponents}
+                    setProductId={product.id}
+                  />
+                </CardContent>
+              </Card>
+
+              <Card className="border-slate-200 shadow-sm">
+                <CardHeader>
+                  <CardTitle>Calculated Set Cost</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <SetCostCalculator
+                    initialComponents={setComponents}
+                    latestCostsByProductId={latestCostsByProductId}
+                    setProductId={product.id}
+                  />
+                </CardContent>
+              </Card>
+            </>
           ) : null}
 
           {product.packaging_required ? (

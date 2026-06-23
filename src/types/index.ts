@@ -149,6 +149,7 @@ export type ProductCostHistory = {
   notes: string | null;
   created_at: string;
   supplier?: { id: string; code: string; name: string } | null;
+  product?: { id: string; code: string; name_english: string } | null;
 };
 
 export type ProductComponent = {
