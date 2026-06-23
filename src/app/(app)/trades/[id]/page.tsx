@@ -5,6 +5,7 @@ import { ClientQuotationsTab } from "@/components/trades/ClientQuotationsTab";
 import { DocumentsTab } from "@/components/trades/DocumentsTab";
 import { ExchangeRatesCard } from "@/components/trades/ExchangeRatesCard";
 import { InvoicesTab } from "@/components/trades/InvoicesTab";
+import { JudyChat } from "@/components/trades/JudyChat";
 import { LedgerTab } from "@/components/trades/LedgerTab";
 import { ManagePartnersDialog } from "@/components/trades/ManagePartnersDialog";
 import { OrderLinesTab } from "@/components/trades/OrderLinesTab";
@@ -318,6 +319,7 @@ export default async function TradeWorkspacePage({ params }: { params: { id: str
           <TabsTrigger value="invoices">Invoices</TabsTrigger>
           <TabsTrigger value="ledger">Ledger</TabsTrigger>
           <TabsTrigger value="shareholders">Shareholders</TabsTrigger>
+          <TabsTrigger value="judy">Judy AI</TabsTrigger>
         </TabsList>
 
         <TabsContent value="summary">
@@ -465,6 +467,9 @@ export default async function TradeWorkspacePage({ params }: { params: { id: str
             tradeId={trade.id}
           />
           <ShareholderBookCard book={shareholderBookData} canManage={canManage} tradeId={trade.id} />
+        </TabsContent>
+        <TabsContent value="judy">
+          <JudyChat tradeId={trade.id} />
         </TabsContent>
       </Tabs>
     </section>
