@@ -62,8 +62,8 @@ export default async function UserManagementPage() {
 
   return (
     <section className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <div className="min-w-0">
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Admin</p>
           <h1 className="mt-2 text-3xl font-semibold text-[#0d1b34]">User Management</h1>
         </div>
@@ -78,11 +78,11 @@ export default async function UserManagementPage() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Email</TableHead>
+                <TableHead className="min-w-44">Name</TableHead>
+                <TableHead className="min-w-56">Email</TableHead>
                 <TableHead>Role</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
+                <TableHead className="w-36 text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -92,8 +92,8 @@ export default async function UserManagementPage() {
                 return (
                   <TableRow key={user.id}>
                     <TableCell className="font-medium text-[#0d1b34]">
-                      <span className="flex items-center gap-2">
-                        {user.name}
+                      <span className="flex min-w-0 items-center gap-2">
+                        <span className="max-w-52 truncate">{user.name}</span>
                         {isSelf ? (
                           <Badge className="border-slate-200 bg-slate-100 text-slate-500" variant="outline">
                             You
@@ -101,7 +101,7 @@ export default async function UserManagementPage() {
                         ) : null}
                       </span>
                     </TableCell>
-                    <TableCell className="text-slate-600">{user.email}</TableCell>
+                    <TableCell className="max-w-72 truncate text-slate-600">{user.email}</TableCell>
                     <TableCell>
                       <Badge className={cn("capitalize", roleBadgeClasses[user.role])} variant="outline">
                         {user.role}
@@ -120,7 +120,7 @@ export default async function UserManagementPage() {
                       </Badge>
                     </TableCell>
                     <TableCell>
-                      <div className="flex items-center justify-end gap-1">
+                      <div className="flex items-center justify-end gap-0.5">
                         <EditUserDialog
                           initialName={user.name}
                           initialRole={user.role}

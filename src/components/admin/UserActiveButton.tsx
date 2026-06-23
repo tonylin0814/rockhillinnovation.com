@@ -1,6 +1,6 @@
 "use client";
 
-import { Loader2 } from "lucide-react";
+import { Loader2, Power, PowerOff } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useTransition } from "react";
 import { toast } from "sonner";
@@ -28,9 +28,22 @@ export function UserActiveButton({ isActive, userId }: { isActive: boolean; user
   }
 
   return (
-    <Button disabled={isPending} onClick={handleClick} size="sm" variant="outline">
-      {isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-      {isActive ? "Deactivate" : "Reactivate"}
+    <Button
+      disabled={isPending}
+      onClick={handleClick}
+      size="icon"
+      title={isActive ? "Deactivate user" : "Reactivate user"}
+      type="button"
+      variant="ghost"
+    >
+      {isPending ? (
+        <Loader2 className="h-4 w-4 animate-spin" />
+      ) : isActive ? (
+        <PowerOff className="h-4 w-4 text-amber-600" />
+      ) : (
+        <Power className="h-4 w-4 text-green-600" />
+      )}
+      <span className="sr-only">{isActive ? "Deactivate" : "Reactivate"}</span>
     </Button>
   );
 }
