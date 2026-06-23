@@ -32,6 +32,13 @@ const invoiceSchema = z.object({
   notes: z.string().trim().nullable(),
 });
 
+const matchSchema = z.object({
+  supplier_invoice_ref: z.string().trim().min(1, "Invoice reference is required").max(100),
+  supplier_stated_amount_rmb: z.coerce
+    .number({ invalid_type_error: "Amount must be a number" })
+    .positive("Amount must be greater than zero"),
+});
+
 async function requireManager() {
   const user = await getCurrentUser();
 
@@ -325,5 +332,58 @@ export async function updateSupplierInvoiceStatus(
     return { error: error.message };
   }
 
+  return { success: true };
+}
+
+export async function matchSupplierInvoice(invoiceId: string, formData: FormData): Promise<ActionResult> {
+  const access = await requireManager();
+
+  if ("error" in access) {
+    return { error: access.error };
+  }
+
+  const invoiceIdParsed = z.string().uuid().safeParse(invoiceId);
+
+  if (!invoiceIdParsed.success) {
+    return { error: "Invalid invoice ID" };
+  }
+
+  const parsed = matchSchema.safeParse({
+    supplier_invoice_ref: formData.get("supplier_invoice_ref"),
+    supplier_stated_amount_rmb: formData.get("supplier_stated_amount_rmb"),
+  });
+
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "Invalid data" };
+  }
+
+  const supabase = createServerSupabaseClient();
+  const { data: invoice, error: fetchError } = await supabase
+    .from("supplier_invoices_outgoing")
+    .select("id, trade_id")
+    .eq("id", invoiceId)
+    .maybeSingle();
+
+  if (fetchError) {
+    return { error: fetchError.message };
+  }
+
+  if (!invoice) {
+    return { error: "Invoice not found" };
+  }
+
+  const { error } = await supabase
+    .from("supplier_invoices_outgoing")
+    .update({
+      supplier_invoice_ref: parsed.data.supplier_invoice_ref,
+      supplier_stated_amount_rmb: parsed.data.supplier_stated_amount_rmb,
+    })
+    .eq("id", invoiceId);
+
+  if (error) {
+    return { error: error.message };
+  }
+
+  revalidatePath(`/trades/${invoice.trade_id}`);
   return { success: true };
 }

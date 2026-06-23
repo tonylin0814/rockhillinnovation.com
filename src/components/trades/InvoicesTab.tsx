@@ -27,6 +27,7 @@ import {
 import type { ClientInvoice, SupplierInvoiceOutgoing } from "@/types";
 import { GenerateInvoiceDialog } from "./GenerateProFormaDialog";
 import { GenerateSupplierInvoiceDialog } from "./GenerateSupplierInvoiceDialog";
+import { SupplierInvoiceMatchDialog } from "./SupplierInvoiceMatchDialog";
 
 const statusLabels = { draft: "Draft", paid: "Paid", sent: "Sent" } as const;
 const statusClasses: Record<string, string> = {
@@ -333,6 +334,7 @@ export function InvoicesTab({
                     <TableHead>Total (RMB)</TableHead>
                     <TableHead>USD Equiv.</TableHead>
                     <TableHead>PDF</TableHead>
+                    <TableHead>Supplier Ref</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -362,6 +364,9 @@ export function InvoicesTab({
                         ) : (
                           "-"
                         )}
+                      </TableCell>
+                      <TableCell>
+                        <SupplierInvoiceMatchDialog canManage={canManage} invoice={invoice} />
                       </TableCell>
                       <TableCell>
                         <div className="flex justify-end">

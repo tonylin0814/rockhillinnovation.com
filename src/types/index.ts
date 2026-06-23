@@ -300,6 +300,8 @@ export type SupplierInvoiceOutgoing = {
   pdf_onedrive_url: string | null;
   notes: string | null;
   created_at: string;
+  supplier_invoice_ref: string | null;
+  supplier_stated_amount_rmb: number | null;
 };
 
 export type ExpenseVendorInvoice = {
