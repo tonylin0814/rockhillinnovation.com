@@ -63,6 +63,12 @@ export type Supplier = {
   invoice_format: "image" | "excel";
   contacts: SupplierContact[];
   address: string | null;
+  bank_account_name: string | null;
+  bank_account_number: string | null;
+  bank_name: string | null;
+  bank_address: string | null;
+  bank_cnaps_no: string | null;
+  bank_swift_code: string | null;
   notes: string | null;
   status: "active" | "inactive";
   created_at: string;

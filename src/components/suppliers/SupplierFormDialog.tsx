@@ -165,6 +165,69 @@ export function SupplierFormDialog({ mode, initialData, trigger }: SupplierFormD
             <Textarea defaultValue={initialData?.address ?? ""} disabled={isPending} id="address" name="address" />
           </div>
 
+          <div className="space-y-4 rounded-lg border border-slate-200 p-4">
+            <div>
+              <h3 className="text-sm font-semibold text-[#0d1b34]">Banking Information</h3>
+              <p className="mt-1 text-xs text-slate-500">Optional supplier payment details.</p>
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="bank_account_name">Account Name</Label>
+                <Input
+                  defaultValue={initialData?.bank_account_name ?? ""}
+                  disabled={isPending}
+                  id="bank_account_name"
+                  name="bank_account_name"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="bank_account_number">Account Number</Label>
+                <Input
+                  defaultValue={initialData?.bank_account_number ?? ""}
+                  disabled={isPending}
+                  id="bank_account_number"
+                  name="bank_account_number"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="bank_name">Bank Name</Label>
+                <Input
+                  defaultValue={initialData?.bank_name ?? ""}
+                  disabled={isPending}
+                  id="bank_name"
+                  name="bank_name"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="bank_cnaps_no">CNAPS No.</Label>
+                <Input
+                  defaultValue={initialData?.bank_cnaps_no ?? ""}
+                  disabled={isPending}
+                  id="bank_cnaps_no"
+                  name="bank_cnaps_no"
+                />
+              </div>
+              <div className="space-y-2 sm:col-span-2">
+                <Label htmlFor="bank_swift_code">SWIFT Code</Label>
+                <Input
+                  defaultValue={initialData?.bank_swift_code ?? ""}
+                  disabled={isPending}
+                  id="bank_swift_code"
+                  name="bank_swift_code"
+                />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="bank_address">Bank Address</Label>
+              <Textarea
+                defaultValue={initialData?.bank_address ?? ""}
+                disabled={isPending}
+                id="bank_address"
+                name="bank_address"
+              />
+            </div>
+          </div>
+
           <div className="space-y-2">
             <Label htmlFor="notes">Notes</Label>
             <Textarea defaultValue={initialData?.notes ?? ""} disabled={isPending} id="notes" name="notes" />

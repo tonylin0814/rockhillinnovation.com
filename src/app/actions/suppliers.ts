@@ -32,6 +32,12 @@ const supplierSchema = z.object({
   invoice_format: z.enum(["image", "excel"]).default("image"),
   contacts: z.array(supplierContactSchema).default([]),
   address: z.string().trim().nullable(),
+  bank_account_name: z.string().trim().nullable(),
+  bank_account_number: z.string().trim().nullable(),
+  bank_name: z.string().trim().nullable(),
+  bank_address: z.string().trim().nullable(),
+  bank_cnaps_no: z.string().trim().nullable(),
+  bank_swift_code: z.string().trim().nullable(),
   notes: z.string().trim().nullable(),
 });
 
@@ -77,6 +83,20 @@ function valuesFromForm(formData: FormData, fallback?: Supplier) {
       : fallback?.invoice_format ?? "image",
     contacts: formData.has("contacts") ? parseContacts(formData.get("contacts")) : fallback?.contacts ?? [],
     address: formData.has("address") ? emptyToNull(formData.get("address")) : fallback?.address,
+    bank_account_name: formData.has("bank_account_name")
+      ? emptyToNull(formData.get("bank_account_name"))
+      : fallback?.bank_account_name,
+    bank_account_number: formData.has("bank_account_number")
+      ? emptyToNull(formData.get("bank_account_number"))
+      : fallback?.bank_account_number,
+    bank_name: formData.has("bank_name") ? emptyToNull(formData.get("bank_name")) : fallback?.bank_name,
+    bank_address: formData.has("bank_address") ? emptyToNull(formData.get("bank_address")) : fallback?.bank_address,
+    bank_cnaps_no: formData.has("bank_cnaps_no")
+      ? emptyToNull(formData.get("bank_cnaps_no"))
+      : fallback?.bank_cnaps_no,
+    bank_swift_code: formData.has("bank_swift_code")
+      ? emptyToNull(formData.get("bank_swift_code"))
+      : fallback?.bank_swift_code,
     notes: formData.has("notes") ? emptyToNull(formData.get("notes")) : fallback?.notes,
   };
 }
