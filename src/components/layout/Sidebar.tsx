@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
+import type { UserRole } from "@/types";
 
 const navItems = [
   { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
@@ -25,8 +26,9 @@ const navItems = [
   { label: "Admin", href: "/admin/users", icon: ShieldCheck },
 ];
 
-export function Sidebar() {
+export function Sidebar({ role }: { role: UserRole }) {
   const pathname = usePathname();
+  const visibleNavItems = navItems.filter((item) => item.label !== "Admin" || role === "admin");
 
   return (
     <aside className="fixed inset-y-0 left-0 flex w-[240px] flex-col bg-[#0d1b34] text-white shadow-2xl shadow-slate-950/20">
@@ -43,7 +45,7 @@ export function Sidebar() {
         </div>
       </div>
       <nav className="flex flex-1 flex-col gap-1.5 px-3 py-5">
-        {navItems.map((item) => {
+        {visibleNavItems.map((item) => {
           const isActive =
             pathname === item.href || (item.href !== "/dashboard" && pathname.startsWith(item.href));
           const Icon = item.icon;

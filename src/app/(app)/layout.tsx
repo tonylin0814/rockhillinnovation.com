@@ -1,18 +1,30 @@
+import { redirect } from "next/navigation";
+
 import { Sidebar } from "@/components/layout/Sidebar";
 import { TopBar } from "@/components/layout/TopBar";
+import { UserProvider } from "@/context/UserContext";
+import { getCurrentUser } from "@/lib/auth";
 
-export default function AppLayout({
+export default async function AppLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const user = await getCurrentUser();
+
+  if (!user) {
+    redirect("/login");
+  }
+
   return (
-    <div className="flex min-h-screen bg-[#f8fafc]">
-      <Sidebar />
-      <div className="ml-[240px] flex min-h-screen flex-1 flex-col">
-        <TopBar />
-        <main className="flex-1 overflow-y-auto px-8 py-7">{children}</main>
+    <UserProvider initialUser={user}>
+      <div className="flex min-h-screen bg-[#f8fafc]">
+        <Sidebar role={user.role} />
+        <div className="ml-[240px] flex min-h-screen flex-1 flex-col">
+          <TopBar name={user.name} role={user.role} />
+          <main className="flex-1 overflow-y-auto px-8 py-7">{children}</main>
+        </div>
       </div>
-    </div>
+    </UserProvider>
   );
 }
