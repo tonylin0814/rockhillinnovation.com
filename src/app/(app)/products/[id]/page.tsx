@@ -94,6 +94,10 @@ function calculateQtyItemsPerPallet(product: Product) {
   return product.qty_per_carton * product.cartons_per_pallet;
 }
 
+function formatCartonFlag(value: string | null | undefined) {
+  return value ? "Yes" : "No";
+}
+
 function formatDate(value: string) {
   return new Intl.DateTimeFormat("en-US", {
     dateStyle: "medium",
@@ -227,6 +231,15 @@ export default async function ProductDetailPage({ params }: { params: { id: stri
                     <PaymentCategoryBadge category={product.payment_category} />
                   </div>
                 </div>
+                <div className="border-b border-slate-100 py-3">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Status</p>
+                  <div className="mt-2 flex items-center gap-3">
+                    <StatusBadge status={product.status} />
+                    <ProductStatusButton productId={product.id} status={product.status} />
+                  </div>
+                </div>
+                <DetailRow label="Created" value={formatDate(product.created_at)} />
+                <DetailRow label="Updated" value={formatDate(product.updated_at)} />
               </div>
               <DetailRow label="Notes" value={product.notes} />
             </CardContent>
@@ -274,15 +287,6 @@ export default async function ProductDetailPage({ params }: { params: { id: stri
 
           <Card className="border-slate-200 shadow-sm">
             <CardHeader>
-              <CardTitle>Product Images</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ProductImagesEditor initialImages={product.product_images} productId={product.id} />
-            </CardContent>
-          </Card>
-
-          <Card className="border-slate-200 shadow-sm">
-            <CardHeader>
               <CardTitle>Cost History</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -312,10 +316,10 @@ export default async function ProductDetailPage({ params }: { params: { id: stri
                   <TableRow>
                     <TableHead>Date</TableHead>
                     <TableHead>Supplier Code</TableHead>
-                    <TableHead>MOQ</TableHead>
-                    <TableHead className="text-right">Unit Cost (RMB)</TableHead>
-                    <TableHead>Quality</TableHead>
-                    <TableHead>Carton Box Packaging</TableHead>
+                    <TableHead className="w-[6ch]">MOQ</TableHead>
+                    <TableHead className="w-[8ch] text-right">Unit (RMB)</TableHead>
+                    <TableHead className="min-w-[14rem]">Quality</TableHead>
+                    <TableHead className="w-[7ch]">Carton</TableHead>
                     <TableHead className="min-w-[20rem]">Notes</TableHead>
                     <TableHead>Source</TableHead>
                   </TableRow>
@@ -331,7 +335,7 @@ export default async function ProductDetailPage({ params }: { params: { id: stri
                           {formatRmb(row.unit_cost_rmb)}
                         </TableCell>
                         <TableCell>{row.quality ?? "-"}</TableCell>
-                        <TableCell>{row.carton_box_packaging ?? "-"}</TableCell>
+                        <TableCell>{formatCartonFlag(row.carton_box_packaging)}</TableCell>
                         <TableCell>{row.notes ?? "-"}</TableCell>
                         <TableCell>{row.source}</TableCell>
                       </TableRow>
@@ -352,32 +356,10 @@ export default async function ProductDetailPage({ params }: { params: { id: stri
         <div>
           <Card className="border-slate-200 shadow-sm">
             <CardHeader>
-              <CardTitle>Profile</CardTitle>
+              <CardTitle>Product Image</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-5">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Status</p>
-                <div className="mt-2 flex items-center justify-between gap-3">
-                  <StatusBadge status={product.status} />
-                  <ProductStatusButton productId={product.id} status={product.status} />
-                </div>
-              </div>
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Created</p>
-                <p className="mt-1 text-sm text-[#0d1b34]">
-                  {new Intl.DateTimeFormat("en-US", {
-                    dateStyle: "medium",
-                  }).format(new Date(product.created_at))}
-                </p>
-              </div>
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Updated</p>
-                <p className="mt-1 text-sm text-[#0d1b34]">
-                  {new Intl.DateTimeFormat("en-US", {
-                    dateStyle: "medium",
-                  }).format(new Date(product.updated_at))}
-                </p>
-              </div>
+            <CardContent>
+              <ProductImagesEditor initialImages={product.product_images} productId={product.id} />
             </CardContent>
           </Card>
         </div>

@@ -8,12 +8,11 @@ import type { ProductImage } from "@/types";
 
 export const runtime = "nodejs";
 
-const imageSlotCount = 5;
-
 const uploadSchema = z.object({
   product_id: z.string().uuid(),
-  slot_index: z.coerce.number().int().min(0).max(imageSlotCount - 1),
+  slot_index: z.coerce.number().int().min(0).max(49),
   image_name: z.string().trim().nullable(),
+  action: z.enum(["save", "remove"]).default("save"),
 });
 
 function emptyToNull(value: FormDataEntryValue | null) {
@@ -25,19 +24,42 @@ function emptyToNull(value: FormDataEntryValue | null) {
   return trimmed.length ? trimmed : null;
 }
 
+function emptyImage(): ProductImage {
+  return {
+    file_id: null,
+    file_name: null,
+    name: "",
+    url: null,
+  };
+}
+
 function normalizeImages(images: unknown): ProductImage[] {
   const existing = Array.isArray(images) ? images : [];
-  return Array.from({ length: imageSlotCount }, (_, index) => {
-    const image = existing[index] as Partial<ProductImage> | undefined;
-    const url = image?.url?.includes("mock.sharepoint.com") ? null : image?.url ?? null;
+  const cleaned = existing
+    .map((image) => {
+      const productImage = image as Partial<ProductImage> | undefined;
+      const url = productImage?.url?.includes("mock.sharepoint.com") ? null : productImage?.url ?? null;
 
-    return {
-      file_id: image?.file_id ?? null,
-      file_name: image?.file_name ?? null,
-      name: image?.name ?? "",
-      url,
-    };
-  });
+      return {
+        file_id: productImage?.file_id ?? null,
+        file_name: productImage?.file_name ?? null,
+        name: productImage?.name ?? "",
+        url,
+      };
+    })
+    .filter((image) => image.file_id || image.file_name || image.name || image.url);
+
+  return cleaned.length ? cleaned : [emptyImage()];
+}
+
+function ensureSlot(images: ProductImage[], slotIndex: number) {
+  const next = [...images];
+
+  while (next.length <= slotIndex) {
+    next.push(emptyImage());
+  }
+
+  return next;
 }
 
 export async function POST(request: Request) {
@@ -49,6 +71,7 @@ export async function POST(request: Request) {
 
   const formData = await request.formData();
   const parsed = uploadSchema.safeParse({
+    action: formData.get("action") ?? "save",
     image_name: emptyToNull(formData.get("image_name")),
     product_id: formData.get("product_id"),
     slot_index: formData.get("slot_index"),
@@ -73,7 +96,25 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Product not found" }, { status: 404 });
   }
 
-  const images = normalizeImages(product.product_images);
+  let images = normalizeImages(product.product_images);
+
+  if (parsed.data.action === "remove") {
+    images.splice(parsed.data.slot_index, 1);
+    images = images.length ? images : [emptyImage()];
+
+    const { error: removeError } = await supabase
+      .from("products")
+      .update({ product_images: images })
+      .eq("id", parsed.data.product_id);
+
+    if (removeError) {
+      return NextResponse.json({ error: removeError.message }, { status: 500 });
+    }
+
+    return NextResponse.json({ success: true, images });
+  }
+
+  images = ensureSlot(images, parsed.data.slot_index);
   const slot = images[parsed.data.slot_index];
   const file = formData.get("file");
 
