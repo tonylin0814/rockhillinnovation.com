@@ -76,6 +76,7 @@ export function ProductFormDialog({
     initialData?.payment_category ?? "outsourced"
   );
   const [packagingRequired, setPackagingRequired] = useState(initialData?.packaging_required ?? false);
+  const [hasCarton, setHasCarton] = useState(initialData?.has_carton ?? false);
   const [qtyPerCarton, setQtyPerCarton] = useState(initialData?.qty_per_carton?.toString() ?? "");
   const [cartonsPerPallet, setCartonsPerPallet] = useState(initialData?.cartons_per_pallet?.toString() ?? "");
   const [setComponentRows, setSetComponentRows] = useState<SetComponentDraft[]>([]);
@@ -91,6 +92,7 @@ export function ProductFormDialog({
       setSupplierId(initialData?.supplier_id ?? "none");
       setPaymentCategory(initialData?.payment_category ?? "outsourced");
       setPackagingRequired(initialData?.packaging_required ?? false);
+      setHasCarton(initialData?.has_carton ?? false);
       setQtyPerCarton(initialData?.qty_per_carton?.toString() ?? "");
       setCartonsPerPallet(initialData?.cartons_per_pallet?.toString() ?? "");
       setSetComponentRows([]);
@@ -165,6 +167,7 @@ export function ProductFormDialog({
     formData.set("supplier_id", supplierId);
     formData.set("payment_category", productType === "part" ? paymentCategory ?? "" : "");
     formData.set("packaging_required", packagingRequired ? "true" : "false");
+    formData.set("has_carton", productType === "set" && hasCarton ? "true" : "false");
 
     startTransition(async () => {
       const componentError = validateSetComponents();
@@ -323,6 +326,21 @@ export function ProductFormDialog({
                     <SelectItem value="produced">Produced</SelectItem>
                   </SelectContent>
                 </Select>
+              </div>
+            ) : null}
+            {productType === "set" ? (
+              <div className="space-y-2 rounded-md border border-slate-200 bg-slate-50 p-3">
+                <label className="flex items-center gap-2 text-sm font-medium text-[#0d1b34]">
+                  <input
+                    checked={hasCarton}
+                    className="h-4 w-4 rounded border-slate-300"
+                    disabled={isPending}
+                    onChange={(event) => setHasCarton(event.target.checked)}
+                    type="checkbox"
+                  />
+                  Carton
+                </label>
+                <p className="text-xs text-slate-500">Check this if the set includes a carton box.</p>
               </div>
             ) : null}
             </div>

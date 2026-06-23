@@ -167,7 +167,7 @@ export default async function ProductDetailPage({ params }: { params: { id: stri
     const { data: components, error: componentsError } = await supabase
       .from("product_components")
       .select(
-        "*, component:products!product_components_component_product_id_fkey(id, code, supplier_product_code, name_english, name_chinese, product_type, supplier_id, payment_category, status, notes, packaging_required, qty_per_carton, carton_height_cm, carton_width_cm, carton_length_cm, carton_weight_kg, cartons_per_pallet, product_images, created_at, updated_at, supplier:suppliers(id, name, code))"
+        "*, component:products!product_components_component_product_id_fkey(id, code, supplier_product_code, name_english, name_chinese, product_type, supplier_id, payment_category, status, notes, packaging_required, has_carton, qty_per_carton, carton_height_cm, carton_width_cm, carton_length_cm, carton_weight_kg, cartons_per_pallet, product_images, created_at, updated_at, supplier:suppliers(id, name, code))"
       )
       .eq("set_product_id", params.id)
       .order("sort_order", { ascending: true });
@@ -255,6 +255,7 @@ export default async function ProductDetailPage({ params }: { params: { id: stri
                   label="Supplier"
                   value={product.supplier?.code ?? null}
                 />
+                {product.product_type === "set" ? <DetailRow label="Carton" value={product.has_carton ? "Yes" : "No"} /> : null}
                 <div className="border-b border-slate-100 py-3">
                   <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Payment Category</p>
                   <div className="mt-1">

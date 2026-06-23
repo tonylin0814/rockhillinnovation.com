@@ -43,6 +43,7 @@ const productSchema = z
     status: z.enum(["active", "inactive"]).default("active"),
     notes: z.string().trim().nullable(),
     packaging_required: z.coerce.boolean().default(false),
+    has_carton: z.coerce.boolean().default(false),
     qty_per_carton: nullableNonNegativeNumber(),
     carton_height_cm: nullableNonNegativeNumber(),
     carton_width_cm: nullableNonNegativeNumber(),
@@ -63,6 +64,7 @@ const productSchema = z
     ...value,
     supplier_product_code: value.product_type === "part" ? value.supplier_product_code ?? null : null,
     payment_category: value.product_type === "part" ? value.payment_category : null,
+    has_carton: value.product_type === "set" ? value.has_carton : false,
     qty_per_carton: value.packaging_required ? value.qty_per_carton : null,
     carton_height_cm: value.packaging_required ? value.carton_height_cm : null,
     carton_width_cm: value.packaging_required ? value.carton_width_cm : null,
@@ -150,6 +152,7 @@ function valuesFromForm(formData: FormData, fallback?: Product) {
     packaging_required: formData.has("packaging_required")
       ? formData.get("packaging_required") === "true"
       : fallback?.packaging_required ?? false,
+    has_carton: formData.has("has_carton") ? formData.get("has_carton") === "true" : fallback?.has_carton ?? false,
     qty_per_carton: formData.has("qty_per_carton") ? formData.get("qty_per_carton") : fallback?.qty_per_carton ?? null,
     carton_height_cm: formData.has("carton_height_cm")
       ? formData.get("carton_height_cm")

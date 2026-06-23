@@ -115,6 +115,7 @@ export type Product = {
   status: "active" | "inactive";
   notes: string | null;
   packaging_required: boolean;
+  has_carton: boolean;
   qty_per_carton: number | null;
   carton_height_cm: number | null;
   carton_width_cm: number | null;
