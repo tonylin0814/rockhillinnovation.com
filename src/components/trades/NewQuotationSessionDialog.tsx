@@ -1,0 +1,99 @@
+"use client";
+
+import { Loader2, Plus } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { FormEvent, useState, useTransition } from "react";
+import { toast } from "sonner";
+
+import { createQuotationSession } from "@/app/actions/client-quotations";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+
+function todayInputValue() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+export function NewQuotationSessionDialog({ tradeId }: { tradeId: string }) {
+  const router = useRouter();
+  const [open, setOpen] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [isPending, startTransition] = useTransition();
+
+  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setError(null);
+
+    const formData = new FormData(event.currentTarget);
+
+    startTransition(async () => {
+      const result = await createQuotationSession(tradeId, formData);
+
+      if (result.error) {
+        setError(result.error);
+        return;
+      }
+
+      toast.success("Quotation session created");
+      setOpen(false);
+      router.refresh();
+    });
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button className="bg-[#0d1b34] hover:bg-[#13294d]">
+          <Plus className="mr-2 h-4 w-4" />
+          New Quotation
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-lg">
+        <DialogHeader>
+          <DialogTitle>New Client Quotation</DialogTitle>
+          <DialogDescription>Create a client-facing quotation round for this trade.</DialogDescription>
+        </DialogHeader>
+
+        <form className="space-y-5" onSubmit={handleSubmit}>
+          <div className="space-y-2">
+            <Label htmlFor="quotation_quote_date">Quote Date</Label>
+            <Input
+              defaultValue={todayInputValue()}
+              disabled={isPending}
+              id="quotation_quote_date"
+              name="quote_date"
+              required
+              type="date"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="quotation_notes">Notes</Label>
+            <Textarea disabled={isPending} id="quotation_notes" name="notes" />
+          </div>
+
+          {error ? <p className="text-sm font-medium text-red-600">{error}</p> : null}
+
+          <div className="flex justify-end gap-2">
+            <Button disabled={isPending} onClick={() => setOpen(false)} type="button" variant="outline">
+              Cancel
+            </Button>
+            <Button className="bg-[#0d1b34] hover:bg-[#13294d]" disabled={isPending} type="submit">
+              {isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+              Create Quotation
+            </Button>
+          </div>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}

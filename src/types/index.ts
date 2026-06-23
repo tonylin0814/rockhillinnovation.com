@@ -201,3 +201,27 @@ export type SupplierQuoteLine = {
   sort_order: number;
   product?: { id: string; code: string; name_english: string } | null;
 };
+
+export type ClientQuotationSession = {
+  id: string;
+  trade_id: string;
+  client_id: string;
+  session_number: number;
+  quote_date: string;
+  status: "draft" | "sent" | "accepted" | "rejected";
+  notes: string | null;
+  created_at: string;
+  client?: { id: string; name: string; code: string } | null;
+};
+
+export type ClientQuotationLine = {
+  id: string;
+  session_id: string;
+  product_id: string | null;
+  item_description: string | null;
+  quantity: number;
+  unit_price_usd: number;
+  total_price_usd: number;
+  notes: string | null;
+  product?: { id: string; code: string; name_english: string } | null;
+};

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import { ClientQuotationsTab } from "@/components/trades/ClientQuotationsTab";
 import { ManagePartnersDialog } from "@/components/trades/ManagePartnersDialog";
 import { OrderLinesTab } from "@/components/trades/OrderLinesTab";
 import { ShareholderRulesEditor } from "@/components/trades/ShareholderRulesEditor";
@@ -15,6 +16,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { getCurrentUser } from "@/lib/auth";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import type {
+  ClientQuotationSession,
   ComponentDemand,
   ExpenseVendor,
   OrderLine,
@@ -106,6 +108,7 @@ export default async function TradeWorkspacePage({ params }: { params: { id: str
     { data: tradeShareholders, error: tradeShareholdersError },
     { data: activeVendors, error: activeVendorsError },
     { data: quoteSessions, error: quoteSessionsError },
+    { data: quotationSessions, error: quotationSessionsError },
   ] = await Promise.all([
     supabase
       .from("trades")
@@ -157,6 +160,11 @@ export default async function TradeWorkspacePage({ params }: { params: { id: str
       .select("*")
       .eq("trade_id", params.id)
       .order("session_number", { ascending: false }),
+    supabase
+      .from("client_quotation_sessions")
+      .select("*, client:clients(id, name, code)")
+      .eq("trade_id", params.id)
+      .order("session_number", { ascending: false }),
   ]);
 
   if (
@@ -169,7 +177,8 @@ export default async function TradeWorkspacePage({ params }: { params: { id: str
     activeProductsError ||
     tradeShareholdersError ||
     activeVendorsError ||
-    quoteSessionsError
+    quoteSessionsError ||
+    quotationSessionsError
   ) {
     return (
       <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm font-medium text-red-700">
@@ -182,7 +191,8 @@ export default async function TradeWorkspacePage({ params }: { params: { id: str
           activeProductsError?.message ??
           tradeShareholdersError?.message ??
           activeVendorsError?.message ??
-          quoteSessionsError?.message}
+          quoteSessionsError?.message ??
+          quotationSessionsError?.message}
       </div>
     );
   }
@@ -201,6 +211,7 @@ export default async function TradeWorkspacePage({ params }: { params: { id: str
   const tradeShareholderRows = (tradeShareholders ?? []) as TradeShareholder[];
   const activeVendorOptions = (activeVendors ?? []) as ExpenseVendor[];
   const quoteSessionRows = (quoteSessions ?? []) as SupplierQuoteSession[];
+  const quotationSessionRows = (quotationSessions ?? []) as ClientQuotationSession[];
   const participantPartnerIds = tradeParticipants.map((participant) => participant.user_id);
 
   return (
@@ -292,7 +303,7 @@ export default async function TradeWorkspacePage({ params }: { params: { id: str
           />
         </TabsContent>
         <TabsContent value="quotations">
-          <ComingSoonCard title="Quotations" />
+          <ClientQuotationsTab canManage={canManage} initialSessions={quotationSessionRows} tradeId={trade.id} />
         </TabsContent>
         <TabsContent value="order-lines">
           <OrderLinesTab
