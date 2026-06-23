@@ -29,12 +29,13 @@ function normalizeImages(images: unknown): ProductImage[] {
   const existing = Array.isArray(images) ? images : [];
   return Array.from({ length: imageSlotCount }, (_, index) => {
     const image = existing[index] as Partial<ProductImage> | undefined;
+    const url = image?.url?.includes("mock.sharepoint.com") ? null : image?.url ?? null;
 
     return {
       file_id: image?.file_id ?? null,
       file_name: image?.file_name ?? null,
       name: image?.name ?? "",
-      url: image?.url ?? null,
+      url,
     };
   });
 }
@@ -84,16 +85,23 @@ export async function POST(request: Request) {
     }
 
     const arrayBuffer = await file.arrayBuffer();
-    const { fileId, webUrl } = await uploadProductImageToOneDrive({
-      fileBuffer: Buffer.from(arrayBuffer),
-      fileName: file.name,
-      mimeType: file.type || "application/octet-stream",
-      productCode: product.code,
-    });
+    let uploadResult: { fileId: string; webUrl: string };
 
-    slot.file_id = fileId;
+    try {
+      uploadResult = await uploadProductImageToOneDrive({
+        fileBuffer: Buffer.from(arrayBuffer),
+        fileName: file.name,
+        mimeType: file.type || "application/octet-stream",
+        productCode: product.code,
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Could not upload image to OneDrive";
+      return NextResponse.json({ error: message }, { status: 500 });
+    }
+
+    slot.file_id = uploadResult.fileId;
     slot.file_name = file.name;
-    slot.url = webUrl;
+    slot.url = uploadResult.webUrl;
   }
 
   images[parsed.data.slot_index] = slot;

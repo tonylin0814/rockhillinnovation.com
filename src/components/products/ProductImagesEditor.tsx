@@ -16,7 +16,7 @@ function normalizeImages(images: ProductImage[] | null | undefined): ProductImag
     file_id: images?.[index]?.file_id ?? null,
     file_name: images?.[index]?.file_name ?? null,
     name: images?.[index]?.name ?? "",
-    url: images?.[index]?.url ?? null,
+    url: images?.[index]?.url?.includes("mock.sharepoint.com") ? null : images?.[index]?.url ?? null,
   }));
 }
 

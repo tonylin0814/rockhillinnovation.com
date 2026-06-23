@@ -54,14 +54,7 @@ export async function uploadToOneDrive({
   mimeType,
   tradeCode,
 }: UploadParams): Promise<{ fileId: string; webUrl: string }> {
-  const driveId = process.env.ONEDRIVE_DRIVE_ID;
-
-  if (!driveId) {
-    return {
-      fileId: `mock-${Date.now()}`,
-      webUrl: `https://mock.sharepoint.com/${encodeURIComponent(fileName)}`,
-    };
-  }
+  const driveId = requireEnv("ONEDRIVE_DRIVE_ID");
 
   const client = await getGraphClient();
   const filePath = buildFilePath({ category, fileName, tradeCode });
@@ -84,14 +77,7 @@ export async function uploadProductImageToOneDrive({
   fileBuffer: Buffer;
   mimeType: string;
 }): Promise<{ fileId: string; webUrl: string }> {
-  const driveId = process.env.ONEDRIVE_DRIVE_ID;
-
-  if (!driveId) {
-    return {
-      fileId: `mock-product-${Date.now()}`,
-      webUrl: `https://mock.sharepoint.com/products/${encodeURIComponent(fileName)}`,
-    };
-  }
+  const driveId = requireEnv("ONEDRIVE_DRIVE_ID");
 
   const client = await getGraphClient();
   const filePath = buildProductImagePath({ fileName, productCode });
