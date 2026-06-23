@@ -30,6 +30,10 @@ function buildFilePath({ category, fileName, tradeCode }: Pick<UploadParams, "ca
   )}`;
 }
 
+function buildProductImagePath({ fileName, productCode }: { fileName: string; productCode: string }) {
+  return `/RockHillInnovation/Products/${sanitizePathPart(productCode)}/Images/${sanitizePathPart(fileName)}`;
+}
+
 export async function getGraphClient() {
   const credential = new ClientSecretCredential(
     requireEnv("ONEDRIVE_TENANT_ID"),
@@ -61,6 +65,36 @@ export async function uploadToOneDrive({
 
   const client = await getGraphClient();
   const filePath = buildFilePath({ category, fileName, tradeCode });
+  const item = await client
+    .api(`/drives/${driveId}/root:${filePath}:/content`)
+    .header("Content-Type", mimeType || "application/octet-stream")
+    .put(fileBuffer);
+
+  return { fileId: item.id, webUrl: item.webUrl };
+}
+
+export async function uploadProductImageToOneDrive({
+  fileBuffer,
+  fileName,
+  mimeType,
+  productCode,
+}: {
+  productCode: string;
+  fileName: string;
+  fileBuffer: Buffer;
+  mimeType: string;
+}): Promise<{ fileId: string; webUrl: string }> {
+  const driveId = process.env.ONEDRIVE_DRIVE_ID;
+
+  if (!driveId) {
+    return {
+      fileId: `mock-product-${Date.now()}`,
+      webUrl: `https://mock.sharepoint.com/products/${encodeURIComponent(fileName)}`,
+    };
+  }
+
+  const client = await getGraphClient();
+  const filePath = buildProductImagePath({ fileName, productCode });
   const item = await client
     .api(`/drives/${driveId}/root:${filePath}:/content`)
     .header("Content-Type", mimeType || "application/octet-stream")

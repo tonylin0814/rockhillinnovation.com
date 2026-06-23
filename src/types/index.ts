@@ -113,10 +113,18 @@ export type Product = {
   payment_category: "outsourced" | "produced" | null;
   status: "active" | "inactive";
   notes: string | null;
+  product_images: ProductImage[];
   created_at: string;
   updated_at: string;
   supplier?: { id: string; name: string; code: string } | null;
   components?: { id: string }[] | null;
+};
+
+export type ProductImage = {
+  name: string;
+  file_name: string | null;
+  file_id: string | null;
+  url: string | null;
 };
 
 export type ProductComponent = {

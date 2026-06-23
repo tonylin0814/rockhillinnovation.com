@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { ProductFormDialog, type ProductSupplierOption } from "@/components/products/ProductFormDialog";
+import { ProductImagesEditor } from "@/components/products/ProductImagesEditor";
 import { ProductStatusButton } from "@/components/products/ProductStatusButton";
 import { SetComponentsEditor } from "@/components/products/SetComponentsEditor";
 import { Badge } from "@/components/ui/badge";
@@ -183,6 +184,15 @@ export default async function ProductDetailPage({ params }: { params: { id: stri
                 </div>
               </div>
               <DetailRow label="Notes" value={product.notes} />
+            </CardContent>
+          </Card>
+
+          <Card className="border-slate-200 shadow-sm">
+            <CardHeader>
+              <CardTitle>Product Images</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ProductImagesEditor initialImages={product.product_images} productId={product.id} />
             </CardContent>
           </Card>
 
