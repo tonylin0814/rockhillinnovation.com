@@ -103,7 +103,7 @@ export function ProductFormDialog({
         {trigger ?? (
           <Button className="bg-[#0d1b34] hover:bg-[#13294d]">
             <Plus className="mr-2 h-4 w-4" />
-            {defaultProductType === "set" ? "Add Set" : "Add Part"}
+            {defaultProductType === "set" ? "Add Set" : "Add Product"}
           </Button>
         )}
       </DialogTrigger>
@@ -161,7 +161,7 @@ export function ProductFormDialog({
                   <SelectValue placeholder="Select product type" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="part">Part</SelectItem>
+                  <SelectItem value="part">Product</SelectItem>
                   <SelectItem value="set">Set</SelectItem>
                 </SelectContent>
               </Select>

@@ -40,7 +40,7 @@ function StatusBadge({ status }: { status: Product["status"] }) {
 function ProductTypeBadge({ type }: { type: Product["product_type"] }) {
   return (
     <Badge className={productTypeClasses[type]} variant="outline">
-      {type}
+      {type === "part" ? "product" : "set"}
     </Badge>
   );
 }
@@ -84,7 +84,7 @@ export default async function ProductDetailPage({ params }: { params: { id: stri
   const [
     { data, error },
     { data: suppliers, error: suppliersError },
-    { data: availableParts, error: availablePartsError },
+    { data: availableProducts, error: availableProductsError },
   ] = await Promise.all([
     supabase.from("products").select("*, supplier:suppliers(id, name, code)").eq("id", params.id).maybeSingle(),
     supabase.from("suppliers").select("id, name, code").eq("status", "active").order("name", { ascending: true }),
@@ -96,10 +96,10 @@ export default async function ProductDetailPage({ params }: { params: { id: stri
       .order("code", { ascending: true }),
   ]);
 
-  if (error || suppliersError || availablePartsError) {
+  if (error || suppliersError || availableProductsError) {
     return (
       <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm font-medium text-red-700">
-        {error?.message ?? suppliersError?.message ?? availablePartsError?.message}
+        {error?.message ?? suppliersError?.message ?? availableProductsError?.message}
       </div>
     );
   }
@@ -110,7 +110,7 @@ export default async function ProductDetailPage({ params }: { params: { id: stri
 
   const product = data as Product;
   const supplierOptions = (suppliers ?? []) as ProductSupplierOption[];
-  const availablePartOptions = (availableParts ?? []) as Product[];
+  const availableProductOptions = (availableProducts ?? []) as Product[];
   let setComponents: ProductComponent[] = [];
 
   if (product.product_type === "set") {
@@ -203,7 +203,7 @@ export default async function ProductDetailPage({ params }: { params: { id: stri
               </CardHeader>
               <CardContent>
                 <SetComponentsEditor
-                  availableParts={availablePartOptions}
+                  availableProducts={availableProductOptions}
                   initialComponents={setComponents}
                   setProductId={product.id}
                 />

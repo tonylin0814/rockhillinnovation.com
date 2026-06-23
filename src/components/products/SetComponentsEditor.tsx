@@ -51,28 +51,28 @@ function rowsFromComponents(components: ProductComponent[]): EditableComponent[]
 }
 
 export function SetComponentsEditor({
-  availableParts,
+  availableProducts,
   initialComponents,
   setProductId,
 }: {
   setProductId: string;
   initialComponents: ProductComponent[];
-  availableParts: Product[];
+  availableProducts: Product[];
 }) {
   const router = useRouter();
   const [isEditing, setIsEditing] = useState(false);
   const [rows, setRows] = useState<EditableComponent[]>(() => rowsFromComponents(initialComponents));
-  const [selectedPartId, setSelectedPartId] = useState("");
+  const [selectedProductId, setSelectedProductId] = useState("");
   const [isPending, startTransition] = useTransition();
 
   const availableToAdd = useMemo(() => {
     const usedIds = new Set(rows.map((row) => row.component_product_id));
-    return availableParts.filter((part) => !usedIds.has(part.id));
-  }, [availableParts, rows]);
+    return availableProducts.filter((product) => !usedIds.has(product.id));
+  }, [availableProducts, rows]);
 
   function resetRows() {
     setRows(rowsFromComponents(initialComponents));
-    setSelectedPartId("");
+    setSelectedProductId("");
   }
 
   function renumber(nextRows: EditableComponent[]) {
@@ -98,9 +98,9 @@ export function SetComponentsEditor({
   }
 
   function addComponent() {
-    const part = availableParts.find((availablePart) => availablePart.id === selectedPartId);
+    const product = availableProducts.find((availableProduct) => availableProduct.id === selectedProductId);
 
-    if (!part) {
+    if (!product) {
       return;
     }
 
@@ -108,15 +108,15 @@ export function SetComponentsEditor({
       renumber([
         ...currentRows,
         {
-          component_product_id: part.id,
+          component_product_id: product.id,
           quantity_per_set: 1,
           sort_order: currentRows.length + 1,
           notes: "",
-          component: part,
+          component: product,
         },
       ])
     );
-    setSelectedPartId("");
+    setSelectedProductId("");
   }
 
   function removeRow(index: number) {
@@ -261,25 +261,25 @@ export function SetComponentsEditor({
       {isEditing ? (
         <div className="space-y-4 rounded-lg border border-slate-200 bg-slate-50 p-4">
           <div className="flex flex-col gap-3 sm:flex-row">
-            <Select onValueChange={setSelectedPartId} value={selectedPartId}>
+            <Select onValueChange={setSelectedProductId} value={selectedProductId}>
               <SelectTrigger className="bg-white sm:max-w-md">
-                <SelectValue placeholder="Select a part to add" />
+                <SelectValue placeholder="Select a product to add" />
               </SelectTrigger>
               <SelectContent>
                 {availableToAdd.length ? (
-                  availableToAdd.map((part) => (
-                    <SelectItem key={part.id} value={part.id}>
-                      {part.code} - {part.name_english}
+                  availableToAdd.map((product) => (
+                    <SelectItem key={product.id} value={product.id}>
+                      {product.code} - {product.name_english}
                     </SelectItem>
                   ))
                 ) : (
                   <SelectItem disabled value="none">
-                    No active parts available
+                    No active products available
                   </SelectItem>
                 )}
               </SelectContent>
             </Select>
-            <Button disabled={!selectedPartId} onClick={addComponent} type="button" variant="outline">
+            <Button disabled={!selectedProductId} onClick={addComponent} type="button" variant="outline">
               <Plus className="mr-2 h-4 w-4" />
               Add Component
             </Button>

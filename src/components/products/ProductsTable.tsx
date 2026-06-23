@@ -24,7 +24,7 @@ import {
 import type { Product } from "@/types";
 
 type PaymentFilter = "all" | "outsourced" | "produced";
-type ProductsTableMode = "parts" | "sets";
+type ProductsTableMode = "products" | "sets";
 
 function StatusBadge({ status }: { status: Product["status"] }) {
   return (
@@ -60,7 +60,7 @@ function PaymentCategoryBadge({ category }: { category: Product["payment_categor
   );
 }
 
-export function ProductsTable({ mode = "parts", products }: { mode?: ProductsTableMode; products: Product[] }) {
+export function ProductsTable({ mode = "products", products }: { mode?: ProductsTableMode; products: Product[] }) {
   const [search, setSearch] = useState("");
   const [paymentFilter, setPaymentFilter] = useState<PaymentFilter>("all");
 
@@ -89,7 +89,7 @@ export function ProductsTable({ mode = "parts", products }: { mode?: ProductsTab
           placeholder="Search code or name..."
           value={search}
         />
-        {mode === "parts" ? (
+        {mode === "products" ? (
           <Select onValueChange={(value: PaymentFilter) => setPaymentFilter(value)} value={paymentFilter}>
             <SelectTrigger className="sm:w-56">
               <SelectValue placeholder="Payment category" />
@@ -109,8 +109,8 @@ export function ProductsTable({ mode = "parts", products }: { mode?: ProductsTab
             <TableHead>Code</TableHead>
             <TableHead>English Name</TableHead>
             <TableHead>Chinese Name</TableHead>
-            {mode === "parts" ? <TableHead>Supplier</TableHead> : null}
-            {mode === "parts" ? <TableHead>Payment Category</TableHead> : <TableHead>Components</TableHead>}
+            {mode === "products" ? <TableHead>Supplier</TableHead> : null}
+            {mode === "products" ? <TableHead>Payment Category</TableHead> : <TableHead>Components</TableHead>}
             <TableHead>Status</TableHead>
             <TableHead className="text-right">Actions</TableHead>
           </TableRow>
@@ -122,13 +122,13 @@ export function ProductsTable({ mode = "parts", products }: { mode?: ProductsTab
                 <TableCell className="font-semibold text-[#0d1b34]">{product.code}</TableCell>
                 <TableCell>{product.name_english}</TableCell>
                 <TableCell>{product.name_chinese ?? "-"}</TableCell>
-                {mode === "parts" ? <TableCell>{product.supplier?.name ?? "-"}</TableCell> : null}
-                {mode === "parts" ? (
+                {mode === "products" ? <TableCell>{product.supplier?.name ?? "-"}</TableCell> : null}
+                {mode === "products" ? (
                   <TableCell>
                     <PaymentCategoryBadge category={product.payment_category} />
                   </TableCell>
                 ) : (
-                  <TableCell>{product.components?.length ?? 0} parts</TableCell>
+                  <TableCell>{product.components?.length ?? 0} products</TableCell>
                 )}
                 <TableCell>
                   <StatusBadge status={product.status} />
@@ -142,8 +142,8 @@ export function ProductsTable({ mode = "parts", products }: { mode?: ProductsTab
             ))
           ) : (
             <TableRow>
-              <TableCell className="text-slate-500" colSpan={mode === "parts" ? 7 : 6}>
-                {mode === "parts" ? "No parts yet." : "No sets yet."}
+              <TableCell className="text-slate-500" colSpan={mode === "products" ? 7 : 6}>
+                {mode === "products" ? "No products yet." : "No sets yet."}
               </TableCell>
             </TableRow>
           )}

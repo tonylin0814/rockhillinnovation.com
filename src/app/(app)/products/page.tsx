@@ -39,7 +39,7 @@ export default async function ProductsPage() {
   }
 
   const allProducts = (products ?? []) as Product[];
-  const partProducts = allProducts.filter((product) => product.product_type === "part");
+  const standardProducts = allProducts.filter((product) => product.product_type === "part");
   const setProducts = allProducts.filter((product) => product.product_type === "set");
   const supplierOptions = (suppliers ?? []) as ProductSupplierOption[];
 
@@ -65,19 +65,19 @@ export default async function ProductsPage() {
         </div>
       </div>
 
-      <Tabs className="space-y-4" defaultValue="parts">
+      <Tabs className="space-y-4" defaultValue="products">
         <TabsList>
-          <TabsTrigger value="parts">Parts</TabsTrigger>
+          <TabsTrigger value="products">Products</TabsTrigger>
           <TabsTrigger value="sets">Sets</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="parts">
+        <TabsContent value="products">
           <Card className="border-slate-200 shadow-sm">
             <CardHeader>
-              <CardTitle>Part Products</CardTitle>
+              <CardTitle>Products</CardTitle>
             </CardHeader>
             <CardContent>
-              <ProductsTable mode="parts" products={partProducts} />
+              <ProductsTable mode="products" products={standardProducts} />
             </CardContent>
           </Card>
         </TabsContent>

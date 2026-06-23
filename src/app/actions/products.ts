@@ -35,7 +35,7 @@ const productSchema = z
     if (value.product_type === "part" && !value.payment_category) {
       context.addIssue({
         code: z.ZodIssueCode.custom,
-        message: "Payment category is required for parts",
+        message: "Payment category is required for products",
         path: ["payment_category"],
       });
     }
