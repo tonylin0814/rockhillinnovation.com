@@ -1,6 +1,7 @@
 "use client";
 
 import { ImageIcon, Loader2, Upload } from "lucide-react";
+import Image from "next/image";
 import { ChangeEvent, useMemo, useState, useTransition } from "react";
 import { toast } from "sonner";
 
@@ -98,11 +99,22 @@ export function ProductImagesEditor({
             ) : null}
           </div>
 
-          <div className="flex aspect-[4/3] items-center justify-center rounded-md border border-dashed border-slate-300 bg-slate-50">
-            <div className="text-center text-slate-500">
-              <ImageIcon className="mx-auto h-8 w-8" />
-              <p className="mt-2 text-xs">{image.file_name ?? "No image uploaded"}</p>
-            </div>
+          <div className="relative flex aspect-[4/3] items-center justify-center rounded-md border border-dashed border-slate-300 bg-slate-50">
+            {image.url ? (
+              <Image
+                alt={image.name || image.file_name || `Product image ${index + 1}`}
+                className="rounded-md object-contain"
+                fill
+                sizes="(min-width: 1280px) 30vw, (min-width: 768px) 45vw, 90vw"
+                src={`/api/products/images/preview?url=${encodeURIComponent(image.url)}`}
+                unoptimized
+              />
+            ) : (
+              <div className="text-center text-slate-500">
+                <ImageIcon className="mx-auto h-8 w-8" />
+                <p className="mt-2 text-xs">{image.file_name ?? "No image uploaded"}</p>
+              </div>
+            )}
           </div>
 
           <div className="space-y-2">
