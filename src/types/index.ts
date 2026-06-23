@@ -114,6 +114,7 @@ export type Product = {
   payment_category: "outsourced" | "produced" | null;
   status: "active" | "inactive";
   notes: string | null;
+  packaging_required: boolean;
   qty_per_carton: number | null;
   carton_height_cm: number | null;
   carton_width_cm: number | null;

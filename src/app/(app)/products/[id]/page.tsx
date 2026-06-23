@@ -86,6 +86,14 @@ function formatPackagingValue(value: number | null | undefined, suffix = "") {
   return `${Number.isInteger(value) ? value.toFixed(0) : value.toString()}${suffix}`;
 }
 
+function calculateQtyItemsPerPallet(product: Product) {
+  if (typeof product.qty_per_carton !== "number" || typeof product.cartons_per_pallet !== "number") {
+    return null;
+  }
+
+  return product.qty_per_carton * product.cartons_per_pallet;
+}
+
 function formatDate(value: string) {
   return new Intl.DateTimeFormat("en-US", {
     dateStyle: "medium",
@@ -153,7 +161,7 @@ export default async function ProductDetailPage({ params }: { params: { id: stri
     const { data: components, error: componentsError } = await supabase
       .from("product_components")
       .select(
-        "*, component:products(id, code, supplier_product_code, name_english, name_chinese, product_type, supplier_id, payment_category, status, notes, qty_per_carton, carton_height_cm, carton_width_cm, carton_length_cm, carton_weight_kg, cartons_per_pallet, product_images, created_at, updated_at, supplier:suppliers(id, name, code))"
+        "*, component:products(id, code, supplier_product_code, name_english, name_chinese, product_type, supplier_id, payment_category, status, notes, packaging_required, qty_per_carton, carton_height_cm, carton_width_cm, carton_length_cm, carton_weight_kg, cartons_per_pallet, product_images, created_at, updated_at, supplier:suppliers(id, name, code))"
       )
       .eq("set_product_id", params.id)
       .order("sort_order", { ascending: true });
@@ -239,21 +247,30 @@ export default async function ProductDetailPage({ params }: { params: { id: stri
             </Card>
           ) : null}
 
-          <Card className="border-slate-200 shadow-sm">
-            <CardHeader>
-              <CardTitle>Packaging Information</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid gap-x-6 sm:grid-cols-2">
-                <DetailRow label="Qty per Carton" value={formatPackagingValue(product.qty_per_carton)} />
-                <DetailRow label="Carton Height" value={formatPackagingValue(product.carton_height_cm, " cm")} />
-                <DetailRow label="Carton Width" value={formatPackagingValue(product.carton_width_cm, " cm")} />
-                <DetailRow label="Carton Length" value={formatPackagingValue(product.carton_length_cm, " cm")} />
-                <DetailRow label="Carton Weight" value={formatPackagingValue(product.carton_weight_kg, " kg")} />
-                <DetailRow label="Cartons per Pallet" value={formatPackagingValue(product.cartons_per_pallet)} />
-              </div>
-            </CardContent>
-          </Card>
+          {product.packaging_required ? (
+            <Card className="border-slate-200 shadow-sm">
+              <CardHeader>
+                <CardTitle>Packaging Information</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid gap-x-6 sm:grid-cols-2">
+                  <DetailRow label="Qty per Carton" value={formatPackagingValue(product.qty_per_carton)} />
+                  <DetailRow
+                    label="Carton Dimensions"
+                    value={`${formatPackagingValue(product.carton_height_cm)} H x ${formatPackagingValue(
+                      product.carton_width_cm
+                    )} W x ${formatPackagingValue(product.carton_length_cm)} L cm`}
+                  />
+                  <DetailRow label="Carton Weight" value={formatPackagingValue(product.carton_weight_kg, " kg")} />
+                  <DetailRow label="Cartons per Pallet" value={formatPackagingValue(product.cartons_per_pallet)} />
+                  <DetailRow
+                    label="Qty Items per Pallet"
+                    value={formatPackagingValue(calculateQtyItemsPerPallet(product))}
+                  />
+                </div>
+              </CardContent>
+            </Card>
+          ) : null}
 
           <Card className="border-slate-200 shadow-sm">
             <CardHeader>
@@ -269,10 +286,14 @@ export default async function ProductDetailPage({ params }: { params: { id: stri
               <CardTitle>Cost History</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid gap-4 rounded-lg border border-slate-200 bg-slate-50 p-4 sm:grid-cols-3">
+              <div className="grid gap-4 rounded-lg border border-slate-200 bg-slate-50 p-4 sm:grid-cols-4">
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Latest Cost</p>
                   <p className="mt-1 text-2xl font-semibold text-[#0d1b34]">{formatRmb(latestCost?.unit_cost_rmb)}</p>
+                </div>
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Latest MOQ</p>
+                  <p className="mt-1 text-sm text-[#0d1b34]">{latestCost?.moq ?? "-"}</p>
                 </div>
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Latest Date</p>
@@ -292,9 +313,9 @@ export default async function ProductDetailPage({ params }: { params: { id: stri
                     <TableHead>Date</TableHead>
                     <TableHead>Supplier Code</TableHead>
                     <TableHead>MOQ</TableHead>
+                    <TableHead className="text-right">Unit Cost (RMB)</TableHead>
                     <TableHead>Quality</TableHead>
                     <TableHead>Carton Box Packaging</TableHead>
-                    <TableHead className="text-right">Unit Cost (RMB)</TableHead>
                     <TableHead className="min-w-[20rem]">Notes</TableHead>
                     <TableHead>Source</TableHead>
                   </TableRow>
@@ -306,11 +327,11 @@ export default async function ProductDetailPage({ params }: { params: { id: stri
                         <TableCell>{formatDate(row.quoted_date)}</TableCell>
                         <TableCell>{row.supplier_product_code ?? "-"}</TableCell>
                         <TableCell>{row.moq ?? "-"}</TableCell>
-                        <TableCell>{row.quality ?? "-"}</TableCell>
-                        <TableCell>{row.carton_box_packaging ?? "-"}</TableCell>
                         <TableCell className="text-right font-medium text-[#0d1b34]">
                           {formatRmb(row.unit_cost_rmb)}
                         </TableCell>
+                        <TableCell>{row.quality ?? "-"}</TableCell>
+                        <TableCell>{row.carton_box_packaging ?? "-"}</TableCell>
                         <TableCell>{row.notes ?? "-"}</TableCell>
                         <TableCell>{row.source}</TableCell>
                       </TableRow>

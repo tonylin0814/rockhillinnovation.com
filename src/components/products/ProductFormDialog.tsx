@@ -58,7 +58,13 @@ export function ProductFormDialog({
   const [paymentCategory, setPaymentCategory] = useState<Product["payment_category"]>(
     initialData?.payment_category ?? "outsourced"
   );
+  const [packagingRequired, setPackagingRequired] = useState(initialData?.packaging_required ?? false);
+  const [qtyPerCarton, setQtyPerCarton] = useState(initialData?.qty_per_carton?.toString() ?? "");
+  const [cartonsPerPallet, setCartonsPerPallet] = useState(initialData?.cartons_per_pallet?.toString() ?? "");
   const [isPending, startTransition] = useTransition();
+  const qtyItemsPerPallet = Number(qtyPerCarton) > 0 && Number(cartonsPerPallet) > 0
+    ? Number(qtyPerCarton) * Number(cartonsPerPallet)
+    : null;
 
   useEffect(() => {
     if (open) {
@@ -66,6 +72,9 @@ export function ProductFormDialog({
       setProductType(initialData?.product_type ?? defaultProductType);
       setSupplierId(initialData?.supplier_id ?? "none");
       setPaymentCategory(initialData?.payment_category ?? "outsourced");
+      setPackagingRequired(initialData?.packaging_required ?? false);
+      setQtyPerCarton(initialData?.qty_per_carton?.toString() ?? "");
+      setCartonsPerPallet(initialData?.cartons_per_pallet?.toString() ?? "");
     }
   }, [defaultProductType, initialData, open]);
 
@@ -77,6 +86,7 @@ export function ProductFormDialog({
     formData.set("product_type", productType);
     formData.set("supplier_id", supplierId);
     formData.set("payment_category", productType === "part" ? paymentCategory ?? "" : "");
+    formData.set("packaging_required", packagingRequired ? "true" : "false");
 
     startTransition(async () => {
       const result =
@@ -215,11 +225,24 @@ export function ProductFormDialog({
           </div>
 
           <div className="space-y-3">
-            <div>
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
               <h3 className="text-sm font-semibold text-[#0d1b34]">Packaging Information</h3>
               <p className="text-xs text-slate-500">Carton and pallet details for shipping and production planning.</p>
+              </div>
+              <label className="flex items-center gap-2 text-sm font-medium text-[#0d1b34]">
+                <input
+                  checked={packagingRequired}
+                  className="h-4 w-4 rounded border-slate-300"
+                  disabled={isPending}
+                  onChange={(event) => setPackagingRequired(event.target.checked)}
+                  type="checkbox"
+                />
+                Has packaging info
+              </label>
             </div>
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {packagingRequired ? (
+            <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="qty_per_carton">Qty per Carton</Label>
                 <Input
@@ -228,45 +251,45 @@ export function ProductFormDialog({
                   id="qty_per_carton"
                   min="0"
                   name="qty_per_carton"
+                  onChange={(event) => setQtyPerCarton(event.target.value)}
                   step="1"
                   type="number"
                 />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="carton_height_cm">Carton Height (cm)</Label>
-                <Input
-                  defaultValue={initialData?.carton_height_cm ?? ""}
-                  disabled={isPending}
-                  id="carton_height_cm"
-                  min="0"
-                  name="carton_height_cm"
-                  step="0.01"
-                  type="number"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="carton_width_cm">Carton Width (cm)</Label>
-                <Input
-                  defaultValue={initialData?.carton_width_cm ?? ""}
-                  disabled={isPending}
-                  id="carton_width_cm"
-                  min="0"
-                  name="carton_width_cm"
-                  step="0.01"
-                  type="number"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="carton_length_cm">Carton Length (cm)</Label>
-                <Input
-                  defaultValue={initialData?.carton_length_cm ?? ""}
-                  disabled={isPending}
-                  id="carton_length_cm"
-                  min="0"
-                  name="carton_length_cm"
-                  step="0.01"
-                  type="number"
-                />
+              <div className="space-y-2 sm:col-span-2">
+                <Label>Carton Dimensions (cm)</Label>
+                <div className="grid gap-3 sm:grid-cols-3">
+                  <Input
+                    aria-label="Carton height in cm"
+                    defaultValue={initialData?.carton_height_cm ?? ""}
+                    disabled={isPending}
+                    min="0"
+                    name="carton_height_cm"
+                    placeholder="H cm"
+                    step="0.01"
+                    type="number"
+                  />
+                  <Input
+                    aria-label="Carton width in cm"
+                    defaultValue={initialData?.carton_width_cm ?? ""}
+                    disabled={isPending}
+                    min="0"
+                    name="carton_width_cm"
+                    placeholder="W cm"
+                    step="0.01"
+                    type="number"
+                  />
+                  <Input
+                    aria-label="Carton length in cm"
+                    defaultValue={initialData?.carton_length_cm ?? ""}
+                    disabled={isPending}
+                    min="0"
+                    name="carton_length_cm"
+                    placeholder="L cm"
+                    step="0.01"
+                    type="number"
+                  />
+                </div>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="carton_weight_kg">Carton Weight (kg)</Label>
@@ -288,11 +311,20 @@ export function ProductFormDialog({
                   id="cartons_per_pallet"
                   min="0"
                   name="cartons_per_pallet"
+                  onChange={(event) => setCartonsPerPallet(event.target.value)}
                   step="1"
                   type="number"
                 />
               </div>
+              <div className="rounded-md border border-slate-200 bg-slate-50 p-3 sm:col-span-2">
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Qty Items per Pallet</p>
+                <p className="mt-1 text-sm font-semibold text-[#0d1b34]">
+                  {qtyItemsPerPallet ? qtyItemsPerPallet.toLocaleString() : "-"}
+                </p>
+                <p className="mt-1 text-xs text-slate-500">Qty per carton x cartons per pallet</p>
+              </div>
             </div>
+            ) : null}
           </div>
 
           <div className="space-y-2">
