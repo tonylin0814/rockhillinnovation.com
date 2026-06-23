@@ -1,6 +1,6 @@
 "use client";
 
-import { Edit, Loader2, Plus, Trash2 } from "lucide-react";
+import { ArrowUpDown, Edit, Loader2, Plus, Trash2 } from "lucide-react";
 import { FormEvent, ReactNode, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -97,6 +97,10 @@ type QuoteHistoryRow = {
   session?: QuoteSessionOption | null;
 };
 
+type SortDirection = "asc" | "desc";
+type CostSortKey = "date" | "product" | "supplier" | "moq" | "unit" | "quality" | "carton" | "source";
+type QuoteSortKey = "date" | "trade" | "round" | "status" | "product" | "name" | "qty" | "unit" | "total" | "source";
+
 function formatDate(value: string) {
   return new Intl.DateTimeFormat("en-US", { dateStyle: "medium", timeZone: "UTC" }).format(new Date(value));
 }
@@ -116,6 +120,53 @@ function StatusBadge({ status }: { status: QuoteSessionOption["status"] }) {
     <Badge className={classes[status]} variant="outline">
       {status}
     </Badge>
+  );
+}
+
+function compareValues(a: string | number | null | undefined, b: string | number | null | undefined) {
+  const normalizedA = a ?? "";
+  const normalizedB = b ?? "";
+
+  if (typeof normalizedA === "number" && typeof normalizedB === "number") {
+    return normalizedA - normalizedB;
+  }
+
+  return String(normalizedA).localeCompare(String(normalizedB), undefined, {
+    numeric: true,
+    sensitivity: "base",
+  });
+}
+
+function SortHeader<T extends string>({
+  activeKey,
+  children,
+  columnKey,
+  direction,
+  onSort,
+  className,
+}: {
+  activeKey: T;
+  children: ReactNode;
+  className?: string;
+  columnKey: T;
+  direction: SortDirection;
+  onSort: (key: T) => void;
+}) {
+  const isActive = activeKey === columnKey;
+
+  return (
+    <TableHead className={className}>
+      <Button
+        className="h-auto px-0 py-0 text-xs font-semibold text-slate-600 hover:bg-transparent hover:text-[#0d1b34]"
+        onClick={() => onSort(columnKey)}
+        type="button"
+        variant="ghost"
+      >
+        {children}
+        <ArrowUpDown className={`ml-1 h-3 w-3 ${isActive ? "text-[#0d1b34]" : "text-slate-400"}`} />
+        {isActive ? <span className="ml-1 text-[10px] uppercase">{direction}</span> : null}
+      </Button>
+    </TableHead>
   );
 }
 
@@ -482,6 +533,88 @@ export function HistoryTabs({
   sessions: QuoteSessionOption[];
   suppliers: SupplierOption[];
 }) {
+  const [costSearch, setCostSearch] = useState("");
+  const [costSourceFilter, setCostSourceFilter] = useState("all");
+  const [costSortKey, setCostSortKey] = useState<CostSortKey>("date");
+  const [costSortDirection, setCostSortDirection] = useState<SortDirection>("desc");
+  const [quoteSearch, setQuoteSearch] = useState("");
+  const [quoteStatusFilter, setQuoteStatusFilter] = useState("all");
+  const [quoteSourceFilter, setQuoteSourceFilter] = useState("all");
+  const [quoteSortKey, setQuoteSortKey] = useState<QuoteSortKey>("date");
+  const [quoteSortDirection, setQuoteSortDirection] = useState<SortDirection>("desc");
+
+  function handleCostSort(key: CostSortKey) {
+    if (costSortKey === key) {
+      setCostSortDirection((current) => (current === "asc" ? "desc" : "asc"));
+      return;
+    }
+
+    setCostSortKey(key);
+    setCostSortDirection(key === "date" || key === "unit" ? "desc" : "asc");
+  }
+
+  function handleQuoteSort(key: QuoteSortKey) {
+    if (quoteSortKey === key) {
+      setQuoteSortDirection((current) => (current === "asc" ? "desc" : "asc"));
+      return;
+    }
+
+    setQuoteSortKey(key);
+    setQuoteSortDirection(["date", "qty", "unit", "total", "round"].includes(key) ? "desc" : "asc");
+  }
+
+  const costSources = useMemo(
+    () => Array.from(new Set(costRows.map((row) => row.source).filter(Boolean))).sort(),
+    [costRows]
+  );
+
+  const quoteSources = useMemo(
+    () =>
+      Array.from(
+        new Set(quoteRows.map((row) => row.payment_category).filter((source): source is NonNullable<typeof source> => Boolean(source)))
+      ).sort(),
+    [quoteRows]
+  );
+
+  const filteredCostRows = useMemo(() => {
+    const normalizedSearch = costSearch.trim().toLowerCase();
+
+    return [...costRows]
+      .filter((row) => {
+        const matchesSource = costSourceFilter === "all" || row.source === costSourceFilter;
+        const haystack = [
+          row.product?.code,
+          row.product?.name_english,
+          row.product?.name_chinese,
+          row.supplier_product_code,
+          row.supplier?.code,
+          row.moq,
+          row.quality,
+          row.source,
+          row.notes,
+        ]
+          .filter(Boolean)
+          .join(" ")
+          .toLowerCase();
+
+        return matchesSource && (!normalizedSearch || haystack.includes(normalizedSearch));
+      })
+      .sort((a, b) => {
+        const values: Record<CostSortKey, [string | number | null | undefined, string | number | null | undefined]> = {
+          carton: [a.carton_box_packaging ? "Yes" : "No", b.carton_box_packaging ? "Yes" : "No"],
+          date: [a.quoted_date, b.quoted_date],
+          moq: [a.moq, b.moq],
+          product: [a.product?.code, b.product?.code],
+          quality: [a.quality, b.quality],
+          source: [a.source, b.source],
+          supplier: [a.supplier_product_code ?? a.supplier?.code, b.supplier_product_code ?? b.supplier?.code],
+          unit: [a.unit_cost_rmb, b.unit_cost_rmb],
+        };
+        const comparison = compareValues(values[costSortKey][0], values[costSortKey][1]);
+        return costSortDirection === "asc" ? comparison : -comparison;
+      });
+  }, [costRows, costSearch, costSortDirection, costSortKey, costSourceFilter]);
+
   const sortedQuotes = useMemo(
     () =>
       [...quoteRows].sort((a, b) => {
@@ -491,6 +624,48 @@ export function HistoryTabs({
       }),
     [quoteRows]
   );
+
+  const filteredQuoteRows = useMemo(() => {
+    const normalizedSearch = quoteSearch.trim().toLowerCase();
+
+    return [...sortedQuotes]
+      .filter((row) => {
+        const matchesStatus = quoteStatusFilter === "all" || row.session?.status === quoteStatusFilter;
+        const matchesSource = quoteSourceFilter === "all" || row.payment_category === quoteSourceFilter;
+        const haystack = [
+          row.session?.trade?.trade_id,
+          row.session?.session_number,
+          row.product?.code,
+          row.product?.name_english,
+          row.product?.name_chinese,
+          row.item_name_english,
+          row.item_name_chinese,
+          row.payment_category,
+          row.notes,
+        ]
+          .filter(Boolean)
+          .join(" ")
+          .toLowerCase();
+
+        return matchesStatus && matchesSource && (!normalizedSearch || haystack.includes(normalizedSearch));
+      })
+      .sort((a, b) => {
+        const values: Record<QuoteSortKey, [string | number | null | undefined, string | number | null | undefined]> = {
+          date: [a.session?.quote_date, b.session?.quote_date],
+          name: [a.item_name_english ?? a.product?.name_english, b.item_name_english ?? b.product?.name_english],
+          product: [a.product?.code, b.product?.code],
+          qty: [a.quantity, b.quantity],
+          round: [a.session?.session_number, b.session?.session_number],
+          source: [a.payment_category, b.payment_category],
+          status: [a.session?.status, b.session?.status],
+          total: [a.total_price_rmb, b.total_price_rmb],
+          trade: [a.session?.trade?.trade_id, b.session?.trade?.trade_id],
+          unit: [a.unit_price_rmb, b.unit_price_rmb],
+        };
+        const comparison = compareValues(values[quoteSortKey][0], values[quoteSortKey][1]);
+        return quoteSortDirection === "asc" ? comparison : -comparison;
+      });
+  }, [quoteSearch, quoteSortDirection, quoteSortKey, quoteSourceFilter, quoteStatusFilter, sortedQuotes]);
 
   return (
     <Tabs className="space-y-4" defaultValue="cost">
@@ -510,23 +685,77 @@ export function HistoryTabs({
               </Button>
             </CostHistoryDialog>
           </div>
+          <div className="grid gap-3 border-b border-slate-200 p-4 md:grid-cols-[minmax(16rem,1fr)_14rem]">
+            <Input
+              onChange={(event) => setCostSearch(event.target.value)}
+              placeholder="Search product, supplier code, MOQ, quality, source..."
+              value={costSearch}
+            />
+            <Select onValueChange={setCostSourceFilter} value={costSourceFilter}>
+              <SelectTrigger>
+                <SelectValue placeholder="Source" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Sources</SelectItem>
+                {costSources.map((source) => (
+                  <SelectItem key={source} value={source}>
+                    {source}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Date</TableHead>
-                <TableHead>Rock Hill Code</TableHead>
-                <TableHead>Supplier Code</TableHead>
-                <TableHead className="w-[6ch]">MOQ</TableHead>
-                <TableHead className="text-right">Unit (RMB)</TableHead>
-                <TableHead className="min-w-[16rem]">Quality</TableHead>
-                <TableHead>Carton</TableHead>
-                <TableHead>Source</TableHead>
+                <SortHeader activeKey={costSortKey} columnKey="date" direction={costSortDirection} onSort={handleCostSort}>
+                  Date
+                </SortHeader>
+                <SortHeader activeKey={costSortKey} columnKey="product" direction={costSortDirection} onSort={handleCostSort}>
+                  Rock Hill Code
+                </SortHeader>
+                <SortHeader activeKey={costSortKey} columnKey="supplier" direction={costSortDirection} onSort={handleCostSort}>
+                  Supplier Code
+                </SortHeader>
+                <SortHeader
+                  activeKey={costSortKey}
+                  className="w-[6ch]"
+                  columnKey="moq"
+                  direction={costSortDirection}
+                  onSort={handleCostSort}
+                >
+                  MOQ
+                </SortHeader>
+                <SortHeader
+                  activeKey={costSortKey}
+                  className="text-right"
+                  columnKey="unit"
+                  direction={costSortDirection}
+                  onSort={handleCostSort}
+                >
+                  Unit (RMB)
+                </SortHeader>
+                <SortHeader
+                  activeKey={costSortKey}
+                  className="min-w-[16rem]"
+                  columnKey="quality"
+                  direction={costSortDirection}
+                  onSort={handleCostSort}
+                >
+                  Quality
+                </SortHeader>
+                <SortHeader activeKey={costSortKey} columnKey="carton" direction={costSortDirection} onSort={handleCostSort}>
+                  Carton
+                </SortHeader>
+                <SortHeader activeKey={costSortKey} columnKey="source" direction={costSortDirection} onSort={handleCostSort}>
+                  Source
+                </SortHeader>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {costRows.length ? (
-                costRows.map((row) => (
+              {filteredCostRows.length ? (
+                filteredCostRows.map((row) => (
                   <TableRow key={row.id}>
                     <TableCell>{formatDate(row.quoted_date)}</TableCell>
                     <TableCell>{row.product?.code ?? "-"}</TableCell>
@@ -551,7 +780,7 @@ export function HistoryTabs({
               ) : (
                 <TableRow>
                   <TableCell className="text-slate-500" colSpan={9}>
-                    No cost history yet.
+                    No cost history matches these filters.
                   </TableCell>
                 </TableRow>
               )}
@@ -571,25 +800,94 @@ export function HistoryTabs({
               </Button>
             </QuoteHistoryDialog>
           </div>
+          <div className="grid gap-3 border-b border-slate-200 p-4 md:grid-cols-[minmax(16rem,1fr)_12rem_14rem]">
+            <Input
+              onChange={(event) => setQuoteSearch(event.target.value)}
+              placeholder="Search trade, product, name, source, notes..."
+              value={quoteSearch}
+            />
+            <Select onValueChange={setQuoteStatusFilter} value={quoteStatusFilter}>
+              <SelectTrigger>
+                <SelectValue placeholder="Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Status</SelectItem>
+                <SelectItem value="draft">Draft</SelectItem>
+                <SelectItem value="confirmed">Confirmed</SelectItem>
+                <SelectItem value="superseded">Superseded</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select onValueChange={setQuoteSourceFilter} value={quoteSourceFilter}>
+              <SelectTrigger>
+                <SelectValue placeholder="Source" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Sources</SelectItem>
+                {quoteSources.map((source) => (
+                  <SelectItem key={source} value={source}>
+                    {source}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Date</TableHead>
-                <TableHead>Trade</TableHead>
-                <TableHead>Round</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Product</TableHead>
-                <TableHead>English Name</TableHead>
-                <TableHead className="text-right">Qty</TableHead>
-                <TableHead className="text-right">Unit (RMB)</TableHead>
-                <TableHead className="text-right">Total</TableHead>
-                <TableHead>Source</TableHead>
+                <SortHeader activeKey={quoteSortKey} columnKey="date" direction={quoteSortDirection} onSort={handleQuoteSort}>
+                  Date
+                </SortHeader>
+                <SortHeader activeKey={quoteSortKey} columnKey="trade" direction={quoteSortDirection} onSort={handleQuoteSort}>
+                  Trade
+                </SortHeader>
+                <SortHeader activeKey={quoteSortKey} columnKey="round" direction={quoteSortDirection} onSort={handleQuoteSort}>
+                  Round
+                </SortHeader>
+                <SortHeader activeKey={quoteSortKey} columnKey="status" direction={quoteSortDirection} onSort={handleQuoteSort}>
+                  Status
+                </SortHeader>
+                <SortHeader activeKey={quoteSortKey} columnKey="product" direction={quoteSortDirection} onSort={handleQuoteSort}>
+                  Product
+                </SortHeader>
+                <SortHeader activeKey={quoteSortKey} columnKey="name" direction={quoteSortDirection} onSort={handleQuoteSort}>
+                  English Name
+                </SortHeader>
+                <SortHeader
+                  activeKey={quoteSortKey}
+                  className="text-right"
+                  columnKey="qty"
+                  direction={quoteSortDirection}
+                  onSort={handleQuoteSort}
+                >
+                  Qty
+                </SortHeader>
+                <SortHeader
+                  activeKey={quoteSortKey}
+                  className="text-right"
+                  columnKey="unit"
+                  direction={quoteSortDirection}
+                  onSort={handleQuoteSort}
+                >
+                  Unit (RMB)
+                </SortHeader>
+                <SortHeader
+                  activeKey={quoteSortKey}
+                  className="text-right"
+                  columnKey="total"
+                  direction={quoteSortDirection}
+                  onSort={handleQuoteSort}
+                >
+                  Total
+                </SortHeader>
+                <SortHeader activeKey={quoteSortKey} columnKey="source" direction={quoteSortDirection} onSort={handleQuoteSort}>
+                  Source
+                </SortHeader>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {sortedQuotes.length ? (
-                sortedQuotes.map((row) => (
+              {filteredQuoteRows.length ? (
+                filteredQuoteRows.map((row) => (
                   <TableRow key={row.id}>
                     <TableCell>{row.session?.quote_date ? formatDate(row.session.quote_date) : "-"}</TableCell>
                     <TableCell>{row.session?.trade?.trade_id ?? "-"}</TableCell>
@@ -616,7 +914,7 @@ export function HistoryTabs({
               ) : (
                 <TableRow>
                   <TableCell className="text-slate-500" colSpan={11}>
-                    No quote history yet.
+                    No quote history matches these filters.
                   </TableCell>
                 </TableRow>
               )}
