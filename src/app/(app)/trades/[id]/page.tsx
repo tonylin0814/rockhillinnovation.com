@@ -138,7 +138,7 @@ export default async function TradeWorkspacePage({ params }: { params: { id: str
       .maybeSingle(),
     supabase
       .from("trade_participants")
-      .select("*, user:users(id, name, email, role)")
+      .select("*, user:users!trade_participants_user_id_fkey(id, name, email, role)")
       .eq("trade_id", params.id),
     canManage
       ? supabase.from("clients").select("id, name, code").eq("status", "active").order("name", { ascending: true })
