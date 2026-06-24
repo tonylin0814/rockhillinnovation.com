@@ -69,14 +69,14 @@ function formatRmb(value: number) {
 }
 
 const clientTypeLabels: Record<ClientInvoice["invoice_type"], string> = {
-  commercial: "Commercial",
-  deposit: "Deposit",
-  final: "Final",
-  pro_forma: "Pro-Forma",
+  commercial: "Commercial Invoice",
+  deposit: "Deposit Invoice",
+  final: "Final Invoice",
+  pro_forma: "Pro-Forma Invoice",
 };
 
 const clientTypeClasses: Record<ClientInvoice["invoice_type"], string> = {
-  commercial: "border-violet-200 bg-violet-50 text-violet-700",
+  commercial: "border-[#0d1b34] bg-[#0d1b34]/10 text-[#0d1b34]",
   deposit: "border-blue-200 bg-blue-50 text-blue-700",
   final: "border-green-200 bg-green-50 text-green-700",
   pro_forma: "border-slate-200 bg-slate-100 text-slate-700",
@@ -165,34 +165,12 @@ function SendInvoiceButton({ invoice }: { invoice: ClientInvoice }) {
 function GenerateClientInvoiceMenu({ tradeId }: { tradeId: string }) {
   return (
     <div className="flex justify-end">
-      <GenerateInvoiceDialog tradeId={tradeId} type="pro_forma">
-        <Button className="rounded-r-none bg-[#0d1b34] hover:bg-[#13294d]">
+      <GenerateInvoiceDialog tradeId={tradeId}>
+        <Button className="bg-[#0d1b34] hover:bg-[#13294d]">
           <FileText className="mr-2 h-4 w-4" />
-          Generate Client Invoice
+          Generate Invoice
         </Button>
       </GenerateInvoiceDialog>
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button
-            aria-label="Choose client invoice type"
-            className="rounded-l-none border-l border-white/20 bg-[#0d1b34] px-3 hover:bg-[#13294d]"
-            type="button"
-          >
-            <ChevronDown className="h-4 w-4" />
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end">
-          <GenerateInvoiceDialog tradeId={tradeId} type="pro_forma">
-            <DropdownMenuItem onSelect={(event) => event.preventDefault()}>Pro-Forma Invoice</DropdownMenuItem>
-          </GenerateInvoiceDialog>
-          <GenerateInvoiceDialog tradeId={tradeId} type="deposit">
-            <DropdownMenuItem onSelect={(event) => event.preventDefault()}>Deposit Invoice</DropdownMenuItem>
-          </GenerateInvoiceDialog>
-          <GenerateInvoiceDialog tradeId={tradeId} type="final">
-            <DropdownMenuItem onSelect={(event) => event.preventDefault()}>Final Invoice</DropdownMenuItem>
-          </GenerateInvoiceDialog>
-        </DropdownMenuContent>
-      </DropdownMenu>
     </div>
   );
 }
