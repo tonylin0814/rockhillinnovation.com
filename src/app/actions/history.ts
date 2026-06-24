@@ -36,11 +36,16 @@ const costHistorySchema = z.object({
 });
 
 const quoteHistorySchema = z.object({
-  session_id: z.string().uuid("Quote session is required"),
   product_id: nullableUuid,
-  item_description: nullableText,
-  quantity: z.coerce.number().positive("Quantity must be greater than 0"),
-  unit_price_usd: z.coerce.number().min(0, "Quote must be zero or greater"),
+  client_id: nullableUuid,
+  supplier_product_code: nullableText,
+  quoted_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Date is required"),
+  unit_price_usd: z.coerce.number().min(0, "Price must be zero or greater"),
+  quantity: z.preprocess(
+    (value) => (typeof value === "string" && value.trim() ? Number(value) : null),
+    z.number().positive().nullable()
+  ),
+  source: z.string().trim().min(1, "Source is required"),
   notes: nullableText,
 });
 
@@ -52,33 +57,6 @@ async function requireHistoryManager() {
   }
 
   return { user };
-}
-
-async function getSessionTradeId(sessionId: string) {
-  const supabase = createServerSupabaseAdmin();
-  const { data, error } = await supabase
-    .from("client_quotation_sessions")
-    .select("trade_id")
-    .eq("id", sessionId)
-    .maybeSingle();
-
-  if (error) {
-    return { error: error.message };
-  }
-
-  if (!data) {
-    return { error: "Quote session not found" };
-  }
-
-  return { tradeId: data.trade_id as string };
-}
-
-async function refreshHistoryAndTrade(tradeId?: string) {
-  revalidatePath("/history");
-
-  if (tradeId) {
-    revalidatePath(`/trades/${tradeId}`);
-  }
 }
 
 export async function createCostHistory(formData: FormData): Promise<ActionResult> {
@@ -179,20 +157,14 @@ export async function createQuoteHistory(formData: FormData): Promise<ActionResu
     return { error: parsed.error.issues[0]?.message ?? "Invalid quote history row" };
   }
 
-  const sessionResult = await getSessionTradeId(parsed.data.session_id);
-
-  if ("error" in sessionResult) {
-    return { error: sessionResult.error };
-  }
-
   const supabase = createServerSupabaseAdmin();
-  const { data, error } = await supabase.from("client_quotation_lines").insert(parsed.data).select("id").single();
+  const { data, error } = await supabase.from("product_quote_history").insert(parsed.data).select("id").single();
 
   if (error) {
     return { error: error.message };
   }
 
-  await refreshHistoryAndTrade(sessionResult.tradeId);
+  revalidatePath("/history");
   return { success: true, id: data.id };
 }
 
@@ -215,24 +187,18 @@ export async function updateQuoteHistory(id: string, formData: FormData): Promis
     return { error: parsed.error.issues[0]?.message ?? "Invalid quote history row" };
   }
 
-  const sessionResult = await getSessionTradeId(parsed.data.session_id);
-
-  if ("error" in sessionResult) {
-    return { error: sessionResult.error };
-  }
-
   const supabase = createServerSupabaseAdmin();
-  const { error } = await supabase.from("client_quotation_lines").update(parsed.data).eq("id", id);
+  const { error } = await supabase.from("product_quote_history").update(parsed.data).eq("id", id);
 
   if (error) {
     return { error: error.message };
   }
 
-  await refreshHistoryAndTrade(sessionResult.tradeId);
+  revalidatePath("/history");
   return { success: true };
 }
 
-export async function deleteQuoteHistory(id: string, sessionId?: string): Promise<ActionResult> {
+export async function deleteQuoteHistory(id: string): Promise<ActionResult> {
   const access = await requireHistoryManager();
 
   if ("error" in access) {
@@ -245,23 +211,13 @@ export async function deleteQuoteHistory(id: string, sessionId?: string): Promis
     return { error: "Invalid quote history ID" };
   }
 
-  let sessionResult: Awaited<ReturnType<typeof getSessionTradeId>> | null = null;
-
-  if (sessionId) {
-    sessionResult = await getSessionTradeId(sessionId);
-
-    if ("error" in sessionResult) {
-      return { error: sessionResult.error };
-    }
-  }
-
   const supabase = createServerSupabaseAdmin();
-  const { error } = await supabase.from("client_quotation_lines").delete().eq("id", id);
+  const { error } = await supabase.from("product_quote_history").delete().eq("id", id);
 
   if (error) {
     return { error: error.message };
   }
 
-  await refreshHistoryAndTrade(sessionResult && "tradeId" in sessionResult ? sessionResult.tradeId : undefined);
+  revalidatePath("/history");
   return { success: true };
 }

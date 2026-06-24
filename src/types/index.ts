@@ -440,3 +440,24 @@ export type ShareholderBookLine = {
   net_share_usd: number;
   invoiced_through: string | null;
 };
+
+export type ProductQuoteHistory = {
+  id: string;
+  product_id: string | null;
+  client_id: string | null;
+  supplier_product_code: string | null;
+  quoted_date: string;
+  unit_price_usd: number;
+  quantity: number | null;
+  source: string;
+  notes: string | null;
+  created_at: string;
+  product?: {
+    id: string;
+    code: string;
+    supplier_product_code: string | null;
+    name_english: string;
+    name_chinese: string | null;
+  } | null;
+  client?: { id: string; code: string; name: string } | null;
+};

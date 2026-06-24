@@ -66,13 +66,7 @@ type SupplierOption = {
   name: string;
 };
 
-type QuoteSessionOption = {
-  id: string;
-  session_number: number;
-  quote_date: string;
-  status: "draft" | "sent" | "accepted" | "rejected";
-  trade?: { id: string; trade_id: string } | null;
-};
+type ClientOption = { id: string; code: string; name: string };
 
 type CostHistoryRow = {
   id: string;
@@ -92,21 +86,22 @@ type CostHistoryRow = {
 
 type QuoteHistoryRow = {
   id: string;
-  session_id: string;
   product_id: string | null;
-  quantity: number;
+  client_id: string | null;
+  supplier_product_code: string | null;
+  quoted_date: string;
   unit_price_usd: number;
-  total_price_usd: number;
-  item_description: string | null;
+  quantity: number | null;
+  source: string;
   notes: string | null;
   product?: ProductOption | null;
-  session?: QuoteSessionOption | null;
+  client?: ClientOption | null;
 };
 
 type SortDirection = "asc" | "desc";
 type HistoryTab = "cost" | "quote";
 type CostSortKey = "date" | "product" | "supplier" | "moq" | "unit" | "quality" | "carton" | "source";
-type QuoteSortKey = "date" | "trade" | "product" | "name" | "qty" | "quote";
+type QuoteSortKey = "date" | "client" | "product" | "name" | "qty" | "quote" | "source";
 
 function formatDate(value: string) {
   return new Intl.DateTimeFormat("en-US", { dateStyle: "medium", timeZone: "UTC" }).format(new Date(value));
@@ -372,14 +367,14 @@ function CostHistoryDialog({
 
 function QuoteHistoryDialog({
   children,
+  clients,
   products,
   quote,
-  sessions,
 }: {
   children: ReactNode;
+  clients: ClientOption[];
   products: ProductOption[];
   quote?: QuoteHistoryRow;
-  sessions: QuoteSessionOption[];
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -411,19 +406,20 @@ function QuoteHistoryDialog({
       <DialogContent className="sm:max-w-3xl">
         <DialogHeader>
           <DialogTitle>{quote ? "Edit Quote History" : "Add Quote History"}</DialogTitle>
-          <DialogDescription>Manual supplier quote line.</DialogDescription>
+          <DialogDescription>Manual product quote reference row.</DialogDescription>
         </DialogHeader>
         <form className="grid gap-4 sm:grid-cols-2" onSubmit={handleSubmit}>
-          <div className="space-y-2 sm:col-span-2">
-            <Label>Quote Session</Label>
-            <Select defaultValue={quote?.session_id} disabled={isPending} name="session_id" required>
+          <div className="space-y-2">
+            <Label>Client</Label>
+            <Select defaultValue={quote?.client_id ?? "none"} disabled={isPending} name="client_id">
               <SelectTrigger>
-                <SelectValue placeholder="Select quote session" />
+                <SelectValue placeholder="Select client" />
               </SelectTrigger>
               <SelectContent>
-                {sessions.map((session) => (
-                  <SelectItem key={session.id} value={session.id}>
-                    {session.trade?.trade_id ?? "Trade"} - Round {session.session_number} - {session.quote_date}
+                <SelectItem value="none">None</SelectItem>
+                {clients.map((client) => (
+                  <SelectItem key={client.id} value={client.id}>
+                    {client.code}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -445,24 +441,34 @@ function QuoteHistoryDialog({
               </SelectContent>
             </Select>
           </div>
-          <div className="space-y-2 sm:col-span-2">
-            <Label htmlFor="item_description">Product Name</Label>
+          <div className="space-y-2">
+            <Label htmlFor="supplier_product_code">Supplier Code</Label>
             <Input
-              defaultValue={quote?.item_description ?? quote?.product?.name_english ?? ""}
+              defaultValue={quote?.supplier_product_code ?? ""}
               disabled={isPending}
-              id="item_description"
-              name="item_description"
+              id="supplier_product_code"
+              name="supplier_product_code"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="quoted_date">Date</Label>
+            <Input
+              defaultValue={quote?.quoted_date ?? new Date().toISOString().slice(0, 10)}
+              disabled={isPending}
+              id="quoted_date"
+              name="quoted_date"
+              required
+              type="date"
             />
           </div>
           <div className="space-y-2">
             <Label htmlFor="quantity">Qty</Label>
             <Input
-              defaultValue={quote?.quantity ?? 1}
+              defaultValue={quote?.quantity ?? ""}
               disabled={isPending}
               id="quantity"
               min="0.0001"
               name="quantity"
-              required
               step="0.0001"
               type="number"
             />
@@ -479,6 +485,10 @@ function QuoteHistoryDialog({
               step="0.0001"
               type="number"
             />
+          </div>
+          <div className="space-y-2 sm:col-span-2">
+            <Label htmlFor="source">Source</Label>
+            <Input defaultValue={quote?.source ?? "manual"} disabled={isPending} id="source" name="source" required />
           </div>
           <div className="space-y-2 sm:col-span-2">
             <Label htmlFor="notes">Notes</Label>
@@ -501,16 +511,16 @@ function QuoteHistoryDialog({
 }
 
 export function HistoryTabs({
+  clients,
   costRows,
   products,
   quoteRows,
-  sessions,
   suppliers,
 }: {
+  clients: ClientOption[];
   costRows: CostHistoryRow[];
   products: ProductOption[];
   quoteRows: QuoteHistoryRow[];
-  sessions: QuoteSessionOption[];
   suppliers: SupplierOption[];
 }) {
   const searchParams = useSearchParams();
@@ -610,9 +620,7 @@ export function HistoryTabs({
   const sortedQuotes = useMemo(
     () =>
       [...quoteRows].sort((a, b) => {
-        const dateA = a.session?.quote_date ?? "";
-        const dateB = b.session?.quote_date ?? "";
-        return dateB.localeCompare(dateA) || (a.session?.trade?.trade_id ?? "").localeCompare(b.session?.trade?.trade_id ?? "");
+        return b.quoted_date.localeCompare(a.quoted_date) || (a.client?.code ?? "").localeCompare(b.client?.code ?? "");
       }),
     [quoteRows]
   );
@@ -623,11 +631,14 @@ export function HistoryTabs({
     return [...sortedQuotes]
       .filter((row) => {
         const haystack = [
-          row.session?.trade?.trade_id,
+          row.quoted_date,
+          row.client?.code,
+          row.client?.name,
           row.product?.code,
+          row.supplier_product_code,
           row.product?.name_english,
           row.product?.name_chinese,
-          row.item_description,
+          row.source,
           row.notes,
         ]
           .filter(Boolean)
@@ -638,12 +649,13 @@ export function HistoryTabs({
       })
       .sort((a, b) => {
         const values: Record<QuoteSortKey, [string | number | null | undefined, string | number | null | undefined]> = {
-          date: [a.session?.quote_date, b.session?.quote_date],
-          name: [a.item_description ?? a.product?.name_english, b.item_description ?? b.product?.name_english],
+          client: [a.client?.code, b.client?.code],
+          date: [a.quoted_date, b.quoted_date],
+          name: [a.product?.name_english, b.product?.name_english],
           product: [a.product?.code, b.product?.code],
           qty: [a.quantity, b.quantity],
           quote: [a.unit_price_usd, b.unit_price_usd],
-          trade: [a.session?.trade?.trade_id, b.session?.trade?.trade_id],
+          source: [a.source, b.source],
         };
         const comparison = compareValues(values[quoteSortKey][0], values[quoteSortKey][1]);
         return quoteSortDirection === "asc" ? comparison : -comparison;
@@ -794,7 +806,7 @@ export function HistoryTabs({
         <div className="rounded-lg border border-slate-200 bg-white shadow-sm">
           <div className="flex items-center justify-between gap-3 border-b border-slate-200 p-4">
             <h2 className="text-lg font-semibold text-[#0d1b34]">Quote History</h2>
-            <QuoteHistoryDialog products={products} sessions={sessions}>
+            <QuoteHistoryDialog clients={clients} products={products}>
               <Button className="bg-[#0d1b34] hover:bg-[#13294d]" size="sm">
                 <Plus className="mr-2 h-4 w-4" />
                 Add Quote
@@ -804,7 +816,7 @@ export function HistoryTabs({
           <div className="grid gap-3 border-b border-slate-200 p-4 md:grid-cols-[minmax(16rem,1fr)]">
             <Input
               onChange={(event) => setQuoteSearch(event.target.value)}
-              placeholder="Search date, trade, Rock Hill code, product name..."
+              placeholder="Search date, client, Rock Hill code, supplier code, product name..."
               value={quoteSearch}
             />
           </div>
@@ -814,12 +826,13 @@ export function HistoryTabs({
                 <SortHeader activeKey={quoteSortKey} columnKey="date" direction={quoteSortDirection} onSort={handleQuoteSort}>
                   Date
                 </SortHeader>
-                <SortHeader activeKey={quoteSortKey} columnKey="trade" direction={quoteSortDirection} onSort={handleQuoteSort}>
-                  Trade
+                <SortHeader activeKey={quoteSortKey} columnKey="client" direction={quoteSortDirection} onSort={handleQuoteSort}>
+                  Client
                 </SortHeader>
                 <SortHeader activeKey={quoteSortKey} columnKey="product" direction={quoteSortDirection} onSort={handleQuoteSort}>
                   Rock Hill Code
                 </SortHeader>
+                <TableHead>Supplier Code</TableHead>
                 <SortHeader activeKey={quoteSortKey} columnKey="name" direction={quoteSortDirection} onSort={handleQuoteSort}>
                   Product Name
                 </SortHeader>
@@ -841,6 +854,9 @@ export function HistoryTabs({
                 >
                   Quote (USD)
                 </SortHeader>
+                <SortHeader activeKey={quoteSortKey} columnKey="source" direction={quoteSortDirection} onSort={handleQuoteSort}>
+                  Source
+                </SortHeader>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -848,27 +864,29 @@ export function HistoryTabs({
               {filteredQuoteRows.length ? (
                 filteredQuoteRows.map((row) => (
                   <TableRow key={row.id}>
-                    <TableCell>{row.session?.quote_date ? formatDate(row.session.quote_date) : "-"}</TableCell>
-                    <TableCell>{row.session?.trade?.trade_id ?? "-"}</TableCell>
+                    <TableCell>{formatDate(row.quoted_date)}</TableCell>
+                    <TableCell>{row.client?.code ?? "-"}</TableCell>
                     <TableCell>{row.product?.code ?? "-"}</TableCell>
-                    <TableCell>{row.item_description ?? row.product?.name_english ?? "-"}</TableCell>
-                    <TableCell className="text-right">{row.quantity}</TableCell>
+                    <TableCell>{row.supplier_product_code ?? row.product?.supplier_product_code ?? "-"}</TableCell>
+                    <TableCell>{row.product?.name_english ?? "-"}</TableCell>
+                    <TableCell className="text-right">{row.quantity ?? "-"}</TableCell>
                     <TableCell className="text-right">{formatUsd(row.unit_price_usd)}</TableCell>
+                    <TableCell>{row.source}</TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-1">
-                        <QuoteHistoryDialog products={products} quote={row} sessions={sessions}>
+                        <QuoteHistoryDialog clients={clients} products={products} quote={row}>
                           <Button size="icon" variant="ghost">
                             <Edit className="h-4 w-4" />
                           </Button>
                         </QuoteHistoryDialog>
-                        <DeleteButton action={() => deleteQuoteHistory(row.id, row.session_id)} label="quote history" />
+                        <DeleteButton action={() => deleteQuoteHistory(row.id)} label="quote history" />
                       </div>
                     </TableCell>
                   </TableRow>
                 ))
               ) : (
                 <TableRow>
-                  <TableCell className="text-slate-500" colSpan={7}>
+                  <TableCell className="text-slate-500" colSpan={9}>
                     No quote history matches these filters.
                   </TableCell>
                 </TableRow>
