@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   ArrowLeftRight,
+  BarChart3,
   Briefcase,
   Building2,
   DollarSign,
@@ -44,6 +45,7 @@ const toolsNavItems = [
 const adminNavItems = [
   { label: "Admin", href: "/admin/users", icon: ShieldCheck },
   { label: "Settings", href: "/admin/settings", icon: Settings },
+  { label: "Finance", href: "/finance", icon: BarChart3 },
 ];
 
 type SidebarUser = Pick<CurrentUser, "name" | "role">;

@@ -646,3 +646,16 @@ export type TradeDevelopmentCost = {
   notes: string | null;
   created_at: string;
 };
+
+export type ShareholderPayout = {
+  id: string;
+  trade_id: string;
+  trade_shareholder_id: string | null;
+  person_name: string;
+  amount_usd: number;
+  wire_date: string;
+  reference: string | null;
+  notes: string | null;
+  created_by: string | null;
+  created_at: string;
+};
