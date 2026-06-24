@@ -6,6 +6,7 @@ import { z } from "zod";
 import { getCurrentUser } from "@/lib/auth";
 import { logActivity } from "@/lib/activity-log";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { seedTradeMilestones } from "@/app/actions/trade-milestones";
 
 type ActionResult = {
   success?: true;
@@ -116,6 +117,8 @@ export async function createTrade(formData: FormData): Promise<ActionResult> {
       return { error: participantsError.message };
     }
   }
+
+  await seedTradeMilestones(trade.id);
 
   revalidatePath("/trades");
   await logActivity({

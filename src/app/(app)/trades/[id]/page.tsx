@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { ActivityLogTable } from "@/components/admin/ActivityLogTable";
 import { ClientQuotationsTab } from "@/components/trades/ClientQuotationsTab";
 import { DevelopmentTab } from "@/components/trades/DevelopmentTab";
+import { DiaryTab } from "@/components/trades/DiaryTab";
 import { DocumentsTab } from "@/components/trades/DocumentsTab";
 import { ExchangeRatesCard } from "@/components/trades/ExchangeRatesCard";
 import { FinancialTab } from "@/components/trades/FinancialTab";
@@ -15,6 +16,7 @@ import { OrderLinesTab } from "@/components/trades/OrderLinesTab";
 import { ShareholderRulesEditor } from "@/components/trades/ShareholderRulesEditor";
 import { SupplierQuotesTab } from "@/components/trades/SupplierQuotesTab";
 import { TradeEditDialog } from "@/components/trades/TradeEditDialog";
+import { TradeMilestoneChecklist } from "@/components/trades/TradeMilestoneChecklist";
 import { TradePnlCard } from "@/components/trades/TradePnlCard";
 import { TradeStatusDropdown } from "@/components/trades/TradeStatusDropdown";
 import { VendorInvoicesCard } from "@/components/trades/VendorInvoicesCard";
@@ -38,11 +40,13 @@ import type {
   SupplierQuoteSession,
   SupplierInvoiceOutgoing,
   Trade,
+  TradeDiaryEntry,
   TradeDevelopmentCost,
   TradeDevelopmentVersion,
   TradeDocument,
   TradeExpense,
   TradeLedgerEntry,
+  TradeMilestone,
   TradeParticipant,
   TradeShareholder,
   UserRole,
@@ -136,9 +140,11 @@ export default async function TradeWorkspacePage({ params }: { params: { id: str
     { data: vendorInvoices, error: vendorInvoicesError },
     { data: exchangeRates, error: exchangeRatesError },
     { data: ledgerEntries, error: ledgerEntriesError },
+    { data: milestones, error: milestonesError },
     { data: shareholderBook, error: shareholderBookError },
     { data: devVersions, error: devVersionsError },
     { data: devCosts, error: devCostsError },
+    { data: diaryEntries, error: diaryEntriesError },
     { data: acceptedQuotationLines, error: acceptedQuotationLinesError },
     { data: confirmedQuoteLines, error: confirmedQuoteLinesError },
     { data: tradeExpenses, error: tradeExpensesError },
@@ -226,6 +232,7 @@ export default async function TradeWorkspacePage({ params }: { params: { id: str
       )
       .eq("trade_id", params.id)
       .order("entry_date", { ascending: false }),
+    supabase.from("trade_milestones").select("*").eq("trade_id", params.id),
     supabase
       .from("shareholder_book")
       .select("*, lines:shareholder_book_lines(*)")
@@ -241,6 +248,11 @@ export default async function TradeWorkspacePage({ params }: { params: { id: str
       .select("*")
       .eq("trade_id", params.id)
       .order("created_at", { ascending: true }),
+    supabase
+      .from("trade_diary_entries")
+      .select("*")
+      .eq("trade_id", params.id)
+      .order("created_at", { ascending: false }),
     supabase
       .from("client_quotation_lines")
       .select("total_price_usd, session:client_quotation_sessions!inner(status, trade_id)")
@@ -276,9 +288,11 @@ export default async function TradeWorkspacePage({ params }: { params: { id: str
     vendorInvoicesError ||
     exchangeRatesError ||
     ledgerEntriesError ||
+    milestonesError ||
     shareholderBookError ||
     devVersionsError ||
     devCostsError ||
+    diaryEntriesError ||
     acceptedQuotationLinesError ||
     confirmedQuoteLinesError ||
     tradeExpensesError
@@ -302,9 +316,11 @@ export default async function TradeWorkspacePage({ params }: { params: { id: str
           vendorInvoicesError?.message ??
           exchangeRatesError?.message ??
           ledgerEntriesError?.message ??
+          milestonesError?.message ??
           shareholderBookError?.message ??
           devVersionsError?.message ??
           devCostsError?.message ??
+          diaryEntriesError?.message ??
           acceptedQuotationLinesError?.message ??
           confirmedQuoteLinesError?.message ??
           tradeExpensesError?.message}
@@ -376,9 +392,11 @@ export default async function TradeWorkspacePage({ params }: { params: { id: str
   const vendorInvoiceRows = (vendorInvoices ?? []) as ExpenseVendorInvoice[];
   const exchangeRateRows = (exchangeRates ?? []) as ExchangeRate[];
   const ledgerEntryRows = (ledgerEntries ?? []) as TradeLedgerEntry[];
+  const tradeMilestoneRows = (milestones ?? []) as TradeMilestone[];
   const shareholderBookData = (shareholderBook ?? null) as ShareholderBook | null;
   const developmentVersions = (devVersions ?? []) as TradeDevelopmentVersion[];
   const developmentCosts = (devCosts ?? []) as TradeDevelopmentCost[];
+  const diaryEntryRows = (diaryEntries ?? []) as TradeDiaryEntry[];
   const tradeExpenseRows = (tradeExpenses ?? []) as TradeExpense[];
   const shareholderBookConfirmed = shareholderBookData?.status === "confirmed";
   const depositRate = exchangeRateRows.find((rate) => rate.payment_type === "deposit") ?? null;
@@ -462,12 +480,23 @@ export default async function TradeWorkspacePage({ params }: { params: { id: str
           <TabsTrigger value="ledger">Ledger</TabsTrigger>
           <TabsTrigger value="documents">Documents</TabsTrigger>
           {canManage ? <TabsTrigger value="shareholders">Shareholders</TabsTrigger> : null}
+          {canManage ? <TabsTrigger value="diary">Diary</TabsTrigger> : null}
           {canManage ? <TabsTrigger value="activity">Activity</TabsTrigger> : null}
           <TabsTrigger value="judy">Judy AI</TabsTrigger>
         </TabsList>
 
         <TabsContent value="summary">
-          <div className="grid gap-6 lg:grid-cols-2">
+          <div className="space-y-6">
+            <Card className="border-slate-200 shadow-sm">
+              <CardHeader>
+                <CardTitle className="text-base">Trade Milestones</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <TradeMilestoneChecklist canManage={canManage} milestones={tradeMilestoneRows} tradeId={trade.id} />
+              </CardContent>
+            </Card>
+
+            <div className="grid gap-6 lg:grid-cols-2">
             <Card className="border-slate-200 shadow-sm">
               <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle>Trade Details</CardTitle>
@@ -536,6 +565,7 @@ export default async function TradeWorkspacePage({ params }: { params: { id: str
                 />
               </>
             ) : null}
+            </div>
           </div>
         </TabsContent>
 
@@ -661,6 +691,11 @@ export default async function TradeWorkspacePage({ params }: { params: { id: str
         {canManage ? (
           <TabsContent value="activity">
             <ActivityLogTable tradeId={trade.id} />
+          </TabsContent>
+        ) : null}
+        {canManage ? (
+          <TabsContent value="diary">
+            <DiaryTab canManage={canManage} entries={diaryEntryRows} tradeId={trade.id} />
           </TabsContent>
         ) : null}
         <TabsContent value="judy">

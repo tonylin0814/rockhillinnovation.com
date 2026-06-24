@@ -512,10 +512,39 @@ export type TradeLedgerEntry = {
   created_at: string;
   updated_at: string;
   recorded_by: string | null;
+  expected_amount_usd: number | null;
+  proof_onedrive_url: string | null;
+  proof_file_name: string | null;
   client_invoice?: { id: string; invoice_number: string } | null;
   supplier_invoice?: { id: string; invoice_number: string } | null;
   vendor_invoice?: { id: string; invoice_number: string } | null;
   recorder?: { id: string; name: string } | null;
+};
+
+export type MilestoneKey =
+  | "deposit_received"
+  | "deposit_sent"
+  | "goods_shipped"
+  | "balance_received"
+  | "balance_sent";
+
+export type TradeMilestone = {
+  trade_id: string;
+  milestone: MilestoneKey;
+  completed_at: string | null;
+  completed_by: string | null;
+  notes: string | null;
+};
+
+export type TradeDiaryEntry = {
+  id: string;
+  trade_id: string;
+  content: string;
+  attachments: { name: string; onedrive_url: string; file_size_bytes: number }[];
+  author_id: string | null;
+  author_name: string;
+  created_at: string;
+  updated_at: string;
 };
 
 export type TradeExpense = {
