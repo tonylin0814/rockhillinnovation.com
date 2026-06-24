@@ -149,7 +149,7 @@ export default async function TradeWorkspacePage({ params }: { params: { id: str
           .select("id, name, email")
           .eq("role", "partner")
           .eq("is_active", true)
-          .order("code", { ascending: true })
+          .order("name", { ascending: true })
       : Promise.resolve({ data: [], error: null }),
     supabase
       .from("order_lines")
