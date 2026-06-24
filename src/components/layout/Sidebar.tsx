@@ -14,6 +14,7 @@ import {
   LayoutDashboard,
   LogOut,
   Package,
+  Settings,
   ShieldCheck,
 } from "lucide-react";
 
@@ -35,7 +36,10 @@ const historySubItems = [
   { label: "Quote History", href: "/history/quote", icon: FileText },
 ];
 
-const adminNavItems = [{ label: "Admin", href: "/admin/users", icon: ShieldCheck }];
+const adminNavItems = [
+  { label: "Admin", href: "/admin/users", icon: ShieldCheck },
+  { label: "Settings", href: "/admin/settings", icon: Settings },
+];
 
 type SidebarUser = Pick<CurrentUser, "name" | "role">;
 
