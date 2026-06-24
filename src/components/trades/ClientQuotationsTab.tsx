@@ -1,6 +1,6 @@
 "use client";
 
-import { CheckCircle2, RotateCcw, Send, XCircle } from "lucide-react";
+import { CheckCircle2, Download, FileText, RotateCcw, Send, XCircle } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { ClientQuotationLine, ClientQuotationSession } from "@/types";
+import { GenerateQuotationDialog } from "./GenerateQuotationDialog";
 import { NewQuotationSessionDialog } from "./NewQuotationSessionDialog";
 import { QuotationLinesEditor } from "./QuotationLinesEditor";
 
@@ -193,6 +194,25 @@ export function ClientQuotationsTab({
                           <RotateCcw className="mr-2 h-4 w-4" />
                           Revert to Draft
                         </Button>
+                      ) : null}
+                      {canManage ? (
+                        <GenerateQuotationDialog defaultRef={session.quotation_ref ?? undefined} sessionId={session.id}>
+                          <Button size="sm" variant="outline">
+                            <FileText className="mr-1.5 h-3.5 w-3.5" />
+                            {session.pdf_onedrive_url ? "Regenerate PDF" : "Generate PDF"}
+                          </Button>
+                        </GenerateQuotationDialog>
+                      ) : null}
+                      {session.pdf_onedrive_url ? (
+                        <a
+                          className="inline-flex items-center gap-1.5 rounded-md border border-slate-200 px-3 py-2 text-sm font-medium text-[#0d1b34] underline-offset-2 hover:bg-slate-50 hover:underline"
+                          href={session.pdf_onedrive_url}
+                          rel="noopener noreferrer"
+                          target="_blank"
+                        >
+                          <Download className="h-3.5 w-3.5" />
+                          Download PDF
+                        </a>
                       ) : null}
                       <Button onClick={() => toggleLines(session.id)} size="sm" variant="outline">
                         View Lines
