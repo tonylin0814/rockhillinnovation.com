@@ -1,5 +1,7 @@
 import { PasswordForm } from "@/components/account/PasswordForm";
 import { ProfileForm } from "@/components/account/ProfileForm";
+import { NotificationsInbox } from "@/components/account/NotificationsInbox";
+import { getNotifications } from "@/app/actions/notifications";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { getCurrentUser } from "@/lib/auth";
 
@@ -16,6 +18,8 @@ export default async function AccountPage() {
   if (!user) {
     return null;
   }
+
+  const notifications = await getNotifications(100);
 
   return (
     <section className="mx-auto max-w-2xl space-y-6">
@@ -43,6 +47,16 @@ export default async function AccountPage() {
         </CardHeader>
         <CardContent>
           <PasswordForm />
+        </CardContent>
+      </Card>
+
+      <Card className="border-slate-200 shadow-sm">
+        <CardHeader>
+          <CardTitle>Notifications</CardTitle>
+          <CardDescription>Activity on trades you participate in.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <NotificationsInbox notifications={notifications} />
         </CardContent>
       </Card>
     </section>

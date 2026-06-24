@@ -705,3 +705,15 @@ export type TradePackingPlan = {
   updated_at: string;
   pallets: TradePalletRow[];
 };
+
+export type TradeNotification = {
+  id: string;
+  user_id: string;
+  trade_id: string;
+  actor_id: string | null;
+  actor_name: string;
+  message: string;
+  trade_code: string;
+  is_read: boolean;
+  created_at: string;
+};

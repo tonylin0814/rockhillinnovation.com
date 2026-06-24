@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
 import { getCurrentUser } from "@/lib/auth";
+import { notifyParticipants } from "@/lib/notifications";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import type { TradeDocument } from "@/types";
 
@@ -38,7 +39,7 @@ export async function updateDocumentStatus(
   const supabase = createServerSupabaseClient();
   const { data: document, error: documentError } = await supabase
     .from("trade_documents")
-    .select("id, trade_id")
+    .select("id, trade_id, trade:trades(trade_id)")
     .eq("id", documentId)
     .maybeSingle();
 
@@ -54,6 +55,18 @@ export async function updateDocumentStatus(
 
   if (error) {
     return { error: error.message };
+  }
+
+  if (status === "approved") {
+    const trade = Array.isArray(document.trade) ? document.trade[0] : document.trade;
+    const tradeCode = trade?.trade_id ?? document.trade_id;
+    await notifyParticipants(
+      document.trade_id,
+      tradeCode,
+      user.id,
+      user.name,
+      `A document was updated on trade ${tradeCode}.`
+    );
   }
 
   revalidatePath(`/trades/${document.trade_id}`);

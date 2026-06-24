@@ -5,6 +5,7 @@ import { z } from "zod";
 
 import { getCurrentUser } from "@/lib/auth";
 import { logActivity } from "@/lib/activity-log";
+import { notifyParticipants } from "@/lib/notifications";
 import { uploadToOneDrive } from "@/lib/onedrive";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import type { TradeLedgerEntry } from "@/types";
@@ -180,7 +181,7 @@ export async function addLedgerEntry(tradeId: string, formData: FormData): Promi
   const supabase = createServerSupabaseClient();
   const { data: trade, error: tradeError } = await supabase
     .from("trades")
-    .select("id")
+    .select("id, trade_id")
     .eq("id", tradeId)
     .maybeSingle();
 
@@ -222,6 +223,13 @@ export async function addLedgerEntry(tradeId: string, formData: FormData): Promi
     tradeId,
     user: access.user,
   });
+  await notifyParticipants(
+    tradeId,
+    trade.trade_id,
+    access.user.id,
+    access.user.name,
+    `A new ledger entry was recorded on trade ${trade.trade_id}.`
+  );
 
   revalidatePath(`/trades/${tradeId}`);
   return { success: true };

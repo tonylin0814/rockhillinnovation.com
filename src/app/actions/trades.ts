@@ -5,6 +5,7 @@ import { z } from "zod";
 
 import { getCurrentUser } from "@/lib/auth";
 import { logActivity } from "@/lib/activity-log";
+import { notifyParticipants, notifyUsers } from "@/lib/notifications";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { seedTradeMilestones } from "@/app/actions/trade-milestones";
 
@@ -98,14 +99,20 @@ export async function createTrade(formData: FormData): Promise<ActionResult> {
 
   const { partner_ids: partnerIds, ...tradeValues } = parsed.data;
   const supabase = createServerSupabaseClient();
-  const { data: trade, error: tradeError } = await supabase.from("trades").insert(tradeValues).select("id").single();
+  const { data: trade, error: tradeError } = await supabase
+    .from("trades")
+    .insert(tradeValues)
+    .select("id, trade_id")
+    .single();
 
   if (tradeError) {
     return { error: tradeError.message };
   }
 
-  if (partnerIds.length) {
-    const participantRows = partnerIds.map((partnerId) => ({
+  const participantIds = Array.from(new Set([access.user.id, ...partnerIds]));
+
+  if (participantIds.length) {
+    const participantRows = participantIds.map((partnerId) => ({
       trade_id: trade.id,
       user_id: partnerId,
       added_by: access.user.id,
@@ -118,6 +125,13 @@ export async function createTrade(formData: FormData): Promise<ActionResult> {
     }
   }
 
+  await notifyParticipants(
+    trade.id,
+    trade.trade_id,
+    access.user.id,
+    access.user.name,
+    `You have been added to trade ${trade.trade_id}.`
+  );
   await seedTradeMilestones(trade.id);
 
   revalidatePath("/trades");
@@ -207,6 +221,16 @@ export async function setTradeStatus(
   }
 
   const supabase = createServerSupabaseClient();
+  const { data: tradeRow, error: tradeFetchError } = await supabase
+    .from("trades")
+    .select("trade_id")
+    .eq("id", id)
+    .maybeSingle();
+
+  if (tradeFetchError) {
+    return { error: tradeFetchError.message };
+  }
+
   const { error } = await supabase.from("trades").update({ status }).eq("id", id);
 
   if (error) {
@@ -215,6 +239,14 @@ export async function setTradeStatus(
 
   revalidatePath("/trades");
   revalidatePath(`/trades/${id}`);
+  const tradeCode = tradeRow?.trade_id ?? id;
+  await notifyParticipants(
+    id,
+    tradeCode,
+    access.user.id,
+    access.user.name,
+    `Trade ${tradeCode} status changed to ${status}.`
+  );
   await logActivity({
     action: "updated",
     summary: `Set trade status to ${status}`,
@@ -245,6 +277,15 @@ export async function updateTradeParticipants(tradeId: string, partnerIds: strin
   }
 
   const supabase = createServerSupabaseClient();
+  const [{ data: existingParticipants }, { data: tradeRow, error: tradeError }] = await Promise.all([
+    supabase.from("trade_participants").select("user_id").eq("trade_id", tradeId),
+    supabase.from("trades").select("trade_id").eq("id", tradeId).maybeSingle(),
+  ]);
+
+  if (tradeError) {
+    return { error: tradeError.message };
+  }
+
   const { error: deleteError } = await supabase
     .from("trade_participants")
     .delete()
@@ -254,8 +295,10 @@ export async function updateTradeParticipants(tradeId: string, partnerIds: strin
     return { error: deleteError.message };
   }
 
-  if (parsed.data.partnerIds.length) {
-    const rows = parsed.data.partnerIds.map((partnerId) => ({
+  const nextParticipantIds = Array.from(new Set([access.user.id, ...parsed.data.partnerIds]));
+
+  if (nextParticipantIds.length) {
+    const rows = nextParticipantIds.map((partnerId) => ({
       trade_id: tradeId,
       user_id: partnerId,
       added_by: access.user.id,
@@ -267,6 +310,17 @@ export async function updateTradeParticipants(tradeId: string, partnerIds: strin
       return { error: insertError.message };
     }
   }
+
+  const existingIds = new Set((existingParticipants ?? []).map((participant) => participant.user_id));
+  const newlyAddedIds = nextParticipantIds.filter((participantId) => !existingIds.has(participantId));
+  const tradeCode = tradeRow?.trade_id ?? tradeId;
+  await notifyUsers(newlyAddedIds, {
+    actorId: access.user.id,
+    actorName: access.user.name,
+    message: `You have been added to trade ${tradeCode}.`,
+    tradeCode,
+    tradeId,
+  });
 
   revalidatePath(`/trades/${tradeId}`);
   return { success: true };

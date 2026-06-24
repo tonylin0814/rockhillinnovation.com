@@ -6,6 +6,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
 import { getCurrentUser } from "@/lib/auth";
+import { notifyParticipants } from "@/lib/notifications";
 import { uploadToOneDrive } from "@/lib/onedrive";
 import { generatePdf } from "@/lib/pdf";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
@@ -266,6 +267,13 @@ export async function generateCommercialInvoice(tradeId: string, formData: FormD
     return { error: documentError.message };
   }
 
+  await notifyParticipants(
+    tradeId,
+    trade.trade_id,
+    access.user.id,
+    access.user.name,
+    `A commercial invoice was generated for trade ${trade.trade_id}.`
+  );
   revalidatePath(`/trades/${tradeId}`);
   return { success: true, downloadUrl: uploaded.webUrl, invoiceId: invoice.id };
 }
