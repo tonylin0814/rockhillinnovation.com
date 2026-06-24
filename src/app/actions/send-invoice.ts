@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
-import { getCurrentUser } from "@/lib/auth";
+import { requireManager } from "@/lib/auth";
 import { sendClientInvoiceEmail } from "@/lib/email";
 import { downloadFromOneDrive } from "@/lib/onedrive";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
@@ -11,10 +11,10 @@ import { createServerSupabaseClient } from "@/lib/supabase/server";
 export type SendResult = { success?: true; error?: string };
 
 export async function sendClientInvoice(invoiceId: string): Promise<SendResult> {
-  const user = await getCurrentUser();
+  const access = await requireManager();
 
-  if (!user || user.role === "partner") {
-    return { error: "Access denied" };
+  if ("error" in access) {
+    return { error: access.error };
   }
 
   const idParsed = z.string().uuid().safeParse(invoiceId);

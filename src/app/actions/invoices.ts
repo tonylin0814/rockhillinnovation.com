@@ -5,7 +5,7 @@ import path from "path";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
-import { getCurrentUser } from "@/lib/auth";
+import { requireManager } from "@/lib/auth";
 import { notifyParticipants } from "@/lib/notifications";
 import { uploadToOneDrive } from "@/lib/onedrive";
 import { generatePdf } from "@/lib/pdf";
@@ -23,13 +23,13 @@ type ActionResult = {
 const invoiceStatusSchema = z.enum(["draft", "sent", "paid"]);
 
 async function requireInvoiceManager() {
-  const user = await getCurrentUser();
+  const access = await requireManager();
 
-  if (!user || user.role === "partner") {
-    return { error: "Access denied" };
+  if ("error" in access) {
+    return { error: access.error };
   }
 
-  return { user };
+  return access;
 }
 
 function emptyToNull(value: FormDataEntryValue | null): string | null {

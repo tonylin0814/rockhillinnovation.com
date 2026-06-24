@@ -51,17 +51,22 @@ create policy "user_read_granted_quotation_history"
     )
   );
 
-drop policy if exists "user_read_granted_cost_history" on public.product_cost_history;
-create policy "user_read_granted_cost_history"
-  on public.product_cost_history for select
-  using (
-    client_id is null
-    or exists (
-      select 1 from public.user_client_access
-      where user_id = (select auth.uid())
-        and client_id = product_cost_history.client_id
-    )
-  );
+do $$
+begin
+  if to_regclass('public.product_cost_history') is not null then
+    drop policy if exists "user_read_granted_cost_history" on public.product_cost_history;
+    create policy "user_read_granted_cost_history"
+      on public.product_cost_history for select
+      using (
+        client_id is null
+        or exists (
+          select 1 from public.user_client_access
+          where user_id = (select auth.uid())
+            and client_id = product_cost_history.client_id
+        )
+      );
+  end if;
+end $$;
 
 drop policy if exists "user_read_granted_client_invoices" on public.client_invoices;
 create policy "user_read_granted_client_invoices"

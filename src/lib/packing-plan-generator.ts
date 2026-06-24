@@ -21,6 +21,7 @@ export type GeneratedCase = {
   case_label: string;
   qty_in_case: number;
   weight_kg: number;
+  max_cases_per_pallet: number;
 };
 
 export type GeneratedPallet = {
@@ -116,6 +117,7 @@ export function generatePackingPlan(
           product_name: line.product_name,
           qty_in_case: qtyInCase,
           weight_kg: round3(line.carton_weight_kg * (qtyInCase / line.qty_per_carton)),
+          max_cases_per_pallet: casesPerPallet,
         };
       });
       return { ...line, cases, cases_per_pallet: casesPerPallet, total_cases: totalCases };
@@ -151,11 +153,19 @@ export function generatePackingPlan(
   }
 
   let mixed = newPallet(true);
+  let mixedCaseLimit = Number.POSITIVE_INFINITY;
   for (const item of remainders.sort((a, b) => b.weight_kg - a.weight_kg)) {
-    if (mixed.cases.length && mixed.total_weight_kg + item.weight_kg > palletConfig.max_weight_kg) {
+    const nextCaseLimit = Math.min(mixedCaseLimit, item.max_cases_per_pallet);
+    if (
+      mixed.cases.length &&
+      (mixed.total_weight_kg + item.weight_kg > palletConfig.max_weight_kg ||
+        mixed.total_cases + 1 > nextCaseLimit)
+    ) {
       pallets.push(mixed);
       mixed = newPallet(true);
+      mixedCaseLimit = Number.POSITIVE_INFINITY;
     }
+    mixedCaseLimit = Math.min(mixedCaseLimit, item.max_cases_per_pallet);
     mixed.cases.push(item);
     mixed.total_cases += 1;
     mixed.total_weight_kg = round3(mixed.total_weight_kg + item.weight_kg);

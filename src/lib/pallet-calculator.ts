@@ -44,12 +44,13 @@ function evaluateOrientation(
   carton: CartonInput,
   pallet: PalletInput,
   boxLength: number,
-  boxWidth: number
+  boxWidth: number,
+  boxHeight = carton.heightCm
 ): OrientationResult {
   const acrossLength = Math.floor(pallet.lengthCm / boxLength);
   const acrossWidth = Math.floor(pallet.widthCm / boxWidth);
   const cartonsPerLayer = acrossLength * acrossWidth;
-  const layersByHeight = Math.floor(pallet.maxHeightCm / carton.heightCm);
+  const layersByHeight = Math.floor(pallet.maxHeightCm / boxHeight);
   const layersByWeight =
     cartonsPerLayer > 0 && carton.weightKg > 0
       ? Math.floor(pallet.maxWeightKg / (cartonsPerLayer * carton.weightKg))
@@ -71,7 +72,7 @@ function evaluateOrientation(
     layers,
     orientation: label,
     palletGrossWeightKg: round2(cartonsPerPallet * carton.weightKg),
-    palletHeightCm: round2(layers * carton.heightCm),
+    palletHeightCm: round2(layers * boxHeight),
   };
 }
 
@@ -79,7 +80,7 @@ export function calculatePallet(carton: CartonInput, pallet: PalletInput): Palle
   const orientations = [
     evaluateOrientation("L x W base", carton, pallet, carton.lengthCm, carton.widthCm),
     evaluateOrientation("W x L base", carton, pallet, carton.widthCm, carton.lengthCm),
-    evaluateOrientation("Sideways", carton, pallet, carton.lengthCm, carton.heightCm),
+    evaluateOrientation("Sideways", carton, pallet, carton.lengthCm, carton.heightCm, carton.widthCm),
   ];
 
   return orientations.reduce((best, candidate) => {

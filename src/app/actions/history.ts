@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
-import { getCurrentUser } from "@/lib/auth";
+import { requireManager } from "@/lib/auth";
 import { createServerSupabaseAdmin } from "@/lib/supabase/server";
 
 type ActionResult = {
@@ -46,13 +46,13 @@ const quoteHistorySchema = z.object({
 });
 
 async function requireHistoryManager() {
-  const user = await getCurrentUser();
+  const access = await requireManager();
 
-  if (!user || user.role === "partner") {
-    return { error: "Access denied" };
+  if ("error" in access) {
+    return { error: access.error };
   }
 
-  return { user };
+  return access;
 }
 
 export async function createCostHistory(formData: FormData): Promise<ActionResult> {

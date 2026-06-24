@@ -256,11 +256,13 @@ export default async function TradeWorkspacePage({ params }: { params: { id: str
       .select("*")
       .eq("trade_id", params.id)
       .order("created_at", { ascending: false }),
-    supabase
-      .from("trade_packing_plans")
-      .select("*, pallets:trade_packing_pallets(*, cases:trade_packing_cases(*))")
-      .eq("trade_id", params.id)
-      .maybeSingle(),
+    canManage
+      ? supabase
+          .from("trade_packing_plans")
+          .select("*, pallets:trade_packing_pallets(*, cases:trade_packing_cases(*))")
+          .eq("trade_id", params.id)
+          .maybeSingle()
+      : Promise.resolve({ data: null, error: null }),
     supabase
       .from("client_quotation_lines")
       .select("total_price_usd, session:client_quotation_sessions!inner(status, trade_id)")
@@ -346,7 +348,7 @@ export default async function TradeWorkspacePage({ params }: { params: { id: str
   const activeProductIds = activeProductRows.map((product) => product.id);
   const latestCostByProductId = new Map<string, number>();
 
-  if (activeProductIds.length) {
+  if (canManage && activeProductIds.length) {
     const { data: latestCosts, error: latestCostsError } = await supabase
       .from("product_cost_history")
       .select("product_id, unit_cost_rmb")

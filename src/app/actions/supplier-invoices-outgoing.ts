@@ -3,7 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
-import { getCurrentUser } from "@/lib/auth";
+import { requireManager as requireManagerRole } from "@/lib/auth";
+import { notifyParticipants } from "@/lib/notifications";
 import { uploadToOneDrive } from "@/lib/onedrive";
 import { generatePdf } from "@/lib/pdf";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
@@ -49,17 +50,13 @@ const matchSchema = z.object({
 });
 
 async function requireManager() {
-  const user = await getCurrentUser();
+  const access = await requireManagerRole();
 
-  if (!user) {
-    return { error: "Unauthorized" };
+  if ("error" in access) {
+    return { error: access.error };
   }
 
-  if (user.role === "partner") {
-    return { error: "Managers and admins only" };
-  }
-
-  return { user };
+  return access;
 }
 
 function parseAdjustments(formData: FormData, invoiceType: InvoiceKind) {
@@ -374,6 +371,13 @@ export async function generateSupplierInvoiceOutgoing(
     return { error: documentError.message };
   }
 
+  await notifyParticipants(
+    tradeId,
+    trade.trade_id,
+    access.user.id,
+    access.user.name,
+    `A supplier ${invoiceType} invoice was generated for trade ${trade.trade_id}.`
+  );
   revalidatePath(`/trades/${tradeId}`);
   return { success: true, downloadUrl: uploaded.webUrl, invoiceId: invoice.id };
 }
@@ -400,15 +404,22 @@ export async function updateSupplierInvoiceStatus(
   }
 
   const supabase = createServerSupabaseClient();
-  const { error } = await supabase
+  const { data: invoice, error } = await supabase
     .from("supplier_invoices_outgoing")
     .update({ status: parsed.data.status })
-    .eq("id", parsed.data.invoiceId);
+    .eq("id", parsed.data.invoiceId)
+    .select("trade_id")
+    .maybeSingle();
 
   if (error) {
     return { error: error.message };
   }
 
+  if (!invoice) {
+    return { error: "Invoice not found" };
+  }
+
+  revalidatePath(`/trades/${invoice.trade_id}`);
   return { success: true };
 }
 

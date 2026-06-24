@@ -115,6 +115,15 @@ export async function generatePackingPlan(
     parsed.data.forkliftClearanceCm
   );
 
+  if (!generated.total_cases) {
+    return {
+      error:
+        generated.warnings.length > 0
+          ? `No packable cartons found. ${generated.warnings.join(" ")}`
+          : "No packable cartons found.",
+    };
+  }
+
   const admin = createServerSupabaseAdmin();
   await admin.from("trade_packing_plans").delete().eq("trade_id", tradeId);
   const { data: plan, error: planError } = await admin

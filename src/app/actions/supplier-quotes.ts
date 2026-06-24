@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
 import { expandComponentDemand } from "@/app/actions/order-lines";
-import { getCurrentUser } from "@/lib/auth";
+import { requireManager } from "@/lib/auth";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 
 type ActionResult = {
@@ -47,13 +47,13 @@ const quoteLineSchema = z.object({
 });
 
 async function requireQuoteManager() {
-  const user = await getCurrentUser();
+  const access = await requireManager();
 
-  if (!user || user.role === "partner") {
-    return { error: "Access denied" };
+  if ("error" in access) {
+    return { error: access.error };
   }
 
-  return { user };
+  return access;
 }
 
 function emptyToNull(value: FormDataEntryValue | null) {

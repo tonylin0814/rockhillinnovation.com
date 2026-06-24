@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
-import { getCurrentUser } from "@/lib/auth";
+import { requireManager } from "@/lib/auth";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 
 type JoinedHistoryRow = {
@@ -66,10 +66,10 @@ function firstOrNull<T>(value: T | T[] | null | undefined) {
 }
 
 export async function GET(request: Request) {
-  const user = await getCurrentUser();
+  const access = await requireManager();
 
-  if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if ("error" in access) {
+    return NextResponse.json({ error: access.error }, { status: 403 });
   }
 
   const url = new URL(request.url);

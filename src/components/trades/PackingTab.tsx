@@ -6,7 +6,6 @@ import { useState, useTransition } from "react";
 
 import {
   confirmPackingPlan,
-  deletePackingPlan,
   generateBatchCartonLabelsPdf,
   generatePackingListPdf,
   generatePackingPlan,
@@ -80,6 +79,23 @@ export function PackingTab({
           palletLengthCm: Number(palletL),
           palletMaxWeightKg: Number(palletMaxW),
           palletWidthCm: Number(palletW),
+        })
+      );
+    });
+  }
+
+  function handleRegenerate() {
+    if (!plan) return;
+    setError(null);
+    startTransition(async () => {
+      refreshOnSuccess(
+        await generatePackingPlan(tradeId, {
+          containerType: plan.container_type,
+          forkliftClearanceCm: Number(plan.forklift_clearance_cm),
+          palletHeightCm: Number(plan.pallet_height_cm),
+          palletLengthCm: Number(plan.pallet_length_cm),
+          palletMaxWeightKg: Number(plan.pallet_max_weight_kg),
+          palletWidthCm: Number(plan.pallet_width_cm),
         })
       );
     });
@@ -185,7 +201,7 @@ export function PackingTab({
                     <AlertDialogCancel>Cancel</AlertDialogCancel>
                     <AlertDialogAction
                       className="bg-red-600 hover:bg-red-700"
-                      onClick={() => startTransition(async () => refreshOnSuccess(await deletePackingPlan(tradeId)))}
+                      onClick={handleRegenerate}
                     >
                       Regenerate
                     </AlertDialogAction>

@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
-import { getCurrentUser } from "@/lib/auth";
+import { requireManager as requireManagerRole } from "@/lib/auth";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 
 export type ActionResult = { success?: true; error?: string };
@@ -13,17 +13,13 @@ function roundMoney(value: number) {
 }
 
 async function requireManager() {
-  const user = await getCurrentUser();
+  const access = await requireManagerRole();
 
-  if (!user) {
-    return { error: "Unauthorized" };
+  if ("error" in access) {
+    return { error: access.error };
   }
 
-  if (user.role === "partner") {
-    return { error: "Managers and admins only" };
-  }
-
-  return { user };
+  return access;
 }
 
 export async function calculateShareholderBook(tradeId: string): Promise<ActionResult> {
