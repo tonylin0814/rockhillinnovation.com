@@ -379,6 +379,18 @@ export type SupplierInvoiceAdjustment = {
   created_at: string;
 };
 
+export type QuotationHistory = {
+  id: string;
+  quote_date: string;
+  trade_id: string | null;
+  rock_hill_code: string;
+  product_name: string;
+  quantity: number;
+  quoted_usd: number;
+  notes: string | null;
+  created_at: string;
+};
+
 export type ExpenseVendorInvoice = {
   id: string;
   vendor_id: string;

@@ -5,17 +5,11 @@ import { getCurrentUser } from "@/lib/auth";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 
 type QuoteHistoryRow = {
-  product_id: string | null;
-  unit_price_usd: number | string | null;
-  session:
-    | { quote_date: string; created_at: string }
-    | { quote_date: string; created_at: string }[]
-    | null;
+  created_at: string;
+  quote_date: string;
+  quoted_usd: number | string | null;
+  rock_hill_code: string;
 };
-
-function firstOrNull<T>(value: T | T[] | null | undefined) {
-  return Array.isArray(value) ? value[0] ?? null : value ?? null;
-}
 
 export async function GET(request: Request) {
   const user = await getCurrentUser();
@@ -50,6 +44,7 @@ export async function GET(request: Request) {
 
   const productRows = products ?? [];
   const productIds = productRows.map((product) => product.id);
+  const productCodes = productRows.map((product) => product.code);
   const latestCostByProductId = new Map<string, number>();
   const previousQuoteByProductId = new Map<string, number>();
 
@@ -62,11 +57,10 @@ export async function GET(request: Request) {
         .order("quoted_date", { ascending: false })
         .order("created_at", { ascending: false }),
       supabase
-        .from("client_quotation_lines")
-        .select("product_id, unit_price_usd, session:client_quotation_sessions(quote_date, created_at)")
-        .in("product_id", productIds)
-        .neq("session_id", parsed.data)
-        .gt("unit_price_usd", 0),
+        .from("quotation_history")
+        .select("rock_hill_code, quoted_usd, quote_date, created_at")
+        .in("rock_hill_code", productCodes)
+        .gt("quoted_usd", 0),
     ]);
 
     if (costsError) {
@@ -83,19 +77,16 @@ export async function GET(request: Request) {
       }
     }
 
-    const sortedQuoteRows = ((quoteRows ?? []) as QuoteHistoryRow[]).sort((a, b) => {
-      const sessionA = firstOrNull(a.session);
-      const sessionB = firstOrNull(b.session);
-      const dateA = sessionA?.quote_date ?? "";
-      const dateB = sessionB?.quote_date ?? "";
-      const createdA = sessionA?.created_at ?? "";
-      const createdB = sessionB?.created_at ?? "";
-      return dateB.localeCompare(dateA) || createdB.localeCompare(createdA);
-    });
+    const productIdByCode = new Map(productRows.map((product) => [product.code, product.id]));
+    const sortedQuoteRows = ((quoteRows ?? []) as QuoteHistoryRow[]).sort(
+      (a, b) => b.quote_date.localeCompare(a.quote_date) || b.created_at.localeCompare(a.created_at)
+    );
 
     for (const row of sortedQuoteRows) {
-      if (row.product_id && !previousQuoteByProductId.has(row.product_id)) {
-        previousQuoteByProductId.set(row.product_id, Number(row.unit_price_usd));
+      const productId = productIdByCode.get(row.rock_hill_code);
+
+      if (productId && !previousQuoteByProductId.has(productId)) {
+        previousQuoteByProductId.set(productId, Number(row.quoted_usd));
       }
     }
   }

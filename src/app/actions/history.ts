@@ -36,11 +36,12 @@ const costHistorySchema = z.object({
 });
 
 const quoteHistorySchema = z.object({
-  session_id: z.string().uuid("Quote session is required").optional(),
-  product_id: nullableUuid,
-  item_description: nullableText,
+  quote_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Date is required"),
+  trade_id: nullableText,
+  rock_hill_code: z.string().trim().min(1, "Rock Hill code is required"),
+  product_name: z.string().trim().min(1, "Product name is required"),
   quantity: z.coerce.number().positive("Quantity must be greater than 0"),
-  unit_price_usd: z.coerce.number().min(0, "Quote must be zero or greater"),
+  quoted_usd: z.coerce.number().min(0, "Quote must be zero or greater"),
   notes: nullableText,
 });
 
@@ -142,6 +143,31 @@ export async function deleteCostHistory(id: string, productId?: string): Promise
   return { success: true };
 }
 
+export async function createQuoteHistory(formData: FormData): Promise<ActionResult> {
+  const access = await requireHistoryManager();
+
+  if ("error" in access) {
+    return { error: access.error };
+  }
+
+  const parsed = quoteHistorySchema.safeParse(Object.fromEntries(formData));
+
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "Invalid quote history row" };
+  }
+
+  const supabase = createServerSupabaseAdmin();
+  const { data, error } = await supabase.from("quotation_history").insert(parsed.data).select("id").single();
+
+  if (error) {
+    return { error: error.message };
+  }
+
+  revalidatePath("/history");
+  revalidatePath("/history/quote");
+  return { success: true, id: data.id };
+}
+
 export async function updateQuoteHistory(id: string, formData: FormData): Promise<ActionResult> {
   const access = await requireHistoryManager();
 
@@ -162,8 +188,7 @@ export async function updateQuoteHistory(id: string, formData: FormData): Promis
   }
 
   const supabase = createServerSupabaseAdmin();
-  const { session_id: _sessionId, ...values } = parsed.data;
-  const { error } = await supabase.from("client_quotation_lines").update(values).eq("id", id);
+  const { error } = await supabase.from("quotation_history").update(parsed.data).eq("id", id);
 
   if (error) {
     return { error: error.message };
@@ -188,7 +213,7 @@ export async function deleteQuoteHistory(id: string): Promise<ActionResult> {
   }
 
   const supabase = createServerSupabaseAdmin();
-  const { error } = await supabase.from("client_quotation_lines").delete().eq("id", id);
+  const { error } = await supabase.from("quotation_history").delete().eq("id", id);
 
   if (error) {
     return { error: error.message };
