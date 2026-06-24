@@ -50,11 +50,21 @@ type SidebarUser = Pick<CurrentUser, "name" | "role">;
 
 export function Sidebar({ currentUser }: { currentUser: SidebarUser }) {
   const pathname = usePathname();
-  const isPartner = currentUser.role === "partner";
-  const isAdmin = currentUser.role === "admin";
-  const isAdminOrManager = currentUser.role === "admin" || currentUser.role === "manager";
+  const role = currentUser.role;
+  const isAdmin = role === "admin";
+  const isManager = role === "manager";
+  const isPartner = role === "partner";
+  const isUser = role === "user";
+  const isAdminOrManager = isAdmin || isManager;
   const isHistoryActive = pathname.startsWith("/history");
   const isToolsActive = pathname.startsWith("/tools");
+  const visibleNavItems = navItems.filter((item) => {
+    if (item.href === "/clients") return isAdminOrManager;
+    if (item.href === "/suppliers") return isAdminOrManager;
+    if (item.href === "/vendors") return isAdminOrManager;
+    if (item.href === "/products") return isAdminOrManager || isPartner || isUser;
+    return true;
+  });
 
   function NavLink({
     href,
@@ -100,11 +110,11 @@ export function Sidebar({ currentUser }: { currentUser: SidebarUser }) {
         </div>
       </div>
       <nav className="flex flex-1 flex-col gap-1.5 px-3 py-5">
-        {navItems.map((item) => (
+        {visibleNavItems.map((item) => (
           <NavLink href={item.href} icon={item.icon} key={item.href} label={item.label} />
         ))}
 
-        {!isPartner ? (
+        {isAdminOrManager ? (
           <>
             <div
               className={cn(
@@ -137,6 +147,8 @@ export function Sidebar({ currentUser }: { currentUser: SidebarUser }) {
             ))}
           </>
         ) : null}
+
+        {isAdminOrManager ? <NavLink href="/admin/activity" icon={History} label="Activity" /> : null}
 
         {isAdmin
           ? adminNavItems.map((item) => <NavLink href={item.href} icon={item.icon} key={item.href} label={item.label} />)

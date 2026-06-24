@@ -9,14 +9,16 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { getCurrentUser } from "@/lib/auth";
 import { createServerSupabaseAdmin } from "@/lib/supabase/server";
 import { cn } from "@/lib/utils";
-import type { CurrentUser, UserRole } from "@/types";
+import type { CurrentUser, UserClientAccess, UserRole } from "@/types";
 
 type UserRow = CurrentUser & { created_at: string };
+type ClientOption = { id: string; code: string; name: string };
 
 const roleBadgeClasses: Record<UserRole, string> = {
   admin: "border-slate-200 bg-slate-100 text-slate-700",
   manager: "border-blue-200 bg-blue-50 text-blue-700",
   partner: "border-violet-200 bg-violet-50 text-violet-700",
+  user: "border-amber-200 bg-amber-50 text-amber-700",
 };
 
 export default async function UserManagementPage() {
@@ -34,19 +36,25 @@ export default async function UserManagementPage() {
   }
 
   let users: UserRow[] = [];
+  let clients: ClientOption[] = [];
+  let grants: UserClientAccess[] = [];
   let loadError: string | null = null;
 
   try {
     const supabase = createServerSupabaseAdmin();
-    const { data, error } = await supabase
-      .from("users")
-      .select("id, name, email, role, is_active, created_at")
-      .order("created_at", { ascending: true });
+    const [{ data, error }, { data: clientRows, error: clientsError }, { data: grantRows, error: grantsError }] =
+      await Promise.all([
+        supabase.from("users").select("id, name, email, role, is_active, created_at").order("created_at", { ascending: true }),
+        supabase.from("clients").select("id, code, name").eq("status", "active").order("code", { ascending: true }),
+        supabase.from("user_client_access").select("*, client:clients(id, code, name)").order("granted_at", { ascending: true }),
+      ]);
 
-    if (error) {
-      loadError = error.message;
+    if (error || clientsError || grantsError) {
+      loadError = error?.message ?? clientsError?.message ?? grantsError?.message ?? "Could not load users.";
     } else {
       users = (data ?? []) as UserRow[];
+      clients = (clientRows ?? []) as ClientOption[];
+      grants = (grantRows ?? []) as UserClientAccess[];
     }
   } catch (error) {
     loadError = error instanceof Error ? error.message : "Could not load users.";
@@ -67,7 +75,7 @@ export default async function UserManagementPage() {
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Admin</p>
           <h1 className="mt-2 text-3xl font-semibold text-[#0d1b34]">User Management</h1>
         </div>
-        <CreateUserDialog />
+        <CreateUserDialog clients={clients} />
       </div>
 
       <Card className="border-slate-200 shadow-sm">
@@ -88,6 +96,7 @@ export default async function UserManagementPage() {
             <TableBody>
               {users.map((user) => {
                 const isSelf = user.id === currentUser.id;
+                const userGrants = grants.filter((grant) => grant.user_id === user.id);
 
                 return (
                   <TableRow key={user.id}>
@@ -106,6 +115,11 @@ export default async function UserManagementPage() {
                       <Badge className={cn("capitalize", roleBadgeClasses[user.role])} variant="outline">
                         {user.role}
                       </Badge>
+                      {user.role === "user" ? (
+                        <Badge className="ml-2 border-amber-200 bg-white text-amber-700" variant="outline">
+                          {userGrants.length} clients
+                        </Badge>
+                      ) : null}
                     </TableCell>
                     <TableCell>
                       <Badge
@@ -122,6 +136,8 @@ export default async function UserManagementPage() {
                     <TableCell>
                       <div className="flex items-center justify-end gap-0.5">
                         <EditUserDialog
+                          clients={clients}
+                          initialGrants={userGrants}
                           initialName={user.name}
                           initialRole={user.role}
                           isSelf={isSelf}

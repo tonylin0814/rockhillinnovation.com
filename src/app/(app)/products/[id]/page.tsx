@@ -116,12 +116,12 @@ export default async function ProductDetailPage({
 }) {
   const user = await getCurrentUser();
 
-  if (user?.role === "partner") {
+  if (!user) {
     return (
       <div className="flex min-h-[calc(100vh-8rem)] items-center justify-center">
         <div className="text-center">
           <h1 className="text-2xl font-semibold text-[#0d1b34]">Access denied</h1>
-          <p className="mt-2 text-sm text-slate-500">Products are available to admins and managers only.</p>
+          <p className="mt-2 text-sm text-slate-500">Products are available to signed-in users only.</p>
         </div>
       </div>
     );
@@ -163,6 +163,7 @@ export default async function ProductDetailPage({
   }
 
   const product = data as Product;
+  const canManage = user.role === "admin" || user.role === "manager";
   const backHref = searchParams?.from?.startsWith("/products") ? searchParams.from : "/products?tab=products";
   const supplierOptions = (suppliers ?? []) as ProductSupplierOption[];
   const availableProductOptions = (availableProducts ?? []) as Product[];
@@ -236,19 +237,21 @@ export default async function ProductDetailPage({
           <Card className="border-slate-200 shadow-sm">
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle>Main Info</CardTitle>
-              <div className="flex flex-wrap justify-end gap-2">
-                <CartonLabelButton productId={product.id} />
-                <ProductFormDialog
-                  initialData={product}
-                  mode="edit"
-                  suppliers={supplierOptions}
-                  trigger={
-                    <Button size="sm" variant="outline">
-                      Edit
-                    </Button>
-                  }
-                />
-              </div>
+              {canManage ? (
+                <div className="flex flex-wrap justify-end gap-2">
+                  <CartonLabelButton productId={product.id} />
+                  <ProductFormDialog
+                    initialData={product}
+                    mode="edit"
+                    suppliers={supplierOptions}
+                    trigger={
+                      <Button size="sm" variant="outline">
+                        Edit
+                      </Button>
+                    }
+                  />
+                </div>
+              ) : null}
             </CardHeader>
             <CardContent>
               <div className="grid gap-x-6 sm:grid-cols-2">
@@ -277,7 +280,7 @@ export default async function ProductDetailPage({
                   <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Status</p>
                   <div className="mt-2 flex items-center gap-3">
                     <StatusBadge status={product.status} />
-                    <ProductStatusButton productId={product.id} status={product.status} />
+                    {canManage ? <ProductStatusButton productId={product.id} status={product.status} /> : null}
                   </div>
                 </div>
                 <DetailRow label="Created" value={formatDate(product.created_at)} />
@@ -416,7 +419,7 @@ export default async function ProductDetailPage({
               <CardTitle>Product Image</CardTitle>
             </CardHeader>
             <CardContent>
-              <ProductImagesEditor initialImages={product.product_images} productId={product.id} />
+                  <ProductImagesEditor canManage={canManage} initialImages={product.product_images} productId={product.id} />
             </CardContent>
           </Card>
         </div>

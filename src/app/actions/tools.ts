@@ -45,7 +45,7 @@ function emptyToNull(value: FormDataEntryValue | null) {
 export async function generatePalletCalculationPdf(formData: FormData): Promise<ActionResult> {
   const user = await getCurrentUser();
 
-  if (!user || user.role === "partner") {
+  if (!user || (user.role !== "admin" && user.role !== "manager")) {
     return { error: "Access denied" };
   }
 

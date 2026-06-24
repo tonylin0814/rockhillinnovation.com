@@ -33,9 +33,11 @@ function normalizeImages(images: ProductImage[] | null | undefined): ProductImag
 }
 
 export function ProductImagesEditor({
+  canManage = true,
   initialImages,
   productId,
 }: {
+  canManage?: boolean;
   initialImages: ProductImage[] | null | undefined;
   productId: string;
 }) {
@@ -135,12 +137,14 @@ export function ProductImagesEditor({
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-end">
-        <Button disabled={isPending} onClick={addImage} size="sm" type="button" variant="outline">
-          <Plus className="mr-2 h-4 w-4" />
-          Add Image
-        </Button>
-      </div>
+      {canManage ? (
+        <div className="flex items-center justify-end">
+          <Button disabled={isPending} onClick={addImage} size="sm" type="button" variant="outline">
+            <Plus className="mr-2 h-4 w-4" />
+            Add Image
+          </Button>
+        </div>
+      ) : null}
 
       <div className="space-y-4">
         {slots.map((image, index) => (
@@ -158,7 +162,7 @@ export function ProductImagesEditor({
                     Open
                   </a>
                 ) : null}
-                {index > 0 ? (
+                {canManage && index > 0 ? (
                   <Button
                     disabled={isPending}
                     onClick={() => removeSlot(index)}
@@ -194,36 +198,40 @@ export function ProductImagesEditor({
               )}
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor={`product-image-name-${index}`}>Image Name</Label>
-              <Input
-                disabled={isPending}
-                id={`product-image-name-${index}`}
-                onChange={(event) => updateName(index, event.currentTarget.value)}
-                placeholder="Front view, packaging, label..."
-                value={image.name}
-              />
-            </div>
+            {canManage ? (
+              <>
+                <div className="space-y-2">
+                  <Label htmlFor={`product-image-name-${index}`}>Image Name</Label>
+                  <Input
+                    disabled={isPending}
+                    id={`product-image-name-${index}`}
+                    onChange={(event) => updateName(index, event.currentTarget.value)}
+                    placeholder="Front view, packaging, label..."
+                    value={image.name}
+                  />
+                </div>
 
-            <div className="space-y-2">
-              <Label htmlFor={`product-image-file-${index}`}>Upload Image</Label>
-              <Input
-                accept="image/*"
-                disabled={isPending}
-                id={`product-image-file-${index}`}
-                onChange={(event) => updateFile(index, event)}
-                type="file"
-              />
-            </div>
+                <div className="space-y-2">
+                  <Label htmlFor={`product-image-file-${index}`}>Upload Image</Label>
+                  <Input
+                    accept="image/*"
+                    disabled={isPending}
+                    id={`product-image-file-${index}`}
+                    onChange={(event) => updateFile(index, event)}
+                    type="file"
+                  />
+                </div>
 
-            <Button disabled={isPending} onClick={() => saveSlot(index)} type="button" variant="outline">
-              {savingSlot === index ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              ) : (
-                <Upload className="mr-2 h-4 w-4" />
-              )}
-              Save Image
-            </Button>
+                <Button disabled={isPending} onClick={() => saveSlot(index)} type="button" variant="outline">
+                  {savingSlot === index ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <Upload className="mr-2 h-4 w-4" />
+                  )}
+                  Save Image
+                </Button>
+              </>
+            ) : null}
           </div>
         ))}
       </div>

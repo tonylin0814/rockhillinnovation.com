@@ -6,6 +6,13 @@ import { FormEvent, useState, useTransition } from "react";
 import { toast } from "sonner";
 
 import { createUser } from "@/app/actions/users";
+import { removeUserClientAccess, setUserClientAccess } from "@/app/actions/user-client-access";
+import {
+  buildClientAccessState,
+  type ClientAccessClient,
+  type ClientAccessState,
+  UserClientAccessFields,
+} from "@/components/admin/UserClientAccessFields";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -26,11 +33,12 @@ import {
 } from "@/components/ui/select";
 import type { UserRole } from "@/types";
 
-export function CreateUserDialog() {
+export function CreateUserDialog({ clients }: { clients: ClientAccessClient[] }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [role, setRole] = useState<UserRole>("manager");
+  const [clientAccess, setClientAccess] = useState<ClientAccessState>(() => buildClientAccessState(clients));
   const [isPending, startTransition] = useTransition();
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -43,9 +51,24 @@ export function CreateUserDialog() {
     startTransition(async () => {
       const result = await createUser(formData);
 
-      if (result.error) {
-        setError(result.error);
+      if (result.error || !result.id) {
+        setError(result.error ?? "User was created but the user ID was not returned");
         return;
+      }
+
+      if (role === "user") {
+        for (const [clientId, grant] of Object.entries(clientAccess)) {
+          if (grant.enabled) {
+            const grantResult = await setUserClientAccess(result.id, clientId, grant.accessLevel);
+
+            if (grantResult.error) {
+              setError(grantResult.error);
+              return;
+            }
+          } else {
+            await removeUserClientAccess(result.id, clientId);
+          }
+        }
       }
 
       setOpen(false);
@@ -89,9 +112,19 @@ export function CreateUserDialog() {
                 <SelectItem value="admin">Admin</SelectItem>
                 <SelectItem value="manager">Manager</SelectItem>
                 <SelectItem value="partner">Project Partner</SelectItem>
+                <SelectItem value="user">User - Client Access</SelectItem>
               </SelectContent>
             </Select>
           </div>
+
+          {role === "user" ? (
+            <UserClientAccessFields
+              clients={clients}
+              disabled={isPending}
+              onChange={setClientAccess}
+              value={clientAccess}
+            />
+          ) : null}
 
           {error ? <p className="text-sm font-medium text-red-600">{error}</p> : null}
 

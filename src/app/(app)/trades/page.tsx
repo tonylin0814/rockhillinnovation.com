@@ -8,14 +8,35 @@ import type { Trade } from "@/types";
 export default async function TradesPage() {
   const user = await getCurrentUser();
   const supabase = createServerSupabaseClient();
-  const canCreateTrades = user?.role !== "partner";
+  const canCreateTrades = user?.role === "admin" || user?.role === "manager";
+  const isUserRole = user?.role === "user";
+  let grantedClientIds: string[] = [];
+
+  if (isUserRole && user) {
+    const { data: grants, error: grantsError } = await supabase
+      .from("user_client_access")
+      .select("client_id")
+      .eq("user_id", user.id);
+
+    if (grantsError) {
+      return (
+        <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm font-medium text-red-700">
+          {grantsError.message}
+        </div>
+      );
+    }
+
+    grantedClientIds = (grants ?? []).map((grant) => grant.client_id);
+  }
+
+  const tradesQuery = supabase
+    .from("trades")
+    .select("*, client:clients(id, name, code)")
+    .order("trade_date", { ascending: false });
 
   const [{ data: trades, error: tradesError }, { data: clients, error: clientsError }, { data: partners, error: partnersError }] =
     await Promise.all([
-      supabase
-        .from("trades")
-        .select("*, client:clients(id, name, code)")
-        .order("trade_date", { ascending: false }),
+      isUserRole && !grantedClientIds.length ? Promise.resolve({ data: [], error: null }) : isUserRole ? tradesQuery.in("client_id", grantedClientIds) : tradesQuery,
       canCreateTrades
         ? supabase.from("clients").select("id, name, code").eq("status", "active").order("name", { ascending: true })
         : Promise.resolve({ data: [], error: null }),

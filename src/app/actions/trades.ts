@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
 import { getCurrentUser } from "@/lib/auth";
+import { logActivity } from "@/lib/activity-log";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 
 type ActionResult = {
@@ -45,7 +46,7 @@ const shareholderInputSchema = z.object({
 async function requireTradeManager() {
   const user = await getCurrentUser();
 
-  if (!user || user.role === "partner") {
+  if (!user || (user.role !== "admin" && user.role !== "manager")) {
     return { error: "Access denied" };
   }
 
@@ -117,6 +118,14 @@ export async function createTrade(formData: FormData): Promise<ActionResult> {
   }
 
   revalidatePath("/trades");
+  await logActivity({
+    action: "created",
+    summary: `Created trade ${tradeValues.trade_id}`,
+    targetId: trade.id,
+    targetTable: "trades",
+    tradeId: trade.id,
+    user: access.user,
+  });
   return { success: true, id: trade.id };
 }
 
@@ -162,6 +171,14 @@ export async function updateTrade(id: string, formData: FormData): Promise<Actio
 
   revalidatePath("/trades");
   revalidatePath(`/trades/${id}`);
+  await logActivity({
+    action: "updated",
+    summary: `Updated trade ${parsed.data.trade_id}`,
+    targetId: id,
+    targetTable: "trades",
+    tradeId: id,
+    user: access.user,
+  });
   return { success: true };
 }
 
@@ -195,6 +212,14 @@ export async function setTradeStatus(
 
   revalidatePath("/trades");
   revalidatePath(`/trades/${id}`);
+  await logActivity({
+    action: "updated",
+    summary: `Set trade status to ${status}`,
+    targetId: id,
+    targetTable: "trades",
+    tradeId: id,
+    user: access.user,
+  });
   return { success: true };
 }
 

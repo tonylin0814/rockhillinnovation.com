@@ -8,11 +8,11 @@ import { getCurrentUser } from "@/lib/auth";
 import { createServerSupabaseAdmin } from "@/lib/supabase/server";
 import type { UserRole } from "@/types";
 
-export type ActionResult = { success?: true; error?: string };
+export type ActionResult = { success?: true; id?: string; error?: string };
 export type ResetResult = { success?: true; resetLink?: string; error?: string };
 export type CreateUserRole = UserRole;
 
-const roleSchema = z.enum(["admin", "manager", "partner"]);
+const roleSchema = z.enum(["admin", "manager", "partner", "user"]);
 
 async function requireAdmin() {
   const user = await getCurrentUser();
@@ -110,7 +110,7 @@ export async function createUser(formData: FormData): Promise<ActionResult> {
   }
 
   revalidatePath("/admin/users");
-  return { success: true };
+  return { id: user.id, success: true };
 }
 
 export async function updateUser(userId: string, formData: FormData): Promise<ActionResult> {

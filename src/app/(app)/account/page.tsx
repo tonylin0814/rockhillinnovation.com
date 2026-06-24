@@ -7,6 +7,7 @@ const roleLabelMap: Record<string, string> = {
   admin: "Admin",
   manager: "Manager",
   partner: "Project Partner",
+  user: "User",
 };
 
 export default async function AccountPage() {

@@ -8,7 +8,7 @@ export const runtime = "nodejs";
 export async function GET(request: Request) {
   const user = await getCurrentUser();
 
-  if (!user || user.role === "partner") {
+  if (!user) {
     return NextResponse.json({ error: "Access denied" }, { status: 403 });
   }
 

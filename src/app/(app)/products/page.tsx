@@ -14,12 +14,12 @@ export default async function ProductsPage({
 }) {
   const user = await getCurrentUser();
 
-  if (user?.role === "partner") {
+  if (!user) {
     return (
       <div className="flex min-h-[calc(100vh-8rem)] items-center justify-center">
         <div className="text-center">
           <h1 className="text-2xl font-semibold text-[#0d1b34]">Access denied</h1>
-          <p className="mt-2 text-sm text-slate-500">Products are available to admins and managers only.</p>
+          <p className="mt-2 text-sm text-slate-500">Products are available to signed-in users only.</p>
         </div>
       </div>
     );
@@ -43,6 +43,7 @@ export default async function ProductsPage({
   }
 
   const allProducts = (products ?? []) as Product[];
+  const canManage = user.role === "admin" || user.role === "manager";
   const activeProducts = allProducts.filter((product) => product.status === "active");
   const standardProducts = activeProducts.filter((product) => product.product_type === "part");
   const setProducts = activeProducts.filter((product) => product.product_type === "set");
@@ -59,20 +60,18 @@ export default async function ProductsPage({
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Catalog</p>
           <h1 className="mt-2 text-3xl font-semibold text-[#0d1b34]">Products</h1>
         </div>
-        <div className="flex flex-wrap items-center justify-end gap-2">
-          <ProductFormDialog defaultProductType="part" mode="create" suppliers={supplierOptions} />
-          <ProductFormDialog
-            availableProducts={standardProducts}
-            defaultProductType="set"
-            mode="create"
-            suppliers={supplierOptions}
-            trigger={
-              <Button variant="outline">
-                Add Set
-              </Button>
-            }
-          />
-        </div>
+        {canManage ? (
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            <ProductFormDialog defaultProductType="part" mode="create" suppliers={supplierOptions} />
+            <ProductFormDialog
+              availableProducts={standardProducts}
+              defaultProductType="set"
+              mode="create"
+              suppliers={supplierOptions}
+              trigger={<Button variant="outline">Add Set</Button>}
+            />
+          </div>
+        ) : null}
       </div>
 
       <Tabs className="space-y-4" defaultValue={activeTab}>

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import { ActivityLogTable } from "@/components/admin/ActivityLogTable";
 import { ClientQuotationsTab } from "@/components/trades/ClientQuotationsTab";
 import { DevelopmentTab } from "@/components/trades/DevelopmentTab";
 import { DocumentsTab } from "@/components/trades/DocumentsTab";
@@ -113,7 +114,8 @@ function ComingSoonCard({ title }: { title: string }) {
 export default async function TradeWorkspacePage({ params }: { params: { id: string } }) {
   const user = await getCurrentUser();
   const currentRole: UserRole = user?.role ?? "partner";
-  const canManage = currentRole !== "partner";
+  const canManage = currentRole === "admin" || currentRole === "manager";
+  const canViewFinancials = canManage;
   const supabase = createServerSupabaseClient();
 
   const [
@@ -342,6 +344,19 @@ export default async function TradeWorkspacePage({ params }: { params: { id: str
   }
 
   const trade = data as Trade;
+  let canEdit = canManage;
+
+  if (currentRole === "user" && user) {
+    const { data: grant } = await supabase
+      .from("user_client_access")
+      .select("access_level")
+      .eq("user_id", user.id)
+      .eq("client_id", trade.client_id)
+      .maybeSingle();
+
+    canEdit = grant?.access_level === "edit";
+  }
+
   const tradeParticipants = (participants ?? []) as TradeParticipant[];
   const clientOptions = (clients ?? []) as TradeClientOption[];
   const partnerOptions = (partners ?? []) as TradePartnerOption[];
@@ -425,12 +440,14 @@ export default async function TradeWorkspacePage({ params }: { params: { id: str
             {` - ${formatDate(trade.trade_date)}`}
           </p>
         </div>
-        <TradeStatusDropdown
-          currentStatus={trade.status}
-          role={currentRole}
-          shareholderBookConfirmed={shareholderBookConfirmed}
-          tradeId={trade.id}
-        />
+        {canManage ? (
+          <TradeStatusDropdown
+            currentStatus={trade.status}
+            role={currentRole}
+            shareholderBookConfirmed={shareholderBookConfirmed}
+            tradeId={trade.id}
+          />
+        ) : null}
       </div>
 
       <Tabs className="space-y-4" defaultValue="summary">
@@ -440,11 +457,12 @@ export default async function TradeWorkspacePage({ params }: { params: { id: str
           <TabsTrigger value="quotes">Quotes</TabsTrigger>
           <TabsTrigger value="quotations">Quotations</TabsTrigger>
           <TabsTrigger value="order-lines">Order Lines</TabsTrigger>
-          <TabsTrigger value="financial">Financial</TabsTrigger>
+          {canViewFinancials ? <TabsTrigger value="financial">Financial</TabsTrigger> : null}
           <TabsTrigger value="invoices">Invoices</TabsTrigger>
           <TabsTrigger value="ledger">Ledger</TabsTrigger>
           <TabsTrigger value="documents">Documents</TabsTrigger>
-          <TabsTrigger value="shareholders">Shareholders</TabsTrigger>
+          {canManage ? <TabsTrigger value="shareholders">Shareholders</TabsTrigger> : null}
+          {canManage ? <TabsTrigger value="activity">Activity</TabsTrigger> : null}
           <TabsTrigger value="judy">Judy AI</TabsTrigger>
         </TabsList>
 
@@ -453,7 +471,7 @@ export default async function TradeWorkspacePage({ params }: { params: { id: str
             <Card className="border-slate-200 shadow-sm">
               <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle>Trade Details</CardTitle>
-                {canManage ? (
+                {canEdit ? (
                   <TradeEditDialog
                     clients={clientOptions}
                     trade={trade}
@@ -494,33 +512,37 @@ export default async function TradeWorkspacePage({ params }: { params: { id: str
               </CardContent>
             </Card>
 
-            <ExchangeRatesCard
-              canManage={canManage}
-              initialRates={exchangeRateRows}
-              tradeId={trade.id}
-              workingExchangeRate={trade.working_exchange_rate}
-            />
+            {canViewFinancials ? (
+              <>
+                <ExchangeRatesCard
+                  canManage={canManage}
+                  initialRates={exchangeRateRows}
+                  tradeId={trade.id}
+                  workingExchangeRate={trade.working_exchange_rate}
+                />
 
-            <TradePnlCard
-              absorbedDevCostCad={absorbedDevCostCad}
-              absorbedDevCostRmb={absorbedDevCostRmb}
-              absorbedDevCostUsd={absorbedDevCostUsd}
-              costRmb={costRmb}
-              depositPnl={depositPnl}
-              depositRateValue={depositRate?.rate_rmb_per_usd ?? null}
-              finalPnl={finalPnl}
-              finalRateValue={finalRate?.rate_rmb_per_usd ?? null}
-              revenueUsd={revenueUsd}
-              workingPnl={workingPnl}
-              workingRateValue={trade.working_exchange_rate}
-            />
+                <TradePnlCard
+                  absorbedDevCostCad={absorbedDevCostCad}
+                  absorbedDevCostRmb={absorbedDevCostRmb}
+                  absorbedDevCostUsd={absorbedDevCostUsd}
+                  costRmb={costRmb}
+                  depositPnl={depositPnl}
+                  depositRateValue={depositRate?.rate_rmb_per_usd ?? null}
+                  finalPnl={finalPnl}
+                  finalRateValue={finalRate?.rate_rmb_per_usd ?? null}
+                  revenueUsd={revenueUsd}
+                  workingPnl={workingPnl}
+                  workingRateValue={trade.working_exchange_rate}
+                />
+              </>
+            ) : null}
           </div>
         </TabsContent>
 
         <TabsContent value="development">
           <DevelopmentTab
             availableProducts={activeProductOptions}
-            canManage={canManage}
+            canManage={canEdit}
             devCosts={developmentCosts}
             devVersions={developmentVersions}
             tradeId={trade.id}
@@ -537,29 +559,31 @@ export default async function TradeWorkspacePage({ params }: { params: { id: str
           />
         </TabsContent>
         <TabsContent value="quotations">
-          <ClientQuotationsTab canManage={canManage} initialSessions={quotationSessionRows} tradeId={trade.id} />
+          <ClientQuotationsTab canManage={canEdit} initialSessions={quotationSessionRows} tradeId={trade.id} />
         </TabsContent>
         <TabsContent value="order-lines">
           <OrderLinesTab
             availableProducts={activeProductOptions}
-            canManage={canManage}
+            canManage={canEdit}
             initialDemand={componentDemandRows}
             initialLines={orderLineRows}
             tradeId={trade.id}
             workingExchangeRate={trade.working_exchange_rate}
           />
         </TabsContent>
-        <TabsContent value="financial">
-          <FinancialTab
-            book={shareholderBookData}
-            canManage={canManage}
-            clientInvoices={clientInvoiceRows}
-            supplierInvoices={supplierInvoiceOutgoingRows}
-            tradeExpenses={tradeExpenseRows}
-            tradeId={trade.id}
-            workingExchangeRate={trade.working_exchange_rate}
-          />
-        </TabsContent>
+        {canViewFinancials ? (
+          <TabsContent value="financial">
+            <FinancialTab
+              book={shareholderBookData}
+              canManage={canManage}
+              clientInvoices={clientInvoiceRows}
+              supplierInvoices={supplierInvoiceOutgoingRows}
+              tradeExpenses={tradeExpenseRows}
+              tradeId={trade.id}
+              workingExchangeRate={trade.working_exchange_rate}
+            />
+          </TabsContent>
+        ) : null}
         <TabsContent value="documents">
           <DocumentsTab initialDocuments={tradeDocumentRows} tradeCode={trade.trade_id} tradeId={trade.id} />
         </TabsContent>
@@ -583,11 +607,11 @@ export default async function TradeWorkspacePage({ params }: { params: { id: str
           />
         </TabsContent>
 
-        <TabsContent value="shareholders">
-          <Card className="border-slate-200 shadow-sm">
-            <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle>Project Partners</CardTitle>
-              {canManage ? (
+        {canManage ? (
+          <TabsContent value="shareholders">
+            <Card className="border-slate-200 shadow-sm">
+              <CardHeader className="flex flex-row items-center justify-between">
+                <CardTitle>Project Partners</CardTitle>
                 <ManagePartnersDialog
                   initialPartnerIds={participantPartnerIds}
                   partners={partnerOptions}
@@ -598,42 +622,47 @@ export default async function TradeWorkspacePage({ params }: { params: { id: str
                     </Button>
                   }
                 />
-              ) : null}
-            </CardHeader>
-            <CardContent>
-              {tradeParticipants.length ? (
-                <div className="grid gap-3">
-                  {tradeParticipants.map((participant) => (
-                    <div
-                      className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-slate-200 p-4"
-                      key={participant.id}
-                    >
-                      <div>
-                        <p className="font-medium text-[#0d1b34]">{participant.user?.name ?? "Unknown user"}</p>
-                        <p className="text-sm text-slate-500">{participant.user?.email ?? "-"}</p>
+              </CardHeader>
+              <CardContent>
+                {tradeParticipants.length ? (
+                  <div className="grid gap-3">
+                    {tradeParticipants.map((participant) => (
+                      <div
+                        className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-slate-200 p-4"
+                        key={participant.id}
+                      >
+                        <div>
+                          <p className="font-medium text-[#0d1b34]">{participant.user?.name ?? "Unknown user"}</p>
+                          <p className="text-sm text-slate-500">{participant.user?.email ?? "-"}</p>
+                        </div>
+                        <RoleBadge role={participant.user?.role ?? "partner"} />
                       </div>
-                      <RoleBadge role={participant.user?.role ?? "partner"} />
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-sm text-slate-500">No partners assigned yet.</p>
-              )}
-            </CardContent>
-          </Card>
-          <ShareholderRulesEditor
-            availableVendors={activeVendorOptions}
-            canManage={canManage}
-            initialShareholders={tradeShareholderRows}
-            tradeId={trade.id}
-          />
-          <VendorInvoicesCard
-            canManage={canManage}
-            existingInvoices={vendorInvoiceRows}
-            shareholders={tradeShareholderRows}
-            tradeId={trade.id}
-          />
-        </TabsContent>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-slate-500">No partners assigned yet.</p>
+                )}
+              </CardContent>
+            </Card>
+            <ShareholderRulesEditor
+              availableVendors={activeVendorOptions}
+              canManage={canManage}
+              initialShareholders={tradeShareholderRows}
+              tradeId={trade.id}
+            />
+            <VendorInvoicesCard
+              canManage={canManage}
+              existingInvoices={vendorInvoiceRows}
+              shareholders={tradeShareholderRows}
+              tradeId={trade.id}
+            />
+          </TabsContent>
+        ) : null}
+        {canManage ? (
+          <TabsContent value="activity">
+            <ActivityLogTable tradeId={trade.id} />
+          </TabsContent>
+        ) : null}
         <TabsContent value="judy">
           <JudyChat tradeId={trade.id} />
         </TabsContent>

@@ -3,12 +3,13 @@ import { redirect } from "next/navigation";
 
 import { BankingAccountDialog } from "@/components/admin/BankingAccountDialog";
 import { BankingAccountsTable } from "@/components/admin/BankingAccountsTable";
+import { AiConfigCard } from "@/components/admin/AiConfigCard";
 import { CompanyInfoForm } from "@/components/admin/CompanyInfoForm";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { getCurrentUser } from "@/lib/auth";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
-import type { CompanyBankingAccount, CompanySettings } from "@/types";
+import type { AiConfig, CompanyBankingAccount, CompanySettings } from "@/types";
 
 export default async function AdminSettingsPage() {
   const user = await getCurrentUser();
@@ -18,9 +19,10 @@ export default async function AdminSettingsPage() {
   }
 
   const supabase = createServerSupabaseClient();
-  const [{ data: settings }, { data: bankingAccounts }] = await Promise.all([
+  const [{ data: settings }, { data: bankingAccounts }, { data: aiConfigs }] = await Promise.all([
     supabase.from("company_settings").select("*").limit(1).maybeSingle(),
     supabase.from("company_banking_accounts").select("*").order("sort_order").order("created_at"),
+    supabase.from("ai_configs").select("*").like("key", "prompt.%").order("key"),
   ]);
 
   return (
@@ -63,6 +65,16 @@ export default async function AdminSettingsPage() {
           <BankingAccountsTable accounts={(bankingAccounts ?? []) as CompanyBankingAccount[]} />
         </CardContent>
       </Card>
+
+      <div className="space-y-4">
+        <div>
+          <h2 className="text-xl font-semibold text-[#0d1b34]">Judy AI Prompts</h2>
+          <p className="mt-1 text-sm text-slate-500">Role-specific instructions Judy uses when users open AI tools.</p>
+        </div>
+        {(aiConfigs ?? []).map((config) => (
+          <AiConfigCard config={config as AiConfig} key={config.key} />
+        ))}
+      </div>
     </div>
   );
 }

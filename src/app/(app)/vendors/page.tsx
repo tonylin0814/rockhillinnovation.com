@@ -55,7 +55,7 @@ function VendorTypeBadge({ type }: { type: ExpenseVendor["vendor_type"] }) {
 export default async function VendorsPage() {
   const user = await getCurrentUser();
 
-  if (user?.role === "partner") {
+  if (!user || user.role === "partner" || user.role === "user") {
     return (
       <div className="flex min-h-[calc(100vh-8rem)] items-center justify-center">
         <div className="text-center">

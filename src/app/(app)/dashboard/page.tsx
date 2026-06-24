@@ -7,6 +7,7 @@ import {
   TrendingUp,
 } from "lucide-react";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -64,6 +65,90 @@ const STATUS_CLASSES: Record<TradeStatus, string> = {
 export default async function DashboardPage() {
   const user = await getCurrentUser();
   const supabase = createServerSupabaseClient();
+
+  if (user?.role === "user") {
+    redirect("/trades");
+  }
+
+  if (user?.role === "partner") {
+    const { data: participantTrades, error } = await supabase
+      .from("trade_participants")
+      .select("trade:trades(id, trade_id, status, updated_at, client:clients(id, name))")
+      .eq("user_id", user.id)
+      .order("added_at", { ascending: false });
+
+    if (error) {
+      return (
+        <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm font-medium text-red-700">
+          {error.message}
+        </div>
+      );
+    }
+
+    const trades = (participantTrades ?? [])
+      .map((row) => (Array.isArray(row.trade) ? row.trade[0] : row.trade))
+      .filter(Boolean);
+
+    return (
+      <section className="space-y-6">
+        <div>
+          <h1 className="text-3xl font-semibold text-[#0d1b34]">My Trades</h1>
+          <p className="mt-2 text-sm text-slate-500">
+            {getGreeting()}, {user.name}.
+          </p>
+        </div>
+
+        <Card className="border-slate-200 shadow-sm">
+          <CardHeader>
+            <CardTitle>Assigned Trades</CardTitle>
+          </CardHeader>
+          <CardContent className="p-0">
+            {trades.length ? (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Trade ID</TableHead>
+                    <TableHead>Client</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Last Updated</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {trades.map((trade) => {
+                    const client = Array.isArray(trade.client) ? trade.client[0] : trade.client;
+                    const status = trade.status as TradeStatus;
+
+                    return (
+                      <TableRow key={trade.id}>
+                        <TableCell>
+                          <Link
+                            className="font-mono text-sm font-medium text-[#0d1b34] underline-offset-4 hover:underline"
+                            href={`/trades/${trade.id}`}
+                          >
+                            {trade.trade_id}
+                          </Link>
+                        </TableCell>
+                        <TableCell className="text-sm">{client?.name ?? "-"}</TableCell>
+                        <TableCell>
+                          <Badge className={STATUS_CLASSES[status] ?? STATUS_CLASSES.draft} variant="outline">
+                            {status}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-sm text-slate-500">{formatDate(trade.updated_at)}</TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            ) : (
+              <p className="px-6 py-10 text-sm text-slate-500">No trades assigned yet.</p>
+            )}
+          </CardContent>
+        </Card>
+      </section>
+    );
+  }
+
   const yearStart = `${new Date().getFullYear()}-01-01`;
 
   const [

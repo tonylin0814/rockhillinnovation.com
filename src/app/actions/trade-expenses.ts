@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
 import { getCurrentUser } from "@/lib/auth";
+import { logActivity } from "@/lib/activity-log";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 
 type ActionResult = { success?: true; error?: string };
@@ -11,7 +12,7 @@ type ActionResult = { success?: true; error?: string };
 async function requireManager() {
   const user = await getCurrentUser();
 
-  if (!user || user.role === "partner") {
+  if (!user || (user.role !== "admin" && user.role !== "manager")) {
     return { error: "Access denied" };
   }
 
@@ -63,17 +64,25 @@ export async function addTradeExpense(tradeId: string, formData: FormData): Prom
   }
 
   const supabase = createServerSupabaseClient();
-  const { error } = await supabase.from("trade_expenses").insert({
+  const { data, error } = await supabase.from("trade_expenses").insert({
     ...parsed.data,
     created_by: access.user.id,
     trade_id: tradeId,
-  });
+  }).select("id").single();
 
   if (error) {
     return { error: error.message };
   }
 
   revalidatePath(`/trades/${tradeId}`);
+  await logActivity({
+    action: "created",
+    summary: `Added trade expense: ${parsed.data.description}`,
+    targetId: data.id,
+    targetTable: "trade_expenses",
+    tradeId,
+    user: access.user,
+  });
   return { success: true };
 }
 
@@ -102,6 +111,14 @@ export async function updateTradeExpense(id: string, tradeId: string, formData: 
   }
 
   revalidatePath(`/trades/${tradeId}`);
+  await logActivity({
+    action: "updated",
+    summary: `Updated trade expense: ${parsed.data.description}`,
+    targetId: id,
+    targetTable: "trade_expenses",
+    tradeId,
+    user: access.user,
+  });
   return { success: true };
 }
 
@@ -124,5 +141,13 @@ export async function deleteTradeExpense(id: string, tradeId: string): Promise<A
   }
 
   revalidatePath(`/trades/${tradeId}`);
+  await logActivity({
+    action: "deleted",
+    summary: "Deleted trade expense",
+    targetId: id,
+    targetTable: "trade_expenses",
+    tradeId,
+    user: access.user,
+  });
   return { success: true };
 }

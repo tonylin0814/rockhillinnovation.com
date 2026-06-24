@@ -1,4 +1,4 @@
-export type UserRole = "admin" | "manager" | "partner";
+export type UserRole = "admin" | "manager" | "partner" | "user";
 
 export type CurrentUser = {
   id: string;
@@ -47,6 +47,36 @@ export type CompanyBankingAccount = {
 export type InvoiceAdjustmentLine = {
   description: string;
   amount_usd: number;
+};
+
+export type UserClientAccess = {
+  user_id: string;
+  client_id: string;
+  access_level: "read" | "edit";
+  granted_at: string;
+  granted_by: string | null;
+  client?: { id: string; code: string; name: string } | null;
+};
+
+export type TradeActivityLog = {
+  id: string;
+  trade_id: string | null;
+  user_id: string | null;
+  user_name: string;
+  user_role: string;
+  action: "created" | "updated" | "deleted";
+  target_table: string;
+  target_id: string | null;
+  summary: string;
+  created_at: string;
+};
+
+export type AiConfig = {
+  key: string;
+  value: string;
+  description: string | null;
+  updated_at: string;
+  updated_by: string | null;
 };
 
 export type Contact = {

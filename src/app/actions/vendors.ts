@@ -34,7 +34,7 @@ const vendorSchema = z.object({
 async function requireVendorManager() {
   const user = await getCurrentUser();
 
-  if (!user || user.role === "partner") {
+  if (!user || (user.role !== "admin" && user.role !== "manager")) {
     return { error: "Access denied" };
   }
 

@@ -30,7 +30,7 @@ export async function getCurrentUser(): Promise<CurrentUser | null> {
 export async function requireManager() {
   const user = await getCurrentUser();
 
-  if (!user || user.role === "partner") {
+  if (!user || (user.role !== "admin" && user.role !== "manager")) {
     return { error: "Access denied" };
   }
 

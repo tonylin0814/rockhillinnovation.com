@@ -5,28 +5,42 @@ import { useRouter } from "next/navigation";
 import { FormEvent, useState, useTransition } from "react";
 import { toast } from "sonner";
 
+import { removeUserClientAccess, setUserClientAccess } from "@/app/actions/user-client-access";
 import { updateUser } from "@/app/actions/users";
+import {
+  buildClientAccessState,
+  type ClientAccessClient,
+  type ClientAccessState,
+  UserClientAccessFields,
+} from "@/components/admin/UserClientAccessFields";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import type { UserRole } from "@/types";
+import type { UserClientAccess, UserRole } from "@/types";
 
 export function EditUserDialog({
   initialName,
   initialRole,
+  initialGrants,
   isSelf,
   userId,
+  clients,
 }: {
   userId: string;
   initialName: string;
   initialRole: UserRole;
+  initialGrants: UserClientAccess[];
+  clients: ClientAccessClient[];
   isSelf: boolean;
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [role, setRole] = useState<UserRole>(initialRole);
+  const [clientAccess, setClientAccess] = useState<ClientAccessState>(() =>
+    buildClientAccessState(clients, initialGrants)
+  );
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
@@ -42,6 +56,18 @@ export function EditUserDialog({
       if (result.error) {
         setError(result.error);
         return;
+      }
+
+      for (const [clientId, grant] of Object.entries(clientAccess)) {
+        const grantResult =
+          role === "user" && grant.enabled
+            ? await setUserClientAccess(userId, clientId, grant.accessLevel)
+            : await removeUserClientAccess(userId, clientId);
+
+        if (grantResult.error) {
+          setError(grantResult.error);
+          return;
+        }
       }
 
       toast.success("User updated");
@@ -77,10 +103,19 @@ export function EditUserDialog({
                 <SelectItem value="admin">Admin</SelectItem>
                 <SelectItem value="manager">Manager</SelectItem>
                 <SelectItem value="partner">Project Partner</SelectItem>
+                <SelectItem value="user">User - Client Access</SelectItem>
               </SelectContent>
             </Select>
             {isSelf ? <p className="text-xs text-slate-500">You cannot change your own role.</p> : null}
           </div>
+          {role === "user" ? (
+            <UserClientAccessFields
+              clients={clients}
+              disabled={isPending || isSelf}
+              onChange={setClientAccess}
+              value={clientAccess}
+            />
+          ) : null}
           {error ? <p className="text-sm font-medium text-red-600">{error}</p> : null}
           <div className="flex justify-end gap-2">
             <Button disabled={isPending} onClick={() => setOpen(false)} type="button" variant="outline">
