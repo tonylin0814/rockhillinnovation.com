@@ -76,10 +76,6 @@ function formatPercent(value: number | null) {
   return typeof value === "number" && Number.isFinite(value) ? `${(value * 100).toFixed(1)}%` : "-";
 }
 
-function productLabel(product: ProductOption) {
-  return [product.code, product.supplier_product_code, product.name_english].filter(Boolean).join(" - ");
-}
-
 export function QuoteLinesEditor({
   availableProducts,
   canManage,
@@ -251,7 +247,7 @@ export function QuoteLinesEditor({
                           <SelectItem value="none">None</SelectItem>
                           {availableProducts.map((availableProduct) => (
                             <SelectItem key={availableProduct.id} value={availableProduct.id}>
-                              {productLabel(availableProduct)}
+                              {availableProduct.name_english}
                             </SelectItem>
                           ))}
                         </SelectContent>

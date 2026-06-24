@@ -19,6 +19,21 @@ type QuoteHistoryRow = {
     | null;
 };
 
+type ClientQuoteHistoryRow = {
+  product_id: string | null;
+  unit_price_usd: number | string | null;
+  session:
+    | {
+        quote_date: string;
+        created_at: string;
+      }
+    | {
+        quote_date: string;
+        created_at: string;
+      }[]
+    | null;
+};
+
 function firstOrNull<T>(value: T | T[] | null | undefined) {
   return Array.isArray(value) ? value[0] ?? null : value ?? null;
 }
@@ -64,6 +79,7 @@ export async function GET(request: Request) {
     const [
       { data: costRows, error: costsError },
       { data: quoteRows, error: quoteRowsError },
+      { data: clientQuoteRows, error: clientQuoteRowsError },
     ] = await Promise.all([
       supabase
         .from("product_cost_history")
@@ -77,6 +93,11 @@ export async function GET(request: Request) {
         .in("product_id", productIds)
         .neq("session_id", parsed.data)
         .gt("unit_quote_usd", 0),
+      supabase
+        .from("client_quotation_lines")
+        .select("product_id, unit_price_usd, session:client_quotation_sessions(quote_date, created_at)")
+        .in("product_id", productIds)
+        .gt("unit_price_usd", 0),
     ]);
 
     if (costsError) {
@@ -87,13 +108,24 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: quoteRowsError.message }, { status: 500 });
     }
 
+    if (clientQuoteRowsError) {
+      return NextResponse.json({ error: clientQuoteRowsError.message }, { status: 500 });
+    }
+
     for (const row of (costRows ?? []) as { product_id: string; unit_cost_rmb: number | string }[]) {
       if (!latestCostByProductId.has(row.product_id)) {
         latestCostByProductId.set(row.product_id, Number(row.unit_cost_rmb));
       }
     }
 
-    const sortedQuoteRows = ((quoteRows ?? []) as QuoteHistoryRow[]).sort((a, b) => {
+    const sortedQuoteRows = [
+      ...((clientQuoteRows ?? []) as ClientQuoteHistoryRow[]).map((row) => ({
+        product_id: row.product_id,
+        unit_quote_usd: row.unit_price_usd,
+        session: row.session,
+      })),
+      ...((quoteRows ?? []) as QuoteHistoryRow[]),
+    ].sort((a, b) => {
       const sessionA = firstOrNull(a.session);
       const sessionB = firstOrNull(b.session);
       const dateA = sessionA?.quote_date ?? "";
