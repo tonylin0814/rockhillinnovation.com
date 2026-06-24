@@ -2,7 +2,7 @@
 
 import { ArrowUpDown, Edit, Loader2, Plus, Trash2 } from "lucide-react";
 import { FormEvent, ReactNode, useMemo, useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 
 import {
@@ -105,6 +105,7 @@ type QuoteHistoryRow = {
 };
 
 type SortDirection = "asc" | "desc";
+type HistoryTab = "cost" | "quote";
 type CostSortKey = "date" | "product" | "supplier" | "moq" | "unit" | "quality" | "carton" | "source";
 type QuoteSortKey = "date" | "trade" | "product" | "name" | "qty" | "quote";
 
@@ -513,6 +514,10 @@ export function HistoryTabs({
   sessions: QuoteSessionOption[];
   suppliers: SupplierOption[];
 }) {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const activeTab: HistoryTab = searchParams.get("tab") === "quote" ? "quote" : "cost";
   const [costSearch, setCostSearch] = useState("");
   const [costSourceFilter, setCostSourceFilter] = useState("all");
   const [costSortKey, setCostSortKey] = useState<CostSortKey>("date");
@@ -539,6 +544,21 @@ export function HistoryTabs({
 
     setQuoteSortKey(key);
     setQuoteSortDirection(["date", "qty", "quote"].includes(key) ? "desc" : "asc");
+  }
+
+  function handleTabChange(value: string) {
+    const nextTab: HistoryTab = value === "quote" ? "quote" : "cost";
+    const params = new URLSearchParams(searchParams.toString());
+
+    if (nextTab === "quote") {
+      params.set("tab", "quote");
+    } else {
+      params.delete("tab");
+    }
+
+    const queryString = params.toString();
+    router.replace(queryString ? `${pathname}?${queryString}` : pathname, { scroll: false });
+    router.refresh();
   }
 
   const costSources = useMemo(
@@ -629,7 +649,7 @@ export function HistoryTabs({
   }, [quoteSearch, quoteSortDirection, quoteSortKey, sortedQuotes]);
 
   return (
-    <Tabs className="space-y-4" defaultValue="cost">
+    <Tabs className="space-y-4" onValueChange={handleTabChange} value={activeTab}>
       <TabsList>
         <TabsTrigger value="cost">Cost History</TabsTrigger>
         <TabsTrigger value="quote">Quote History</TabsTrigger>
