@@ -8,6 +8,11 @@ export type CurrentUser = {
   is_active: boolean;
 };
 
+export type InvoiceAdjustmentLine = {
+  description: string;
+  amount_usd: number;
+};
+
 export type Contact = {
   name: string;
   first_name: string;
@@ -279,6 +284,9 @@ export type ClientQuotationSession = {
   client_id: string;
   session_number: number;
   quote_date: string;
+  quotation_ref: string | null;
+  valid_until: string | null;
+  pdf_onedrive_url: string | null;
   status: "draft" | "sent" | "accepted" | "rejected";
   notes: string | null;
   created_at: string;
@@ -319,10 +327,13 @@ export type ClientInvoice = {
   id: string;
   trade_id: string;
   invoice_number: string;
-  invoice_type: "pro_forma" | "deposit" | "final";
+  invoice_type: "pro_forma" | "deposit" | "final" | "commercial";
   invoice_date: string;
   due_date: string | null;
   status: "draft" | "sent" | "paid";
+  deposit_pct: number;
+  payment_terms: string | null;
+  adjustment_lines: InvoiceAdjustmentLine[];
   subtotal_usd: number;
   total_usd: number;
   pdf_onedrive_url: string | null;

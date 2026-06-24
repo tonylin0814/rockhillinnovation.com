@@ -69,12 +69,14 @@ function formatRmb(value: number) {
 }
 
 const clientTypeLabels: Record<ClientInvoice["invoice_type"], string> = {
+  commercial: "Commercial",
   deposit: "Deposit",
   final: "Final",
   pro_forma: "Pro-Forma",
 };
 
 const clientTypeClasses: Record<ClientInvoice["invoice_type"], string> = {
+  commercial: "border-violet-200 bg-violet-50 text-violet-700",
   deposit: "border-blue-200 bg-blue-50 text-blue-700",
   final: "border-green-200 bg-green-50 text-green-700",
   pro_forma: "border-slate-200 bg-slate-100 text-slate-700",

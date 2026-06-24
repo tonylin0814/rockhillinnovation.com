@@ -20,7 +20,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import type { ClientInvoice } from "@/types";
 
-type InvoiceType = ClientInvoice["invoice_type"];
+type InvoiceType = Exclude<ClientInvoice["invoice_type"], "commercial">;
 
 const dialogLabels: Record<InvoiceType, string> = {
   deposit: "Deposit",
