@@ -26,3 +26,13 @@ export async function getCurrentUser(): Promise<CurrentUser | null> {
 
   return profile;
 }
+
+export async function requireManager() {
+  const user = await getCurrentUser();
+
+  if (!user || user.role === "partner") {
+    return { error: "Access denied" };
+  }
+
+  return { user };
+}
