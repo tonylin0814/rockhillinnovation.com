@@ -1,7 +1,6 @@
 import Link from "next/link";
 
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Table,
@@ -79,14 +78,17 @@ export default async function ClientsPage() {
                 <TableHead>Currency</TableHead>
                 <TableHead>Payment Terms</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {(clients as Client[]).length ? (
                 (clients as Client[]).map((client) => (
                   <TableRow key={client.id}>
-                    <TableCell className="font-semibold text-[#0d1b34]">{client.code}</TableCell>
+                    <TableCell className="font-semibold text-[#0d1b34]">
+                      <Link className="transition-colors hover:text-blue-700 hover:underline" href={`/clients/${client.id}`}>
+                        {client.code}
+                      </Link>
+                    </TableCell>
                     <TableCell>{client.country ?? "—"}</TableCell>
                     <TableCell>{client.currency}</TableCell>
                     <TableCell>
@@ -95,16 +97,11 @@ export default async function ClientsPage() {
                     <TableCell>
                       <StatusBadge status={client.status} />
                     </TableCell>
-                    <TableCell className="text-right">
-                      <Button asChild size="sm" variant="outline">
-                        <Link href={`/clients/${client.id}`}>View</Link>
-                      </Button>
-                    </TableCell>
                   </TableRow>
                 ))
               ) : (
                 <TableRow>
-                  <TableCell className="text-slate-500" colSpan={6}>
+                  <TableCell className="text-slate-500" colSpan={5}>
                     No clients yet.
                   </TableCell>
                 </TableRow>
