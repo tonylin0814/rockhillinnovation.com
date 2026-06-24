@@ -25,6 +25,25 @@ export type CompanySettings = {
   updated_at: string;
 };
 
+export type CompanyBankingAccount = {
+  id: string;
+  currency: string;
+  label: string | null;
+  bank_name: string;
+  bank_branch: string | null;
+  bank_address: string | null;
+  account_name: string;
+  account_number: string | null;
+  swift_code: string | null;
+  routing_number: string | null;
+  iban: string | null;
+  intermediary_bank: string | null;
+  notes: string | null;
+  is_active: boolean;
+  sort_order: number;
+  created_at: string;
+};
+
 export type InvoiceAdjustmentLine = {
   description: string;
   amount_usd: number;
