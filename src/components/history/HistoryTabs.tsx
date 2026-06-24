@@ -1,7 +1,7 @@
 "use client";
 
 import { ArrowUpDown, Edit, Loader2, Plus, Trash2 } from "lucide-react";
-import { FormEvent, ReactNode, useMemo, useState, useTransition } from "react";
+import { FormEvent, ReactNode, useEffect, useMemo, useState, useTransition } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 
@@ -517,7 +517,8 @@ export function HistoryTabs({
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const activeTab: HistoryTab = searchParams.get("tab") === "quote" ? "quote" : "cost";
+  const tabFromUrl: HistoryTab = searchParams.get("tab") === "quote" ? "quote" : "cost";
+  const [activeTab, setActiveTab] = useState<HistoryTab>(tabFromUrl);
   const [costSearch, setCostSearch] = useState("");
   const [costSourceFilter, setCostSourceFilter] = useState("all");
   const [costSortKey, setCostSortKey] = useState<CostSortKey>("date");
@@ -525,6 +526,10 @@ export function HistoryTabs({
   const [quoteSearch, setQuoteSearch] = useState("");
   const [quoteSortKey, setQuoteSortKey] = useState<QuoteSortKey>("date");
   const [quoteSortDirection, setQuoteSortDirection] = useState<SortDirection>("desc");
+
+  useEffect(() => {
+    setActiveTab(tabFromUrl);
+  }, [tabFromUrl]);
 
   function handleCostSort(key: CostSortKey) {
     if (costSortKey === key) {
@@ -550,6 +555,8 @@ export function HistoryTabs({
     const nextTab: HistoryTab = value === "quote" ? "quote" : "cost";
     const params = new URLSearchParams(searchParams.toString());
 
+    setActiveTab(nextTab);
+
     if (nextTab === "quote") {
       params.set("tab", "quote");
     } else {
@@ -558,7 +565,6 @@ export function HistoryTabs({
 
     const queryString = params.toString();
     router.replace(queryString ? `${pathname}?${queryString}` : pathname, { scroll: false });
-    router.refresh();
   }
 
   const costSources = useMemo(
