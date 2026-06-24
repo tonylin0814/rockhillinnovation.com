@@ -251,6 +251,7 @@ export type SupplierQuoteSession = {
   quote_date: string;
   status: "draft" | "confirmed" | "superseded";
   source_document_id: string | null;
+  source_document_url: string | null;
   recorded_by: "chatgpt" | "judy" | "manual";
   notes: string | null;
   created_at: string;
@@ -460,4 +461,42 @@ export type ProductQuoteHistory = {
     name_chinese: string | null;
   } | null;
   client?: { id: string; code: string; name: string } | null;
+};
+
+export type DevelopmentVersionStatus =
+  | "draft"
+  | "sent_to_producer"
+  | "sample_received"
+  | "client_approved"
+  | "rejected"
+  | "in_correction";
+
+export type DevelopmentCostType = "molding" | "sample" | "express_shipping" | "other";
+
+export type TradeDevelopmentVersion = {
+  id: string;
+  trade_id: string;
+  product_id: string | null;
+  product_name_override: string | null;
+  version_label: string;
+  change_summary: string | null;
+  file_onedrive_url: string | null;
+  status: DevelopmentVersionStatus;
+  notes: string | null;
+  created_at: string;
+  product?: { id: string; code: string; name_english: string } | null;
+};
+
+export type TradeDevelopmentCost = {
+  id: string;
+  trade_id: string;
+  version_id: string | null;
+  cost_type: DevelopmentCostType;
+  description: string | null;
+  amount_rmb: number | null;
+  amount_cad: number | null;
+  amount_usd: number | null;
+  is_absorbed: boolean;
+  notes: string | null;
+  created_at: string;
 };
