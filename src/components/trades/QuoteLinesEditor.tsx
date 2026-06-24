@@ -302,7 +302,9 @@ export function QuoteLinesEditor({
                       formatUsd(row.unit_quote_usd)
                     )}
                   </TableCell>
-                  <TableCell>{product?.previous_quote_usd ? formatUsd(product.previous_quote_usd) : "-"}</TableCell>
+                  <TableCell>
+                    {product?.previous_quote_usd != null ? formatUsd(product.previous_quote_usd) : "-"}
+                  </TableCell>
                   <TableCell>{profit === null ? "-" : formatUsd(profit)}</TableCell>
                   <TableCell>{formatUsd(quoteTotal)}</TableCell>
                   <TableCell>{profitTotal === null ? "-" : formatUsd(profitTotal)}</TableCell>
