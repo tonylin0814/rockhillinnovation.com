@@ -264,6 +264,7 @@ export type SupplierQuoteLine = {
   item_name_english: string | null;
   quantity: number;
   unit_price_rmb: number;
+  unit_quote_usd: number;
   total_price_rmb: number;
   payment_category: "outsourced" | "produced" | "misc_expense" | null;
   notes: string | null;

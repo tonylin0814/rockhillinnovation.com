@@ -408,6 +408,7 @@ export default async function TradeWorkspacePage({ params }: { params: { id: str
             canManage={canManage}
             initialSessions={quoteSessionRows}
             tradeId={trade.id}
+            workingExchangeRate={trade.working_exchange_rate}
           />
         </TabsContent>
         <TabsContent value="quotations">

@@ -33,6 +33,7 @@ type ProductOption = {
   supplier_product_code: string | null;
   name_english: string;
   latest_cost_rmb?: number | null;
+  previous_quote_usd?: number | null;
 };
 
 type EditableQuoteLine = {
@@ -41,6 +42,7 @@ type EditableQuoteLine = {
   item_name_english: string;
   quantity: number;
   unit_price_rmb: number;
+  unit_quote_usd: number;
   sort_order: number;
 };
 
@@ -52,6 +54,7 @@ function rowsFromLines(lines: SupplierQuoteLine[]): EditableQuoteLine[] {
       item_name_english: line.item_name_english ?? "",
       quantity: line.quantity,
       unit_price_rmb: line.unit_price_rmb,
+      unit_quote_usd: line.unit_quote_usd ?? 0,
       sort_order: line.sort_order || index + 1,
     }))
     .sort((a, b) => a.sort_order - b.sort_order)
@@ -60,6 +63,17 @@ function rowsFromLines(lines: SupplierQuoteLine[]): EditableQuoteLine[] {
 
 function formatRmb(value: number) {
   return `\u00A5${value.toFixed(2)}`;
+}
+
+function formatUsd(value: number) {
+  return new Intl.NumberFormat("en-US", {
+    currency: "USD",
+    style: "currency",
+  }).format(value);
+}
+
+function formatPercent(value: number | null) {
+  return typeof value === "number" && Number.isFinite(value) ? `${(value * 100).toFixed(1)}%` : "-";
 }
 
 function productLabel(product: ProductOption) {
@@ -72,6 +86,7 @@ export function QuoteLinesEditor({
   initialLines,
   sessionId,
   sessionStatus,
+  workingExchangeRate,
 }: {
   sessionId: string;
   tradeId: string;
@@ -79,6 +94,7 @@ export function QuoteLinesEditor({
   availableProducts: ProductOption[];
   sessionStatus: SupplierQuoteSession["status"];
   canManage: boolean;
+  workingExchangeRate: number | null;
 }) {
   const router = useRouter();
   const [isEditing, setIsEditing] = useState(false);
@@ -89,7 +105,13 @@ export function QuoteLinesEditor({
     [availableProducts]
   );
   const canEdit = canManage && sessionStatus === "draft";
-  const runningTotal = rows.reduce((total, row) => total + row.quantity * row.unit_price_rmb, 0);
+  const hasExchangeRate = typeof workingExchangeRate === "number" && workingExchangeRate > 0;
+  const runningCostTotal = rows.reduce((total, row) => total + row.quantity * row.unit_price_rmb, 0);
+  const runningQuoteTotal = rows.reduce((total, row) => total + row.quantity * row.unit_quote_usd, 0);
+  const runningProfitTotal = hasExchangeRate
+    ? rows.reduce((total, row) => total + row.quantity * (row.unit_quote_usd - row.unit_price_rmb / workingExchangeRate), 0)
+    : 0;
+  const runningMargin = runningQuoteTotal > 0 && hasExchangeRate ? runningProfitTotal / runningQuoteTotal : null;
 
   function renumber(nextRows: EditableQuoteLine[]) {
     return nextRows.map((row, index) => ({ ...row, sort_order: index + 1 }));
@@ -122,6 +144,7 @@ export function QuoteLinesEditor({
           item_name_english: "",
           quantity: 1,
           unit_price_rmb: 0,
+          unit_quote_usd: 0,
           sort_order: currentRows.length + 1,
         },
       ])
@@ -143,6 +166,7 @@ export function QuoteLinesEditor({
       product_id: productId,
       item_name_english: product ? product.name_english : rows[index].item_name_english,
       unit_price_rmb: product?.latest_cost_rmb ?? 0,
+      unit_quote_usd: product?.previous_quote_usd ?? rows[index].unit_quote_usd,
     });
   }
 
@@ -157,6 +181,7 @@ export function QuoteLinesEditor({
           item_name_english: row.item_name_english || null,
           quantity: row.quantity,
           unit_price_rmb: row.unit_price_rmb,
+          unit_quote_usd: row.unit_quote_usd,
           payment_category: null,
           notes: null,
           sort_order: index + 1,
@@ -188,11 +213,16 @@ export function QuoteLinesEditor({
         <TableHeader>
           <TableRow>
             <TableHead className="w-14">#</TableHead>
+            <TableHead>Code</TableHead>
             <TableHead>Product</TableHead>
-            <TableHead>English Name</TableHead>
             <TableHead>Qty</TableHead>
-            <TableHead>Unit Price (RMB)</TableHead>
-            <TableHead>Total (RMB)</TableHead>
+            <TableHead>Cost (RMB)</TableHead>
+            <TableHead>Quote</TableHead>
+            <TableHead>Prv. Quote</TableHead>
+            <TableHead>Profit</TableHead>
+            <TableHead>Quote Total</TableHead>
+            <TableHead>Profit Total</TableHead>
+            <TableHead>Margin</TableHead>
             {!isEditing ? <TableHead className="text-right">History</TableHead> : null}
             {isEditing ? <TableHead className="text-right">Actions</TableHead> : null}
           </TableRow>
@@ -201,11 +231,16 @@ export function QuoteLinesEditor({
           {rows.length ? (
             rows.map((row, index) => {
               const product = row.product_id === "none" ? null : productById.get(row.product_id);
-              const total = row.quantity * row.unit_price_rmb;
+              const costUsd = hasExchangeRate ? row.unit_price_rmb / workingExchangeRate : null;
+              const profit = costUsd === null ? null : row.unit_quote_usd - costUsd;
+              const quoteTotal = row.quantity * row.unit_quote_usd;
+              const profitTotal = profit === null ? null : row.quantity * profit;
+              const margin = row.unit_quote_usd > 0 && profit !== null ? profit / row.unit_quote_usd : null;
 
               return (
                 <TableRow key={row.id ?? `new-${index}`}>
                   <TableCell>{index + 1}</TableCell>
+                  <TableCell className="font-mono text-sm">{product?.code ?? "-"}</TableCell>
                   <TableCell>
                     {isEditing ? (
                       <Select onValueChange={(value) => handleProductChange(index, value)} value={row.product_id}>
@@ -222,17 +257,7 @@ export function QuoteLinesEditor({
                         </SelectContent>
                       </Select>
                     ) : product ? (
-                      productLabel(product)
-                    ) : (
-                      "-"
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    {isEditing ? (
-                      <Input
-                        onChange={(event) => updateRow(index, { item_name_english: event.currentTarget.value })}
-                        value={row.item_name_english}
-                      />
+                      row.item_name_english || product.name_english
                     ) : (
                       row.item_name_english || "-"
                     )}
@@ -267,7 +292,25 @@ export function QuoteLinesEditor({
                       formatRmb(row.unit_price_rmb)
                     )}
                   </TableCell>
-                  <TableCell>{formatRmb(total)}</TableCell>
+                  <TableCell>
+                    {isEditing ? (
+                      <Input
+                        className="w-28"
+                        min={0}
+                        onChange={(event) => updateRow(index, { unit_quote_usd: Number(event.currentTarget.value) || 0 })}
+                        step="0.01"
+                        type="number"
+                        value={row.unit_quote_usd}
+                      />
+                    ) : (
+                      formatUsd(row.unit_quote_usd)
+                    )}
+                  </TableCell>
+                  <TableCell>{product?.previous_quote_usd ? formatUsd(product.previous_quote_usd) : "-"}</TableCell>
+                  <TableCell>{profit === null ? "-" : formatUsd(profit)}</TableCell>
+                  <TableCell>{formatUsd(quoteTotal)}</TableCell>
+                  <TableCell>{profitTotal === null ? "-" : formatUsd(profitTotal)}</TableCell>
+                  <TableCell>{formatPercent(margin)}</TableCell>
                   {!isEditing ? (
                     <TableCell>
                       <div className="flex justify-end">
@@ -321,7 +364,7 @@ export function QuoteLinesEditor({
             })
           ) : (
             <TableRow>
-              <TableCell className="text-slate-500" colSpan={7}>
+              <TableCell className="text-slate-500" colSpan={isEditing ? 12 : 12}>
                 No lines yet.
               </TableCell>
             </TableRow>
@@ -329,10 +372,16 @@ export function QuoteLinesEditor({
         </TableBody>
         <TableFooter>
           <TableRow>
-            <TableCell className="font-semibold" colSpan={5}>
+            <TableCell className="font-semibold" colSpan={4}>
               Total
             </TableCell>
-            <TableCell className="font-semibold">{formatRmb(runningTotal)}</TableCell>
+            <TableCell className="font-semibold">{formatRmb(runningCostTotal)}</TableCell>
+            <TableCell />
+            <TableCell />
+            <TableCell />
+            <TableCell className="font-semibold">{formatUsd(runningQuoteTotal)}</TableCell>
+            <TableCell className="font-semibold">{hasExchangeRate ? formatUsd(runningProfitTotal) : "-"}</TableCell>
+            <TableCell className="font-semibold">{formatPercent(runningMargin)}</TableCell>
             <TableCell />
           </TableRow>
         </TableFooter>
