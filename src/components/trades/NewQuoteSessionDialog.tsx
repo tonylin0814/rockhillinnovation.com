@@ -109,6 +109,17 @@ export function NewQuoteSessionDialog({ tradeId }: { tradeId: string }) {
             <Textarea disabled={isPending} id="notes" name="notes" />
           </div>
 
+          <div className="space-y-2">
+            <Label htmlFor="source_document_url">Source Document (URL)</Label>
+            <Input
+              disabled={isPending}
+              id="source_document_url"
+              name="source_document_url"
+              placeholder="Paste OneDrive or file link to the original quote image/document"
+              type="text"
+            />
+          </div>
+
           {error ? <p className="text-sm font-medium text-red-600">{error}</p> : null}
 
           <div className="flex justify-end gap-2">

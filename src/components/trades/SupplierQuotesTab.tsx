@@ -1,6 +1,6 @@
 "use client";
 
-import { BarChart2, CheckCircle2, ChevronsUpDown, RotateCcw } from "lucide-react";
+import { BarChart2, CheckCircle2, ChevronsUpDown, FileText, RotateCcw } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
@@ -236,6 +236,21 @@ export function SupplierQuotesTab({
                         <span className="text-sm text-slate-500">{formatDate(session.quote_date)}</span>
                         <StatusBadge status={session.status} />
                         <RecordedByBadge recordedBy={session.recorded_by} />
+                      </div>
+                      <div className="mt-2">
+                        {session.source_document_url ? (
+                          <a
+                            className="inline-flex items-center gap-1 text-xs font-medium text-[#0d1b34] underline-offset-4 hover:underline"
+                            href={session.source_document_url}
+                            rel="noreferrer"
+                            target="_blank"
+                          >
+                            <FileText className="h-3 w-3" />
+                            Source document
+                          </a>
+                        ) : (
+                          <span className="text-xs text-slate-400">No source document attached</span>
+                        )}
                       </div>
                       {session.notes ? <p className="mt-2 text-sm text-slate-500">{session.notes}</p> : null}
                     </div>

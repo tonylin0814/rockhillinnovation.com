@@ -30,6 +30,7 @@ const quoteSessionSchema = z.object({
   quote_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Quote date is required"),
   recorded_by: z.enum(["chatgpt", "judy", "manual"]).default("manual"),
   notes: z.string().trim().nullable(),
+  source_document_url: z.string().trim().nullable(),
 });
 
 const quoteLineSchema = z.object({
@@ -87,6 +88,7 @@ export async function createQuoteSession(tradeId: string, formData: FormData): P
         quote_date: formData.get("quote_date"),
         recorded_by: formData.get("recorded_by") || "manual",
         notes: emptyToNull(formData.get("notes")),
+        source_document_url: emptyToNull(formData.get("source_document_url")),
       },
     });
 
@@ -116,6 +118,7 @@ export async function createQuoteSession(tradeId: string, formData: FormData): P
       quote_date: parsed.data.session.quote_date,
       recorded_by: parsed.data.session.recorded_by,
       notes: parsed.data.session.notes,
+      source_document_url: parsed.data.session.source_document_url,
     })
     .select("id")
     .single();
