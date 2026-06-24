@@ -1,10 +1,15 @@
 "use server";
 
+import fs from "fs";
+import path from "path";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
 import { getCurrentUser } from "@/lib/auth";
+import { uploadToOneDrive } from "@/lib/onedrive";
+import { generatePdf } from "@/lib/pdf";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { buildClientQuotationHtml } from "@/lib/templates/client-quotation";
 
 type ActionResult = {
   success?: true;
@@ -57,6 +62,25 @@ function emptyToNull(value: FormDataEntryValue | null) {
 function normalizeText(value: string | null | undefined) {
   const trimmed = value?.trim() ?? "";
   return trimmed.length ? trimmed : null;
+}
+
+function normalizeDate(value: string) {
+  return new Intl.DateTimeFormat("en-US", {
+    day: "numeric",
+    month: "long",
+    timeZone: "UTC",
+    year: "numeric",
+  }).format(new Date(`${value}T00:00:00.000Z`));
+}
+
+function loadLogoBase64(): string | null {
+  try {
+    const logoPath = path.join(process.cwd(), "public", "brand", "rockhill-logo-nav-cropped.png");
+    const buffer = fs.readFileSync(logoPath);
+    return `data:image/png;base64,${buffer.toString("base64")}`;
+  } catch {
+    return null;
+  }
 }
 
 export async function createQuotationSession(tradeId: string, formData: FormData): Promise<ActionResult> {
@@ -175,6 +199,131 @@ export async function updateQuotationSessionStatus(
 
   revalidatePath(`/trades/${session.trade_id}`);
   return { success: true };
+}
+
+export async function generateQuotationPdf(
+  sessionId: string,
+  formData: FormData
+): Promise<{ success?: true; downloadUrl?: string; error?: string }> {
+  const user = await getCurrentUser();
+
+  if (!user || user.role === "partner") {
+    return { error: "Access denied" };
+  }
+
+  const rawRef = formData.get("quotation_ref");
+  const rawValidUntil = formData.get("valid_until");
+  const rawNotes = formData.get("notes");
+
+  if (typeof rawRef !== "string" || !rawRef.trim()) {
+    return { error: "Quotation reference is required" };
+  }
+
+  const quotationRef = rawRef.trim();
+  const validUntil =
+    typeof rawValidUntil === "string" && /^\d{4}-\d{2}-\d{2}$/.test(rawValidUntil.trim())
+      ? rawValidUntil.trim()
+      : null;
+  const notes = typeof rawNotes === "string" && rawNotes.trim() ? rawNotes.trim() : null;
+
+  const supabase = createServerSupabaseClient();
+  const { data: session, error: sessionError } = await supabase
+    .from("client_quotation_sessions")
+    .select(
+      `id, trade_id, quote_date,
+       client:clients(id, name, address, currency),
+       lines:client_quotation_lines(
+         id, item_description, quantity, unit_price_usd, total_price_usd, notes,
+         product:products(id, code, name_english)
+       ),
+       trade:trades(trade_id)`
+    )
+    .eq("id", sessionId)
+    .maybeSingle();
+
+  if (sessionError) {
+    return { error: sessionError.message };
+  }
+
+  if (!session) {
+    return { error: "Quotation session not found" };
+  }
+
+  const client = Array.isArray(session.client) ? session.client[0] : session.client;
+  const trade = Array.isArray(session.trade) ? session.trade[0] : session.trade;
+
+  if (!client) {
+    return { error: "Client not found" };
+  }
+
+  const lines = (Array.isArray(session.lines) ? session.lines : []).map((line) => {
+    const product = Array.isArray(line.product) ? line.product[0] : line.product;
+
+    return {
+      description: line.item_description ?? product?.name_english ?? "Item",
+      itemCode: product?.code ?? null,
+      notes: line.notes ?? null,
+      quantity: Number(line.quantity),
+      total: Number(line.total_price_usd),
+      unitPrice: Number(line.unit_price_usd),
+    };
+  });
+
+  const total = lines.reduce((sum, line) => sum + line.total, 0);
+  const logoBase64 = loadLogoBase64();
+  const html = buildClientQuotationHtml({
+    billToAddress: client.address ?? null,
+    billToName: client.name,
+    currency: client.currency ?? "USD",
+    lines,
+    logoBase64,
+    notes,
+    quotationDate: normalizeDate(session.quote_date),
+    quotationRef,
+    total,
+    validUntil: validUntil ? normalizeDate(validUntil) : null,
+  });
+
+  const pdfBuffer = await generatePdf(html);
+  const fileName = `${quotationRef}.pdf`;
+  const uploaded = await uploadToOneDrive({
+    category: "quotation",
+    fileBuffer: pdfBuffer,
+    fileName,
+    mimeType: "application/pdf",
+    tradeCode: trade?.trade_id ?? "unknown",
+  });
+
+  const { error: updateError } = await supabase
+    .from("client_quotation_sessions")
+    .update({ pdf_onedrive_url: uploaded.webUrl, quotation_ref: quotationRef, valid_until: validUntil })
+    .eq("id", sessionId);
+
+  if (updateError) {
+    return { error: updateError.message };
+  }
+
+  const { error: documentError } = await supabase.from("trade_documents").insert({
+    document_category: "client_quotation",
+    document_type: "quotation",
+    file_name: fileName,
+    file_size_bytes: pdfBuffer.length,
+    notes,
+    onedrive_file_id: uploaded.fileId,
+    onedrive_url: uploaded.webUrl,
+    related_party: "client",
+    status: "draft",
+    trade_id: session.trade_id,
+    uploaded_by: user.id,
+    version: 1,
+  });
+
+  if (documentError) {
+    return { error: documentError.message };
+  }
+
+  revalidatePath(`/trades/${session.trade_id}`);
+  return { success: true, downloadUrl: uploaded.webUrl };
 }
 
 export async function saveQuotationLines(sessionId: string, lines: QuotationLineInput[]): Promise<ActionResult> {
