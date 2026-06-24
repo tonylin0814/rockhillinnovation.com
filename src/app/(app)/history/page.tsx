@@ -1,3 +1,5 @@
+import { Suspense } from "react";
+
 import { HistoryTabs } from "@/components/history/HistoryTabs";
 import { getCurrentUser } from "@/lib/auth";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
@@ -70,33 +72,35 @@ export default async function HistoryPage() {
         <h1 className="mt-2 text-3xl font-semibold text-[#0d1b34]">History</h1>
       </div>
 
-      <HistoryTabs
-        costRows={(costRows ?? []).map((row) => ({
-          ...row,
-          product: firstJoin(row.product),
-          supplier: firstJoin(row.supplier),
-        }))}
-        products={products ?? []}
-        quoteRows={(quoteRows ?? []).map((row) => {
-          const session = firstJoin(row.session);
-
-          return {
+      <Suspense fallback={<div className="text-sm text-slate-500">Loading...</div>}>
+        <HistoryTabs
+          costRows={(costRows ?? []).map((row) => ({
             ...row,
             product: firstJoin(row.product),
-            session: session
-              ? {
-                  ...session,
-                  trade: firstJoin(session.trade),
-                }
-              : null,
-          };
-        })}
-        sessions={(sessions ?? []).map((session) => ({
-          ...session,
-          trade: firstJoin(session.trade),
-        }))}
-        suppliers={suppliers ?? []}
-      />
+            supplier: firstJoin(row.supplier),
+          }))}
+          products={products ?? []}
+          quoteRows={(quoteRows ?? []).map((row) => {
+            const session = firstJoin(row.session);
+
+            return {
+              ...row,
+              product: firstJoin(row.product),
+              session: session
+                ? {
+                    ...session,
+                    trade: firstJoin(session.trade),
+                  }
+                : null,
+            };
+          })}
+          sessions={(sessions ?? []).map((session) => ({
+            ...session,
+            trade: firstJoin(session.trade),
+          }))}
+          suppliers={suppliers ?? []}
+        />
+      </Suspense>
     </section>
   );
 }
