@@ -346,6 +346,17 @@ export function ProductFormDialog({
             </div>
 
             <div className="space-y-2">
+              <Label htmlFor="country_of_origin">Country of Origin</Label>
+              <Input
+                defaultValue={initialData?.country_of_origin ?? "CHINA"}
+                disabled={isPending}
+                id="country_of_origin"
+                name="country_of_origin"
+                placeholder="CHINA"
+              />
+            </div>
+
+            <div className="space-y-2">
               <Label htmlFor="notes">Notes</Label>
               <Textarea defaultValue={initialData?.notes ?? ""} disabled={isPending} id="notes" name="notes" />
             </div>
@@ -562,6 +573,62 @@ export function ProductFormDialog({
                       {qtyItemsPerPallet ? qtyItemsPerPallet.toLocaleString() : "-"}
                     </p>
                   </div>
+                </div>
+                <div className="rounded-md border border-slate-200 bg-slate-50 p-3">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Pallet Configuration</p>
+                  <div className="mt-3 grid gap-3 sm:grid-cols-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="pallet_length_cm">Pallet L (cm)</Label>
+                      <Input
+                        defaultValue={initialData?.pallet_length_cm ?? ""}
+                        disabled={isPending}
+                        id="pallet_length_cm"
+                        min="0"
+                        name="pallet_length_cm"
+                        step="0.01"
+                        type="number"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="pallet_width_cm">Pallet W (cm)</Label>
+                      <Input
+                        defaultValue={initialData?.pallet_width_cm ?? ""}
+                        disabled={isPending}
+                        id="pallet_width_cm"
+                        min="0"
+                        name="pallet_width_cm"
+                        step="0.01"
+                        type="number"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="pallet_height_cm">Max H (cm)</Label>
+                      <Input
+                        defaultValue={initialData?.pallet_height_cm ?? ""}
+                        disabled={isPending}
+                        id="pallet_height_cm"
+                        min="0"
+                        name="pallet_height_cm"
+                        step="0.01"
+                        type="number"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="pallet_max_weight_kg">Max Weight (kg)</Label>
+                      <Input
+                        defaultValue={initialData?.pallet_max_weight_kg ?? ""}
+                        disabled={isPending}
+                        id="pallet_max_weight_kg"
+                        min="0"
+                        name="pallet_max_weight_kg"
+                        step="0.01"
+                        type="number"
+                      />
+                    </div>
+                  </div>
+                  <p className="mt-2 text-xs text-slate-500">
+                    Leave blank to use the pallet calculator defaults.
+                  </p>
                 </div>
               </div>
             ) : null}

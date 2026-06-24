@@ -4,7 +4,9 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
 import { getCurrentUser } from "@/lib/auth";
+import { generatePdf } from "@/lib/pdf";
 import { createServerSupabaseAdmin, createServerSupabaseClient } from "@/lib/supabase/server";
+import { buildCartonLabelHtml } from "@/lib/templates/carton-label";
 import type { Product } from "@/types";
 
 type ActionResult = {
@@ -50,6 +52,11 @@ const productSchema = z
     carton_length_cm: nullableNonNegativeNumber(),
     carton_weight_kg: nullableNonNegativeNumber(),
     cartons_per_pallet: nullableNonNegativeNumber(),
+    pallet_length_cm: nullableNonNegativeNumber(),
+    pallet_width_cm: nullableNonNegativeNumber(),
+    pallet_height_cm: nullableNonNegativeNumber(),
+    pallet_max_weight_kg: nullableNonNegativeNumber(),
+    country_of_origin: z.string().trim().min(1, "Country of origin is required").default("CHINA"),
   })
   .superRefine((value, context) => {
     if (value.product_type === "part" && !value.payment_category) {
@@ -71,6 +78,11 @@ const productSchema = z
     carton_length_cm: value.packaging_required ? value.carton_length_cm : null,
     carton_weight_kg: value.packaging_required ? value.carton_weight_kg : null,
     cartons_per_pallet: value.packaging_required ? value.cartons_per_pallet : null,
+    pallet_length_cm: value.packaging_required ? value.pallet_length_cm : null,
+    pallet_width_cm: value.packaging_required ? value.pallet_width_cm : null,
+    pallet_height_cm: value.packaging_required ? value.pallet_height_cm : null,
+    pallet_max_weight_kg: value.packaging_required ? value.pallet_max_weight_kg : null,
+    country_of_origin: value.country_of_origin || "CHINA",
   }));
 
 const componentInputSchema = z.object({
@@ -169,6 +181,21 @@ function valuesFromForm(formData: FormData, fallback?: Product) {
     cartons_per_pallet: formData.has("cartons_per_pallet")
       ? formData.get("cartons_per_pallet")
       : fallback?.cartons_per_pallet ?? null,
+    pallet_length_cm: formData.has("pallet_length_cm")
+      ? formData.get("pallet_length_cm")
+      : fallback?.pallet_length_cm ?? null,
+    pallet_width_cm: formData.has("pallet_width_cm")
+      ? formData.get("pallet_width_cm")
+      : fallback?.pallet_width_cm ?? null,
+    pallet_height_cm: formData.has("pallet_height_cm")
+      ? formData.get("pallet_height_cm")
+      : fallback?.pallet_height_cm ?? null,
+    pallet_max_weight_kg: formData.has("pallet_max_weight_kg")
+      ? formData.get("pallet_max_weight_kg")
+      : fallback?.pallet_max_weight_kg ?? null,
+    country_of_origin: formData.has("country_of_origin")
+      ? formData.get("country_of_origin")
+      : fallback?.country_of_origin ?? "CHINA",
   };
 }
 
@@ -413,4 +440,43 @@ export async function saveSetCostSnapshot(
   revalidatePath(`/products/${parsed.data.setProductId}`);
   revalidatePath("/history");
   return { success: true, id: data.id };
+}
+
+export async function generateCartonLabelPdf(productId: string, totalCartons: number): Promise<ActionResult & { url?: string }> {
+  const access = await requireProductManager();
+
+  if ("error" in access) {
+    return { error: access.error };
+  }
+
+  const parsed = z
+    .object({
+      productId: z.string().uuid(),
+      totalCartons: z.coerce.number().int().positive("Total cartons must be greater than 0"),
+    })
+    .safeParse({ productId, totalCartons });
+
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "Invalid carton label request" };
+  }
+
+  const supabase = createServerSupabaseClient();
+  const { data: product, error } = await supabase
+    .from("products")
+    .select("*, supplier:suppliers(id, name, code)")
+    .eq("id", parsed.data.productId)
+    .maybeSingle();
+
+  if (error) {
+    return { error: error.message };
+  }
+
+  if (!product) {
+    return { error: "Product not found" };
+  }
+
+  const html = buildCartonLabelHtml({ product: product as Product, totalCartons: parsed.data.totalCartons });
+  const pdf = await generatePdf(html);
+
+  return { success: true, url: `data:application/pdf;base64,${pdf.toString("base64")}` };
 }

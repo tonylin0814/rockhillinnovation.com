@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import { CartonLabelButton } from "@/components/products/CartonLabelButton";
 import { ProductFormDialog, type ProductSupplierOption } from "@/components/products/ProductFormDialog";
 import { ProductImagesEditor } from "@/components/products/ProductImagesEditor";
 import { ProductStatusButton } from "@/components/products/ProductStatusButton";
@@ -174,7 +175,7 @@ export default async function ProductDetailPage({
     const { data: components, error: componentsError } = await supabase
       .from("product_components")
       .select(
-        "*, component:products!product_components_component_product_id_fkey(id, code, supplier_product_code, name_english, name_chinese, product_type, supplier_id, payment_category, status, notes, packaging_required, has_carton, qty_per_carton, carton_height_cm, carton_width_cm, carton_length_cm, carton_weight_kg, cartons_per_pallet, product_images, created_at, updated_at, supplier:suppliers(id, name, code))"
+        "*, component:products!product_components_component_product_id_fkey(id, code, supplier_product_code, name_english, name_chinese, product_type, supplier_id, payment_category, status, notes, packaging_required, has_carton, qty_per_carton, carton_height_cm, carton_width_cm, carton_length_cm, carton_weight_kg, cartons_per_pallet, pallet_length_cm, pallet_width_cm, pallet_height_cm, pallet_max_weight_kg, country_of_origin, product_images, created_at, updated_at, supplier:suppliers(id, name, code))"
       )
       .eq("set_product_id", params.id)
       .order("sort_order", { ascending: true });
@@ -235,16 +236,19 @@ export default async function ProductDetailPage({
           <Card className="border-slate-200 shadow-sm">
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle>Main Info</CardTitle>
-              <ProductFormDialog
-                initialData={product}
-                mode="edit"
-                suppliers={supplierOptions}
-                trigger={
-                  <Button size="sm" variant="outline">
-                    Edit
-                  </Button>
-                }
-              />
+              <div className="flex flex-wrap justify-end gap-2">
+                <CartonLabelButton productId={product.id} />
+                <ProductFormDialog
+                  initialData={product}
+                  mode="edit"
+                  suppliers={supplierOptions}
+                  trigger={
+                    <Button size="sm" variant="outline">
+                      Edit
+                    </Button>
+                  }
+                />
+              </div>
             </CardHeader>
             <CardContent>
               <div className="grid gap-x-6 sm:grid-cols-2">

@@ -163,6 +163,11 @@ export type Product = {
   carton_length_cm: number | null;
   carton_weight_kg: number | null;
   cartons_per_pallet: number | null;
+  pallet_length_cm: number | null;
+  pallet_width_cm: number | null;
+  pallet_height_cm: number | null;
+  pallet_max_weight_kg: number | null;
+  country_of_origin: string;
   product_images: ProductImage[];
   created_at: string;
   updated_at: string;

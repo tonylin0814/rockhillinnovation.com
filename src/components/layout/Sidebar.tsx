@@ -14,6 +14,7 @@ import {
   LayoutDashboard,
   LogOut,
   Package,
+  Package2,
   Settings,
   ShieldCheck,
 } from "lucide-react";
@@ -36,6 +37,10 @@ const historySubItems = [
   { label: "Quote History", href: "/history/quote", icon: FileText },
 ];
 
+const toolsNavItems = [
+  { label: "Pallet Calculator", href: "/tools/pallet-calculator", icon: Package2 },
+];
+
 const adminNavItems = [
   { label: "Admin", href: "/admin/users", icon: ShieldCheck },
   { label: "Settings", href: "/admin/settings", icon: Settings },
@@ -47,7 +52,9 @@ export function Sidebar({ currentUser }: { currentUser: SidebarUser }) {
   const pathname = usePathname();
   const isPartner = currentUser.role === "partner";
   const isAdmin = currentUser.role === "admin";
+  const isAdminOrManager = currentUser.role === "admin" || currentUser.role === "manager";
   const isHistoryActive = pathname.startsWith("/history");
+  const isToolsActive = pathname.startsWith("/tools");
 
   function NavLink({
     href,
@@ -109,6 +116,23 @@ export function Sidebar({ currentUser }: { currentUser: SidebarUser }) {
               History
             </div>
             {historySubItems.map((item) => (
+              <NavLink href={item.href} icon={item.icon} indent key={item.href} label={item.label} />
+            ))}
+          </>
+        ) : null}
+
+        {isAdminOrManager ? (
+          <>
+            <div
+              className={cn(
+                "mt-1 flex h-10 items-center gap-3 px-3 text-sm font-medium",
+                isToolsActive ? "text-white" : "text-slate-500"
+              )}
+            >
+              <Package2 className="h-4 w-4" />
+              Tools
+            </div>
+            {toolsNavItems.map((item) => (
               <NavLink href={item.href} icon={item.icon} indent key={item.href} label={item.label} />
             ))}
           </>
