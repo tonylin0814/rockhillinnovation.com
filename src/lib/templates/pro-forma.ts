@@ -1,10 +1,35 @@
 import { buildBaseHtml } from "@/lib/templates/base";
+import type { InvoiceAdjustmentLine } from "@/types";
 
-type ProFormaLine = {
+type InvoiceLine = {
+  itemCode?: string | null;
   description: string;
   quantity: number;
   unitPrice: number;
   total: number;
+};
+
+type BuildProFormaParams = {
+  adjustmentLines?: InvoiceAdjustmentLine[];
+  billToAddress?: string | null;
+  billToName?: string;
+  clientAddress?: string | null;
+  clientName?: string;
+  currency: string;
+  depositDueDate?: string | null;
+  depositPct?: number;
+  invoiceDate: string;
+  invoiceNumber: string;
+  invoiceType?: "pro_forma" | "deposit" | "final" | "commercial";
+  lines: InvoiceLine[];
+  logoBase64?: string | null;
+  notes: string | null;
+  orderedBy?: string | null;
+  paymentTerms?: string | null;
+  shipToAddress?: string | null;
+  shipToName?: string | null;
+  subtotal: number;
+  total?: number;
 };
 
 function escapeHtml(value: string) {
@@ -17,10 +42,7 @@ function escapeHtml(value: string) {
 }
 
 function formatUsd(value: number) {
-  return new Intl.NumberFormat("en-US", {
-    currency: "USD",
-    style: "currency",
-  }).format(value);
+  return new Intl.NumberFormat("en-US", { currency: "USD", style: "currency" }).format(value);
 }
 
 function formatQuantity(value: number) {
@@ -34,203 +56,178 @@ function multiline(value: string | null) {
   return escapeHtml(value ?? "").replace(/\n/g, "<br />");
 }
 
+function round2(value: number) {
+  return Math.round((value + Number.EPSILON) * 100) / 100;
+}
+
 export function buildProFormaHtml({
+  adjustmentLines = [],
+  billToAddress,
+  billToName,
   clientAddress,
   clientName,
   currency,
+  depositDueDate = null,
+  depositPct = 50,
   invoiceDate,
   invoiceNumber,
-  invoiceType = "pro_forma",
   lines,
+  logoBase64 = null,
   notes,
+  orderedBy = null,
+  paymentTerms = null,
+  shipToAddress = null,
+  shipToName = null,
   subtotal,
-  total,
-}: {
-  invoiceNumber: string;
-  invoiceDate: string;
-  invoiceType?: "pro_forma" | "deposit" | "final";
-  clientName: string;
-  clientAddress: string | null;
-  lines: ProFormaLine[];
-  subtotal: number;
-  total: number;
-  notes: string | null;
-  currency: string;
-}): string {
-  const invoiceTypeLabel = {
-    deposit: "Deposit Invoice",
-    final: "Final Invoice",
-    pro_forma: "Pro-Forma Invoice",
-  }[invoiceType];
-  const content = `
-    <div class="document-shell">
-      <div>
-        <div class="header-block">
-          <div>
-            <div class="company-name">Rock Hill Innovation</div>
-            <div class="muted-title">${invoiceTypeLabel}</div>
-          </div>
-          <div class="invoice-meta">
-            <div class="invoice-number">Invoice # ${escapeHtml(invoiceNumber)}</div>
-            <div>${escapeHtml(invoiceDate)}</div>
-          </div>
-        </div>
+}: BuildProFormaParams): string {
+  const resolvedBillToName = billToName ?? clientName ?? "";
+  const resolvedBillToAddress = billToAddress ?? clientAddress ?? null;
+  const adjustmentsTotal = adjustmentLines.reduce((sum, adjustment) => sum + adjustment.amount_usd, 0);
+  const grandTotal = round2(subtotal + adjustmentsTotal);
+  const depositAmount = round2((grandTotal * depositPct) / 100);
+  const balanceAmount = round2(grandTotal - depositAmount);
+  const showSchedule = depositPct > 0 && depositPct < 100;
 
-        <section class="bill-to no-break">
-          <div class="label">Bill To</div>
-          <div class="client-name">${escapeHtml(clientName)}</div>
-          ${clientAddress ? `<div class="client-address">${multiline(clientAddress)}</div>` : ""}
-        </section>
+  const logoHtml = logoBase64
+    ? `<img src="${logoBase64}" alt="Rock Hill Innovation" class="doc-logo" />`
+    : `<div style="color:#0d1b34;font-size:16pt;font-weight:800;letter-spacing:0.02em;margin-bottom:6px;">ROCK HILL INNOVATION CO., LTD</div>`;
 
-        <table class="line-items">
+  const adjustmentsHtml = adjustmentLines.length
+    ? `<table class="adjustments-table no-break">
+        <thead>
+          <tr>
+            <th>Adjustment</th>
+            <th class="amount" style="width:1.8in;">Amount (${escapeHtml(currency)})</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${adjustmentLines
+            .map(
+              (adjustment) => `<tr>
+                <td>${escapeHtml(adjustment.description)}</td>
+                <td class="amount" style="${adjustment.amount_usd < 0 ? "color:#c0392b;" : "color:#0d1b34;"}font-weight:600;">
+                  ${adjustment.amount_usd >= 0 ? "+" : ""}${formatUsd(adjustment.amount_usd)}
+                </td>
+              </tr>`
+            )
+            .join("")}
+        </tbody>
+      </table>`
+    : "";
+
+  const paymentScheduleHtml = showSchedule
+    ? `<div class="payment-schedule no-break">
+        <div class="payment-schedule-title">Payment Schedule</div>
+        <table>
           <thead>
             <tr>
-              <th>Description</th>
-              <th class="amount qty-column">Qty</th>
-              <th class="amount price-column">Unit Price</th>
-              <th class="amount price-column">Total</th>
+              <th>Milestone</th>
+              <th class="amount" style="width:1.6in;">Amount (${escapeHtml(currency)})</th>
+              <th class="amount" style="width:1.6in;">Due</th>
             </tr>
           </thead>
           <tbody>
-            ${lines
-              .map(
-                (line) => `
-                  <tr>
-                    <td>${escapeHtml(line.description)}</td>
-                    <td class="amount">${formatQuantity(line.quantity)}</td>
-                    <td class="amount">${formatUsd(line.unitPrice)}</td>
-                    <td class="amount">${formatUsd(line.total)}</td>
-                  </tr>
-                `
-              )
-              .join("")}
+            <tr>
+              <td class="milestone-label">Deposit (${depositPct}%)</td>
+              <td class="milestone-amount">${formatUsd(depositAmount)}</td>
+              <td class="milestone-due">${depositDueDate ? escapeHtml(depositDueDate) : "Upon confirmation"}</td>
+            </tr>
+            <tr>
+              <td class="milestone-label">Balance (${100 - depositPct}%)</td>
+              <td class="milestone-amount">${formatUsd(balanceAmount)}</td>
+              <td class="milestone-due">${paymentTerms ? escapeHtml(paymentTerms) : "Prior to shipment"}</td>
+            </tr>
           </tbody>
         </table>
+      </div>`
+    : paymentTerms
+      ? `<div class="info-block no-break"><strong>Payment Terms:</strong> ${escapeHtml(paymentTerms)}</div>`
+      : "";
 
-        <div class="totals no-break">
-          <div class="total-line">
-            <span>Subtotal</span>
-            <strong>${formatUsd(subtotal)}</strong>
-          </div>
-          <div class="total-rule"></div>
-          <div class="total-line grand-total">
-            <span>Total (${escapeHtml(currency)})</span>
-            <strong>${formatUsd(total)}</strong>
-          </div>
-        </div>
-
-        ${
-          notes
-            ? `<section class="notes no-break">
-                <div class="label">Notes</div>
-                <p>${multiline(notes)}</p>
-              </section>`
-            : ""
-        }
+  const content = `
+    <div class="doc-header">
+      <div>
+        ${logoHtml}
+        <div class="doc-address-line">5F., No. 7, Ln. 332, Sec. 2, Zhongshan Rd., Zhonghe Dist.</div>
+        <div class="doc-address-line">New Taipei City, Taiwan 235026</div>
+        <div class="doc-address-line">packaging@rockhill.com.tw &nbsp;|&nbsp; (+886)2-22452580</div>
       </div>
-
-      <footer class="document-footer">
-        <p>Thank you for your business.</p>
-        <p>sales@rockhillinnovation.com | www.rockhillinnovation.com</p>
-      </footer>
+      <div class="doc-type-badge">INVOICE</div>
     </div>
+
+    <table class="doc-meta-table">
+      <tr>
+        <td class="doc-meta-label">Invoice No:</td>
+        <td class="doc-meta-value-bold">${escapeHtml(invoiceNumber)}</td>
+      </tr>
+      <tr>
+        <td class="doc-meta-label">Invoice Date:</td>
+        <td class="doc-meta-value">${escapeHtml(invoiceDate)}</td>
+      </tr>
+      ${orderedBy ? `<tr><td class="doc-meta-label">Ordered By:</td><td class="doc-meta-value">${escapeHtml(orderedBy)}</td></tr>` : ""}
+    </table>
+
+    <div class="doc-parties no-break">
+      <div>
+        <div class="label">Bill To</div>
+        <div class="doc-party-name">${escapeHtml(resolvedBillToName)}</div>
+        ${resolvedBillToAddress ? `<div class="doc-party-address">${multiline(resolvedBillToAddress)}</div>` : ""}
+      </div>
+      ${
+        shipToName
+          ? `<div>
+              <div class="label">Ship To</div>
+              <div class="doc-party-name">${escapeHtml(shipToName)}</div>
+              ${shipToAddress ? `<div class="doc-party-address">${multiline(shipToAddress)}</div>` : ""}
+            </div>`
+          : "<div></div>"
+      }
+    </div>
+
+    <table class="line-items">
+      <thead>
+        <tr>
+          <th style="width:11%;">Item #</th>
+          <th>Description</th>
+          <th class="amount" style="width:10%;">Qty</th>
+          <th class="amount" style="width:13%;">Unit Price</th>
+          <th class="amount" style="width:13%;">Amount</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${lines
+          .map(
+            (line) => `<tr class="no-break">
+              <td class="item-code">${escapeHtml(line.itemCode ?? "")}</td>
+              <td>${escapeHtml(line.description)}</td>
+              <td class="amount">${formatQuantity(line.quantity)}</td>
+              <td class="amount">${formatUsd(line.unitPrice)}</td>
+              <td class="amount" style="font-weight:700;color:#0d1b34;">${formatUsd(line.total)}</td>
+            </tr>`
+          )
+          .join("")}
+      </tbody>
+    </table>
+
+    ${adjustmentsHtml}
+
+    <div class="totals-block no-break">
+      ${
+        adjustmentLines.length
+          ? `<div class="totals-row"><span style="color:#555;">Subtotal</span><span>${formatUsd(subtotal)}</span></div>`
+          : ""
+      }
+      <div class="totals-divider"></div>
+      <div class="totals-row totals-grand">
+        <span>Grand Total (${escapeHtml(currency)}):</span>
+        <span>${formatUsd(grandTotal)}</span>
+      </div>
+    </div>
+
+    ${paymentScheduleHtml}
+
+    ${notes ? `<div class="info-block no-break"><strong>Notes:</strong> ${multiline(notes)}</div>` : ""}
   `;
 
-  return buildBaseHtml({
-    content,
-    styles: `
-      .document-shell {
-        display: flex;
-        flex-direction: column;
-        min-height: 9.4in;
-      }
-
-      .muted-title {
-        color: #666;
-        font-size: 11pt;
-        margin-top: 2px;
-      }
-
-      .invoice-meta {
-        color: #333;
-        line-height: 1.5;
-        text-align: right;
-      }
-
-      .invoice-number {
-        color: #0d1b34;
-        font-weight: 700;
-      }
-
-      .bill-to {
-        margin-bottom: 24px;
-      }
-
-      .client-name {
-        color: #0d1b34;
-        font-weight: 700;
-        margin-top: 4px;
-      }
-
-      .client-address {
-        color: #333;
-        margin-top: 4px;
-        white-space: normal;
-      }
-
-      .line-items {
-        margin-top: 16px;
-      }
-
-      .qty-column {
-        width: 0.9in;
-      }
-
-      .price-column {
-        width: 1.35in;
-      }
-
-      .totals {
-        margin: 16px 0 28px auto;
-        width: 2.6in;
-      }
-
-      .total-line {
-        display: flex;
-        justify-content: space-between;
-        padding: 4px 0;
-      }
-
-      .total-rule {
-        border-top: 1px solid #333;
-        margin: 5px 0;
-      }
-
-      .grand-total {
-        color: #0d1b34;
-        font-size: 13pt;
-        font-weight: 700;
-      }
-
-      .notes {
-        margin-top: 18px;
-      }
-
-      .notes p {
-        margin-top: 4px;
-      }
-
-      .document-footer {
-        color: #666;
-        margin-top: auto;
-        padding-top: 36px;
-        text-align: center;
-      }
-
-      .document-footer p {
-        margin: 2px 0;
-      }
-    `,
-    title: `Pro-Forma Invoice ${invoiceNumber}`,
-  });
+  return buildBaseHtml({ content, logoBase64, title: `Invoice ${invoiceNumber}` });
 }
