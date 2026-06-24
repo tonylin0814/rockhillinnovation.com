@@ -256,6 +256,8 @@ export async function generateQuotationPdf(
     return { error: "Client not found" };
   }
 
+  const { data: companySettings } = await supabase.from("company_settings").select("*").limit(1).maybeSingle();
+
   const lines = (Array.isArray(session.lines) ? session.lines : []).map((line) => {
     const product = Array.isArray(line.product) ? line.product[0] : line.product;
 
@@ -274,6 +276,7 @@ export async function generateQuotationPdf(
   const html = buildClientQuotationHtml({
     billToAddress: client.address ?? null,
     billToName: client.name,
+    companyInfo: companySettings ?? null,
     currency: client.currency ?? "USD",
     lines,
     logoBase64,

@@ -143,6 +143,12 @@ export async function generateCommercialInvoice(tradeId: string, formData: FormD
     return { error: "No client linked to this trade" };
   }
 
+  const [{ data: companySettings }, { data: bankingAccounts }] = await Promise.all([
+    supabase.from("company_settings").select("*").limit(1).maybeSingle(),
+    supabase.from("company_banking_accounts").select("*").eq("is_active", true).order("sort_order").limit(1),
+  ]);
+  const bankingAccount = Array.isArray(bankingAccounts) ? (bankingAccounts[0] ?? null) : (bankingAccounts ?? null);
+
   const rawLines = Array.isArray(trade.order_lines) ? trade.order_lines : [];
   const invoiceLines = rawLines
     .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
@@ -174,8 +180,10 @@ export async function generateCommercialInvoice(tradeId: string, formData: FormD
 
   const html = buildProFormaHtml({
     adjustmentLines,
+    bankingAccount,
     billToAddress: client.address ?? null,
     billToName: client.name,
+    companyInfo: companySettings ?? null,
     currency: client.currency ?? "USD",
     depositDueDate: depositDueDate ? normalizeDate(depositDueDate) : null,
     depositPct,
