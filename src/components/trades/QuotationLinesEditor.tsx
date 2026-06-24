@@ -31,6 +31,8 @@ type ProductOption = {
   code: string;
   supplier_product_code: string | null;
   name_english: string;
+  latest_cost_rmb?: number | null;
+  previous_quote_usd?: number | null;
 };
 
 type EditableQuotationLine = {
@@ -133,6 +135,7 @@ export function QuotationLinesEditor({
     updateRow(index, {
       product_id: productId,
       item_description: product ? product.name_english : rows[index].item_description,
+      unit_price_usd: product?.previous_quote_usd ?? rows[index].unit_price_usd,
     });
   }
 
@@ -179,6 +182,7 @@ export function QuotationLinesEditor({
             <TableHead>Description</TableHead>
             <TableHead>Qty</TableHead>
             <TableHead>Unit Price (USD)</TableHead>
+            <TableHead>Prv. Quote</TableHead>
             <TableHead>Total (USD)</TableHead>
             <TableHead>Notes</TableHead>
             {isEditing ? <TableHead className="text-right">Actions</TableHead> : null}
@@ -254,6 +258,7 @@ export function QuotationLinesEditor({
                       formatUsd(row.unit_price_usd)
                     )}
                   </TableCell>
+                  <TableCell>{product?.previous_quote_usd ? formatUsd(product.previous_quote_usd) : "-"}</TableCell>
                   <TableCell>{formatUsd(total)}</TableCell>
                   <TableCell>
                     {isEditing ? (
@@ -305,7 +310,7 @@ export function QuotationLinesEditor({
             })
           ) : (
             <TableRow>
-              <TableCell className="text-slate-500" colSpan={isEditing ? 8 : 7}>
+              <TableCell className="text-slate-500" colSpan={isEditing ? 9 : 8}>
                 No lines yet.
               </TableCell>
             </TableRow>
@@ -316,6 +321,7 @@ export function QuotationLinesEditor({
             <TableCell className="font-semibold" colSpan={5}>
               Total
             </TableCell>
+            <TableCell />
             <TableCell className="font-semibold">{formatUsd(runningTotal)}</TableCell>
             <TableCell colSpan={isEditing ? 2 : 1} />
           </TableRow>

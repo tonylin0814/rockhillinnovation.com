@@ -43,7 +43,7 @@ export default async function HistoryPage() {
       .select(
         "*, product:products(id, code, supplier_product_code, name_english, name_chinese), session:client_quotation_sessions!inner(id, session_number, quote_date, status, trade:trades(id, trade_id), client:clients(id, code, name))"
       )
-      .eq("client_quotation_sessions.status", "accepted")
+      .eq("session.status", "accepted")
       .limit(500),
     supabase
       .from("products")
