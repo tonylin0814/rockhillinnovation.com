@@ -31,7 +31,6 @@ export default async function HistoryPage() {
     { data: quoteRows, error: quoteError },
     { data: products, error: productsError },
     { data: suppliers, error: suppliersError },
-    { data: clients, error: clientsError },
   ] = await Promise.all([
     supabase
       .from("product_cost_history")
@@ -40,23 +39,23 @@ export default async function HistoryPage() {
       .order("created_at", { ascending: false })
       .limit(300),
     supabase
-      .from("product_quote_history")
-      .select("*, product:products(id, code, supplier_product_code, name_english, name_chinese), client:clients(id, code, name)")
-      .order("quoted_date", { ascending: false })
-      .order("created_at", { ascending: false })
-      .limit(300),
+      .from("client_quotation_lines")
+      .select(
+        "*, product:products(id, code, supplier_product_code, name_english, name_chinese), session:client_quotation_sessions!inner(id, session_number, quote_date, status, trade:trades(id, trade_id), client:clients(id, code, name))"
+      )
+      .eq("client_quotation_sessions.status", "accepted")
+      .limit(500),
     supabase
       .from("products")
       .select("id, code, supplier_product_code, name_english, name_chinese")
       .order("code", { ascending: true }),
     supabase.from("suppliers").select("id, code, name").order("code", { ascending: true }),
-    supabase.from("clients").select("id, code, name").order("code", { ascending: true }),
   ]);
 
-  if (costError || quoteError || productsError || suppliersError || clientsError) {
+  if (costError || quoteError || productsError || suppliersError) {
     return (
       <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm font-medium text-red-700">
-        {costError?.message ?? quoteError?.message ?? productsError?.message ?? suppliersError?.message ?? clientsError?.message}
+        {costError?.message ?? quoteError?.message ?? productsError?.message ?? suppliersError?.message}
       </div>
     );
   }
@@ -70,7 +69,6 @@ export default async function HistoryPage() {
 
       <Suspense fallback={<div className="py-4 text-sm text-slate-500">Loading...</div>}>
         <HistoryTabs
-          clients={clients ?? []}
           costRows={(costRows ?? []).map((row) => ({
             ...row,
             product: firstJoin(row.product),
@@ -78,10 +76,18 @@ export default async function HistoryPage() {
           }))}
           products={products ?? []}
           quoteRows={(quoteRows ?? []).map((row) => {
+            const session = firstJoin(row.session);
+
             return {
               ...row,
               product: firstJoin(row.product),
-              client: firstJoin(row.client),
+              session: session
+                ? {
+                    ...session,
+                    trade: firstJoin(session.trade),
+                    client: firstJoin(session.client),
+                  }
+                : null,
             };
           })}
           suppliers={suppliers ?? []}
