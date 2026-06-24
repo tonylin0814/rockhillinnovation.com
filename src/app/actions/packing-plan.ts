@@ -232,33 +232,50 @@ export async function moveCaseToPallet(caseId: string, targetPalletId: string, t
     .eq("id", caseId)
     .maybeSingle();
   if (fetchError) return { error: fetchError.message };
+  if (!caseRow) return { error: "Case not found" };
+
+  const { data: targetPallet, error: targetPalletError } = await admin
+    .from("trade_packing_pallets")
+    .select("plan_id")
+    .eq("id", targetPalletId)
+    .maybeSingle();
+
+  if (targetPalletError) return { error: targetPalletError.message };
+  if (!targetPallet || targetPallet.plan_id !== caseRow.plan_id) {
+    return { error: "Target pallet does not belong to this packing plan" };
+  }
+
   const { error } = await admin.from("trade_packing_cases").update({ pallet_id: targetPalletId }).eq("id", caseId);
   if (error) return { error: error.message };
 
-  if (caseRow?.plan_id) {
-    const { data: allCases } = await admin
-      .from("trade_packing_cases")
-      .select("pallet_id, weight_kg, product_id")
-      .eq("plan_id", caseRow.plan_id);
-    const totals = new Map<string, { cases: number; productIds: Set<string>; weight: number }>();
-    for (const item of allCases ?? []) {
-      const current = totals.get(item.pallet_id) ?? { cases: 0, productIds: new Set<string>(), weight: 0 };
-      current.cases += 1;
-      current.weight += Number(item.weight_kg);
-      current.productIds.add(item.product_id);
-      totals.set(item.pallet_id, current);
-    }
-    for (const [palletId, total] of Array.from(totals.entries())) {
-      await admin
-        .from("trade_packing_pallets")
-        .update({
-          is_mixed: total.productIds.size > 1,
-          total_cases: total.cases,
-          total_weight_kg: Math.round(total.weight * 1000) / 1000,
-        })
-        .eq("id", palletId);
-    }
+  const [{ data: planPallets }, { data: allCases }] = await Promise.all([
+    admin.from("trade_packing_pallets").select("id").eq("plan_id", caseRow.plan_id),
+    admin.from("trade_packing_cases").select("pallet_id, weight_kg, product_id").eq("plan_id", caseRow.plan_id),
+  ]);
+  const totals = new Map<string, { cases: number; productIds: Set<string>; weight: number }>();
+
+  for (const pallet of planPallets ?? []) {
+    totals.set(pallet.id, { cases: 0, productIds: new Set<string>(), weight: 0 });
   }
+
+  for (const item of allCases ?? []) {
+    const current = totals.get(item.pallet_id) ?? { cases: 0, productIds: new Set<string>(), weight: 0 };
+    current.cases += 1;
+    current.weight += Number(item.weight_kg);
+    current.productIds.add(item.product_id);
+    totals.set(item.pallet_id, current);
+  }
+
+  for (const [palletId, total] of Array.from(totals.entries())) {
+    await admin
+      .from("trade_packing_pallets")
+      .update({
+        is_mixed: total.productIds.size > 1,
+        total_cases: total.cases,
+        total_weight_kg: Math.round(total.weight * 1000) / 1000,
+      })
+      .eq("id", palletId);
+    }
 
   revalidatePath(`/trades/${tradeId}`);
   return { success: true };

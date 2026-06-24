@@ -286,16 +286,30 @@ export async function updateTradeParticipants(tradeId: string, partnerIds: strin
     return { error: tradeError.message };
   }
 
-  const { error: deleteError } = await supabase
-    .from("trade_participants")
-    .delete()
-    .eq("trade_id", tradeId);
+  const existingParticipantIds = (existingParticipants ?? []).map((participant) => participant.user_id);
+  const existingNonPartnerIds: string[] = [];
+
+  if (existingParticipantIds.length) {
+    const { data: existingUsers, error: usersError } = await supabase
+      .from("users")
+      .select("id, role")
+      .in("id", existingParticipantIds);
+
+    if (usersError) {
+      return { error: usersError.message };
+    }
+
+    const partnerUserIds = new Set((existingUsers ?? []).filter((user) => user.role === "partner").map((user) => user.id));
+    existingNonPartnerIds.push(...existingParticipantIds.filter((userId) => !partnerUserIds.has(userId)));
+  }
+
+  const { error: deleteError } = await supabase.from("trade_participants").delete().eq("trade_id", tradeId);
 
   if (deleteError) {
     return { error: deleteError.message };
   }
 
-  const nextParticipantIds = Array.from(new Set([access.user.id, ...parsed.data.partnerIds]));
+  const nextParticipantIds = Array.from(new Set([...existingNonPartnerIds, ...parsed.data.partnerIds]));
 
   if (nextParticipantIds.length) {
     const rows = nextParticipantIds.map((partnerId) => ({
@@ -311,7 +325,7 @@ export async function updateTradeParticipants(tradeId: string, partnerIds: strin
     }
   }
 
-  const existingIds = new Set((existingParticipants ?? []).map((participant) => participant.user_id));
+  const existingIds = new Set(existingParticipantIds);
   const newlyAddedIds = nextParticipantIds.filter((participantId) => !existingIds.has(participantId));
   const tradeCode = tradeRow?.trade_id ?? tradeId;
   await notifyUsers(newlyAddedIds, {

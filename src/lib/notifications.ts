@@ -36,7 +36,7 @@ export async function notifyUsers(userIds: string[], input: NotificationInput): 
   }
 
   const supabase = createServerSupabaseAdmin();
-  await supabase.from("trade_notifications").insert(
+  const { error } = await supabase.from("trade_notifications").insert(
     uniqueUserIds.map((userId) => ({
       actor_id: input.actorId,
       actor_name: input.actorName,
@@ -46,4 +46,8 @@ export async function notifyUsers(userIds: string[], input: NotificationInput): 
       user_id: userId,
     }))
   );
+
+  if (error) {
+    console.error("Notification insert failed", error);
+  }
 }
