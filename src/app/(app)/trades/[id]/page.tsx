@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { ClientQuotationsTab } from "@/components/trades/ClientQuotationsTab";
+import { DevelopmentTab } from "@/components/trades/DevelopmentTab";
 import { DocumentsTab } from "@/components/trades/DocumentsTab";
 import { ExchangeRatesCard } from "@/components/trades/ExchangeRatesCard";
 import { InvoicesTab } from "@/components/trades/InvoicesTab";
@@ -35,6 +36,8 @@ import type {
   SupplierQuoteSession,
   SupplierInvoiceOutgoing,
   Trade,
+  TradeDevelopmentCost,
+  TradeDevelopmentVersion,
   TradeDocument,
   TradeLedgerEntry,
   TradeParticipant,
@@ -130,6 +133,8 @@ export default async function TradeWorkspacePage({ params }: { params: { id: str
     { data: exchangeRates, error: exchangeRatesError },
     { data: ledgerEntries, error: ledgerEntriesError },
     { data: shareholderBook, error: shareholderBookError },
+    { data: devVersions, error: devVersionsError },
+    { data: devCosts, error: devCostsError },
   ] = await Promise.all([
     supabase
       .from("trades")
@@ -219,6 +224,16 @@ export default async function TradeWorkspacePage({ params }: { params: { id: str
       .select("*, lines:shareholder_book_lines(*)")
       .eq("trade_id", params.id)
       .maybeSingle(),
+    supabase
+      .from("trade_development_versions")
+      .select("*, product:products(id, code, name_english)")
+      .eq("trade_id", params.id)
+      .order("created_at", { ascending: true }),
+    supabase
+      .from("trade_development_costs")
+      .select("*")
+      .eq("trade_id", params.id)
+      .order("created_at", { ascending: true }),
   ]);
 
   if (
@@ -239,7 +254,9 @@ export default async function TradeWorkspacePage({ params }: { params: { id: str
     vendorInvoicesError ||
     exchangeRatesError ||
     ledgerEntriesError ||
-    shareholderBookError
+    shareholderBookError ||
+    devVersionsError ||
+    devCostsError
   ) {
     return (
       <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm font-medium text-red-700">
@@ -260,7 +277,9 @@ export default async function TradeWorkspacePage({ params }: { params: { id: str
           vendorInvoicesError?.message ??
           exchangeRatesError?.message ??
           ledgerEntriesError?.message ??
-          shareholderBookError?.message}
+          shareholderBookError?.message ??
+          devVersionsError?.message ??
+          devCostsError?.message}
       </div>
     );
   }
@@ -317,6 +336,8 @@ export default async function TradeWorkspacePage({ params }: { params: { id: str
   const exchangeRateRows = (exchangeRates ?? []) as ExchangeRate[];
   const ledgerEntryRows = (ledgerEntries ?? []) as TradeLedgerEntry[];
   const shareholderBookData = (shareholderBook ?? null) as ShareholderBook | null;
+  const developmentVersions = (devVersions ?? []) as TradeDevelopmentVersion[];
+  const developmentCosts = (devCosts ?? []) as TradeDevelopmentCost[];
   const participantPartnerIds = tradeParticipants.map((participant) => participant.user_id);
 
   return (
@@ -342,6 +363,7 @@ export default async function TradeWorkspacePage({ params }: { params: { id: str
       <Tabs className="space-y-4" defaultValue="summary">
         <TabsList className="flex h-auto flex-wrap justify-start">
           <TabsTrigger value="summary">Summary</TabsTrigger>
+          <TabsTrigger value="development">Development</TabsTrigger>
           <TabsTrigger value="quotes">Quotes</TabsTrigger>
           <TabsTrigger value="quotations">Quotations</TabsTrigger>
           <TabsTrigger value="order-lines">Order Lines</TabsTrigger>
@@ -400,6 +422,16 @@ export default async function TradeWorkspacePage({ params }: { params: { id: str
 
             <ExchangeRatesCard canManage={canManage} initialRates={exchangeRateRows} tradeId={trade.id} />
           </div>
+        </TabsContent>
+
+        <TabsContent value="development">
+          <DevelopmentTab
+            availableProducts={activeProductOptions}
+            canManage={canManage}
+            devCosts={developmentCosts}
+            devVersions={developmentVersions}
+            tradeId={trade.id}
+          />
         </TabsContent>
 
         <TabsContent value="quotes">
