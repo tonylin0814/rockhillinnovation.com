@@ -75,6 +75,7 @@ export async function createCostHistory(formData: FormData): Promise<ActionResul
   }
 
   revalidatePath("/history");
+  revalidatePath("/history/cost");
   revalidatePath(`/products/${parsed.data.product_id}`);
   return { success: true, id: data.id };
 }
@@ -106,6 +107,7 @@ export async function updateCostHistory(id: string, formData: FormData): Promise
   }
 
   revalidatePath("/history");
+  revalidatePath("/history/cost");
   revalidatePath(`/products/${parsed.data.product_id}`);
   return { success: true };
 }
@@ -131,6 +133,7 @@ export async function deleteCostHistory(id: string, productId?: string): Promise
   }
 
   revalidatePath("/history");
+  revalidatePath("/history/cost");
 
   if (productId) {
     revalidatePath(`/products/${productId}`);
@@ -167,6 +170,7 @@ export async function updateQuoteHistory(id: string, formData: FormData): Promis
   }
 
   revalidatePath("/history");
+  revalidatePath("/history/quote");
   return { success: true };
 }
 
@@ -191,5 +195,6 @@ export async function deleteQuoteHistory(id: string): Promise<ActionResult> {
   }
 
   revalidatePath("/history");
+  revalidatePath("/history/quote");
   return { success: true };
 }

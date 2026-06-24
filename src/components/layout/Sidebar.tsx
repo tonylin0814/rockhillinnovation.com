@@ -1,13 +1,15 @@
 "use client";
 
-import Link from "next/link";
 import Image from "next/image";
+import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   ArrowLeftRight,
   Briefcase,
   Building2,
+  DollarSign,
   Factory,
+  FileText,
   History,
   LayoutDashboard,
   LogOut,
@@ -26,55 +28,91 @@ const navItems = [
   { label: "Suppliers", href: "/suppliers", icon: Factory },
   { label: "Vendors", href: "/vendors", icon: Briefcase },
   { label: "Products", href: "/products", icon: Package },
-  { label: "History", href: "/history", icon: History },
-  { label: "Admin", href: "/admin/users", icon: ShieldCheck },
 ];
+
+const historySubItems = [
+  { label: "Cost History", href: "/history/cost", icon: DollarSign },
+  { label: "Quote History", href: "/history/quote", icon: FileText },
+];
+
+const adminNavItems = [{ label: "Admin", href: "/admin/users", icon: ShieldCheck }];
 
 type SidebarUser = Pick<CurrentUser, "name" | "role">;
 
 export function Sidebar({ currentUser }: { currentUser: SidebarUser }) {
   const pathname = usePathname();
-  const visibleNavItems = navItems.filter(
-    (item) =>
-      (item.label !== "Admin" || currentUser.role === "admin") &&
-      (item.label !== "History" || currentUser.role !== "partner")
-  );
+  const isPartner = currentUser.role === "partner";
+  const isAdmin = currentUser.role === "admin";
+  const isHistoryActive = pathname.startsWith("/history");
+
+  function NavLink({
+    href,
+    icon: Icon,
+    indent = false,
+    label,
+  }: {
+    href: string;
+    icon: React.ElementType;
+    indent?: boolean;
+    label: string;
+  }) {
+    const isActive = pathname === href || pathname.startsWith(`${href}/`);
+
+    return (
+      <Link
+        className={cn(
+          "flex h-10 items-center gap-3 rounded-md px-3 text-sm font-medium transition-colors",
+          indent && "ml-4 pl-3",
+          isActive ? "bg-white/15 text-white" : "text-slate-400 hover:bg-white/10 hover:text-white"
+        )}
+        href={href}
+      >
+        <Icon className="h-4 w-4" />
+        {label}
+      </Link>
+    );
+  }
 
   return (
     <aside className="sticky top-0 flex h-screen w-[240px] shrink-0 flex-col bg-[#0d1b34] text-white shadow-2xl shadow-slate-950/20">
       <div className="flex h-[112px] items-center border-b border-white/10 px-3">
         <div className="flex h-[82px] w-full items-center justify-center rounded-lg bg-white px-3 shadow-sm">
           <Image
-            src="/brand/rockhill-logo-nav-safe.png"
             alt="Rock Hill Innovation"
-            width={2075}
-            height={496}
             className="h-auto w-full object-contain"
+            height={496}
             priority
+            src="/brand/rockhill-logo-nav-safe.png"
             unoptimized
+            width={2075}
           />
         </div>
       </div>
       <nav className="flex flex-1 flex-col gap-1.5 px-3 py-5">
-        {visibleNavItems.map((item) => {
-          const isActive =
-            pathname === item.href || (item.href !== "/dashboard" && pathname.startsWith(item.href));
-          const Icon = item.icon;
+        {navItems.map((item) => (
+          <NavLink href={item.href} icon={item.icon} key={item.href} label={item.label} />
+        ))}
 
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
+        {!isPartner ? (
+          <>
+            <div
               className={cn(
-                "flex h-10 items-center gap-3 rounded-md px-3 text-sm font-medium transition-colors",
-                isActive ? "bg-white/15 text-white" : "text-slate-400 hover:bg-white/10 hover:text-white"
+                "mt-1 flex h-10 items-center gap-3 px-3 text-sm font-medium",
+                isHistoryActive ? "text-white" : "text-slate-500"
               )}
             >
-              <Icon className="h-4 w-4" />
-              {item.label}
-            </Link>
-          );
-        })}
+              <History className="h-4 w-4" />
+              History
+            </div>
+            {historySubItems.map((item) => (
+              <NavLink href={item.href} icon={item.icon} indent key={item.href} label={item.label} />
+            ))}
+          </>
+        ) : null}
+
+        {isAdmin
+          ? adminNavItems.map((item) => <NavLink href={item.href} icon={item.icon} key={item.href} label={item.label} />)
+          : null}
       </nav>
       <div className="border-t border-white/10 px-4 py-4">
         <div className="flex items-center justify-between gap-3">
