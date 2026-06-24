@@ -9,6 +9,7 @@ type QuoteHistoryRow = {
   quote_date: string;
   quoted_usd: number | string | null;
   rock_hill_code: string;
+  trade_id: string | null;
 };
 
 export async function GET(request: Request) {
@@ -48,6 +49,7 @@ export async function GET(request: Request) {
   const productCodes = productRows.map((product) => product.code);
   const latestCostByProductId = new Map<string, number>();
   const previousQuoteByProductId = new Map<string, number>();
+  const previousQuoteMetaByProductId = new Map<string, { quote_date: string; trade_id: string | null }>();
 
   if (productIds.length) {
     const [{ data: costRows, error: costsError }, { data: quoteRows, error: quoteRowsError }] = await Promise.all([
@@ -59,7 +61,7 @@ export async function GET(request: Request) {
         .order("created_at", { ascending: false }),
       supabase
         .from("quotation_history")
-        .select("rock_hill_code, quoted_usd, quote_date, created_at")
+        .select("rock_hill_code, quoted_usd, quote_date, trade_id, created_at")
         .in("rock_hill_code", productCodes)
         .gt("quoted_usd", 0),
     ]);
@@ -88,6 +90,10 @@ export async function GET(request: Request) {
 
       if (productId && !previousQuoteByProductId.has(productId)) {
         previousQuoteByProductId.set(productId, Number(row.quoted_usd));
+        previousQuoteMetaByProductId.set(productId, {
+          quote_date: row.quote_date,
+          trade_id: row.trade_id,
+        });
       }
     }
   }
@@ -96,6 +102,8 @@ export async function GET(request: Request) {
     ...product,
     latest_cost_rmb: latestCostByProductId.get(product.id) ?? null,
     previous_quote_usd: previousQuoteByProductId.get(product.id) ?? null,
+    previous_quote_date: previousQuoteMetaByProductId.get(product.id)?.quote_date ?? null,
+    previous_quote_trade_id: previousQuoteMetaByProductId.get(product.id)?.trade_id ?? null,
   }));
 
   return NextResponse.json({ lines: lines ?? [], products: productsWithCosts });

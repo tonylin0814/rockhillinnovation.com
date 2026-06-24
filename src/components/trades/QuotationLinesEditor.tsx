@@ -32,6 +32,8 @@ type ProductOption = {
   supplier_product_code: string | null;
   name_english: string;
   latest_cost_rmb?: number | null;
+  previous_quote_date?: string | null;
+  previous_quote_trade_id?: string | null;
   previous_quote_usd?: number | null;
 };
 
@@ -62,8 +64,35 @@ function formatUsd(value: number) {
   }).format(value);
 }
 
+function formatDate(value: string) {
+  return new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    timeZone: "UTC",
+  }).format(new Date(value));
+}
+
 function productLabel(product: ProductOption) {
   return [product.code, product.supplier_product_code, product.name_english].filter(Boolean).join(" - ");
+}
+
+function PreviousQuoteCell({ product }: { product: ProductOption | null | undefined }) {
+  if (product?.previous_quote_usd == null) {
+    return "-";
+  }
+
+  return (
+    <span className="group relative inline-flex cursor-help items-center font-medium text-[#0d1b34]">
+      {formatUsd(product.previous_quote_usd)}
+      <span className="pointer-events-none absolute left-1/2 top-full z-50 mt-2 hidden w-max max-w-64 -translate-x-1/2 rounded-md border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-[#0d1b34] shadow-lg group-hover:block">
+        <span className="block">Previous trade: {product.previous_quote_trade_id ?? "-"}</span>
+        <span className="block">
+          Quoted date: {product.previous_quote_date ? formatDate(product.previous_quote_date) : "-"}
+        </span>
+      </span>
+    </span>
+  );
 }
 
 export function QuotationLinesEditor({
@@ -258,7 +287,9 @@ export function QuotationLinesEditor({
                       formatUsd(row.unit_price_usd)
                     )}
                   </TableCell>
-                  <TableCell>{product?.previous_quote_usd ? formatUsd(product.previous_quote_usd) : "-"}</TableCell>
+                  <TableCell>
+                    <PreviousQuoteCell product={product} />
+                  </TableCell>
                   <TableCell>{formatUsd(total)}</TableCell>
                   <TableCell>
                     {isEditing ? (
