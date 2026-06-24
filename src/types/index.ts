@@ -8,6 +8,23 @@ export type CurrentUser = {
   is_active: boolean;
 };
 
+export type CompanySettings = {
+  id: string;
+  company_name: string;
+  company_name_full: string | null;
+  address_line1: string | null;
+  address_line2: string | null;
+  city_state: string | null;
+  country: string | null;
+  phone: string | null;
+  email: string | null;
+  website: string | null;
+  sales_contact_name: string | null;
+  sales_contact_email: string | null;
+  sales_contact_phone: string | null;
+  updated_at: string;
+};
+
 export type InvoiceAdjustmentLine = {
   description: string;
   amount_usd: number;
