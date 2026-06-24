@@ -72,7 +72,7 @@ export default async function HistoryPage() {
         <h1 className="mt-2 text-3xl font-semibold text-[#0d1b34]">History</h1>
       </div>
 
-      <Suspense fallback={<div className="text-sm text-slate-500">Loading...</div>}>
+      <Suspense fallback={<div className="py-4 text-sm text-slate-500">Loading...</div>}>
         <HistoryTabs
           costRows={(costRows ?? []).map((row) => ({
             ...row,

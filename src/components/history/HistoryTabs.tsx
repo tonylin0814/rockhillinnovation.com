@@ -2,7 +2,7 @@
 
 import { ArrowUpDown, Edit, Loader2, Plus, Trash2 } from "lucide-react";
 import { FormEvent, ReactNode, useEffect, useMemo, useState, useTransition } from "react";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 
 import {
@@ -513,8 +513,6 @@ export function HistoryTabs({
   sessions: QuoteSessionOption[];
   suppliers: SupplierOption[];
 }) {
-  const router = useRouter();
-  const pathname = usePathname();
   const searchParams = useSearchParams();
   const tabFromUrl: HistoryTab = searchParams.get("tab") === "quote" ? "quote" : "cost";
   const [activeTab, setActiveTab] = useState<HistoryTab>(tabFromUrl);
@@ -552,18 +550,17 @@ export function HistoryTabs({
 
   function handleTabChange(value: string) {
     const nextTab: HistoryTab = value === "quote" ? "quote" : "cost";
-    const params = new URLSearchParams(searchParams.toString());
-
     setActiveTab(nextTab);
 
+    const params = new URLSearchParams(searchParams.toString());
     if (nextTab === "quote") {
       params.set("tab", "quote");
     } else {
       params.delete("tab");
     }
 
-    const queryString = params.toString();
-    router.replace(queryString ? `${pathname}?${queryString}` : pathname, { scroll: false });
+    const qs = params.toString();
+    window.history.replaceState(null, "", qs ? `?${qs}` : window.location.pathname);
   }
 
   const costSources = useMemo(
