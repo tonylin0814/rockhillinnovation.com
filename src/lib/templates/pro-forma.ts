@@ -73,9 +73,9 @@ function buildBankingPage(
     : `<div style="color:#0d1b34;font-size:16pt;font-weight:800;margin-bottom:6px;">${escapeHtml(companyName)}</div>`;
 
   const addressLines = [
-    account.bank_address ? null : companyInfo?.address_line1,
+    companyInfo?.address_line1 ?? "5F., No. 7, Ln. 332, Sec. 2, Zhongshan Rd., Zhonghe Dist.",
     companyInfo?.address_line2,
-    companyInfo?.city_state,
+    companyInfo?.city_state ?? "New Taipei City, Taiwan 235026",
   ].filter(Boolean);
   const contactLine = [companyInfo?.email, companyInfo?.phone]
     .filter(Boolean)

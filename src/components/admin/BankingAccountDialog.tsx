@@ -1,6 +1,7 @@
 "use client";
 
 import { Loader2 } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { FormEvent, ReactNode, useState, useTransition } from "react";
 import { toast } from "sonner";
 
@@ -56,6 +57,7 @@ export function BankingAccountDialog({
   account?: CompanyBankingAccount;
   onDone?: () => void;
 }) {
+  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -79,6 +81,7 @@ export function BankingAccountDialog({
 
       toast.success(isEdit ? "Account updated" : "Account added");
       setOpen(false);
+      router.refresh();
       onDone?.();
     });
   }
