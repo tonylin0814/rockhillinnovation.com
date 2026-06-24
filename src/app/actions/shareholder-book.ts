@@ -41,7 +41,7 @@ export async function calculateShareholderBook(tradeId: string): Promise<ActionR
 
   const { data: trade, error: tradeError } = await supabase
     .from("trades")
-    .select("id, corporate_tax_rate")
+    .select("id, corporate_tax_rate, working_exchange_rate")
     .eq("id", tradeId)
     .maybeSingle();
 
@@ -52,8 +52,6 @@ export async function calculateShareholderBook(tradeId: string): Promise<ActionR
   if (!trade) {
     return { error: "Trade not found" };
   }
-
-  const taxRate = Number(trade.corporate_tax_rate ?? 0);
 
   const { data: shareholders, error: shareholdersError } = await supabase
     .from("trade_shareholders")
@@ -75,30 +73,42 @@ export async function calculateShareholderBook(tradeId: string): Promise<ActionR
     return { error: `Profit split must sum to 100% (currently ${totalSplit.toFixed(2)}%)` };
   }
 
-  const { data: paidInvoices, error: invoicesError } = await supabase
+  const { data: clientInvoices, error: invoicesError } = await supabase
     .from("client_invoices")
     .select("total_usd")
-    .eq("trade_id", tradeId)
-    .eq("status", "paid");
+    .eq("trade_id", tradeId);
 
   if (invoicesError) {
     return { error: invoicesError.message };
   }
 
   const grossRevenue = roundMoney(
-    (paidInvoices ?? []).reduce((sum, invoice) => sum + Number(invoice.total_usd ?? 0), 0)
+    (clientInvoices ?? []).reduce((sum, invoice) => sum + Number(invoice.total_usd ?? 0), 0)
   );
 
-  const { data: demand, error: demandError } = await supabase
-    .from("component_demand")
-    .select("estimated_cost_usd")
+  const exchangeRate = Number(trade.working_exchange_rate ?? 0);
+  const { data: supplierInvoices, error: supplierInvoicesError } = await supabase
+    .from("supplier_invoices_outgoing")
+    .select("total_usd, total_rmb")
     .eq("trade_id", tradeId);
 
-  if (demandError) {
-    return { error: demandError.message };
+  if (supplierInvoicesError) {
+    return { error: supplierInvoicesError.message };
   }
 
-  const supplierCosts = roundMoney((demand ?? []).reduce((sum, item) => sum + Number(item.estimated_cost_usd ?? 0), 0));
+  const supplierCosts = roundMoney(
+    (supplierInvoices ?? []).reduce((sum, invoice) => {
+      if (invoice.total_usd != null) {
+        return sum + Number(invoice.total_usd);
+      }
+
+      if (exchangeRate > 0 && invoice.total_rmb != null) {
+        return sum + Number(invoice.total_rmb) / exchangeRate;
+      }
+
+      return sum;
+    }, 0)
+  );
 
   const { data: vendorInvoices, error: vendorError } = await supabase
     .from("expense_vendor_invoices")
@@ -109,10 +119,21 @@ export async function calculateShareholderBook(tradeId: string): Promise<ActionR
     return { error: vendorError.message };
   }
 
+  const { data: tradeExpenses, error: tradeExpensesError } = await supabase
+    .from("trade_expenses")
+    .select("amount_usd")
+    .eq("trade_id", tradeId);
+
+  if (tradeExpensesError) {
+    return { error: tradeExpensesError.message };
+  }
+
   const expenseDeductions = roundMoney(
-    (vendorInvoices ?? []).reduce((sum, invoice) => sum + Number(invoice.amount_usd ?? 0), 0)
+    (vendorInvoices ?? []).reduce((sum, invoice) => sum + Number(invoice.amount_usd ?? 0), 0) +
+      (tradeExpenses ?? []).reduce((sum, expense) => sum + Number(expense.amount_usd ?? 0), 0)
   );
 
+  const taxRate = shareholders.length === 1 ? 0 : Number(trade.corporate_tax_rate ?? 0);
   const grossProfit = roundMoney(grossRevenue - supplierCosts);
   const taxableBase = roundMoney(grossProfit - expenseDeductions);
   const corporateTax = roundMoney(taxableBase * taxRate);

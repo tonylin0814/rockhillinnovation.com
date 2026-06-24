@@ -23,6 +23,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { buildDownloadUrl } from "@/lib/download";
 import type { TradeDocument } from "@/types";
 import { UploadDocumentDialog } from "./UploadDocumentDialog";
 
@@ -168,10 +169,9 @@ export function DocumentsTab({
                           <TableCell>
                             {document.onedrive_url ? (
                               <a
+                                download
                                 className="font-medium text-[#0d1b34] underline-offset-4 hover:underline"
-                                href={document.onedrive_url}
-                                rel="noreferrer"
-                                target="_blank"
+                                href={buildDownloadUrl(document.onedrive_url, document.file_name ?? "document")}
                               >
                                 {document.file_name}
                               </a>

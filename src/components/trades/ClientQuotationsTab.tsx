@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { buildDownloadUrl } from "@/lib/download";
 import type { ClientQuotationLine, ClientQuotationSession } from "@/types";
 import { GenerateQuotationDialog } from "./GenerateQuotationDialog";
 import { NewQuotationSessionDialog } from "./NewQuotationSessionDialog";
@@ -205,10 +206,12 @@ export function ClientQuotationsTab({
                       ) : null}
                       {session.pdf_onedrive_url ? (
                         <a
+                          download
                           className="inline-flex items-center gap-1.5 rounded-md border border-slate-200 px-3 py-2 text-sm font-medium text-[#0d1b34] underline-offset-2 hover:bg-slate-50 hover:underline"
-                          href={session.pdf_onedrive_url}
-                          rel="noopener noreferrer"
-                          target="_blank"
+                          href={buildDownloadUrl(
+                            session.pdf_onedrive_url,
+                            `quotation-${session.quotation_ref ?? session.id}.pdf`
+                          )}
                         >
                           <Download className="h-3.5 w-3.5" />
                           Download PDF

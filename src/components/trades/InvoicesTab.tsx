@@ -25,6 +25,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { buildDownloadUrl } from "@/lib/download";
 import type { ClientInvoice, SupplierInvoiceOutgoing } from "@/types";
 import { GenerateInvoiceDialog } from "./GenerateProFormaDialog";
 import { GenerateSupplierInvoiceDialog } from "./GenerateSupplierInvoiceDialog";
@@ -304,10 +305,9 @@ export function InvoicesTab({
                       <TableCell>
                         {invoice.pdf_onedrive_url ? (
                           <a
+                            download
                             className="font-medium text-[#0d1b34] underline-offset-4 hover:underline"
-                            href={invoice.pdf_onedrive_url}
-                            rel="noreferrer"
-                            target="_blank"
+                            href={buildDownloadUrl(invoice.pdf_onedrive_url, `invoice-${invoice.invoice_number}.pdf`)}
                           >
                             Download
                           </a>
@@ -377,10 +377,9 @@ export function InvoicesTab({
                           <TableCell>
                             {invoice.pdf_onedrive_url ? (
                               <a
+                                download
                                 className="font-medium text-[#0d1b34] underline-offset-4 hover:underline"
-                                href={invoice.pdf_onedrive_url}
-                                rel="noreferrer"
-                                target="_blank"
+                                href={buildDownloadUrl(invoice.pdf_onedrive_url, `invoice-${invoice.invoice_number}.pdf`)}
                               >
                                 Download
                               </a>

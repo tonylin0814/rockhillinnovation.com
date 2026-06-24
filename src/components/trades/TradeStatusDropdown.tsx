@@ -25,11 +25,13 @@ const statuses: { label: string; value: Trade["status"] }[] = [
 export function TradeStatusDropdown({
   currentStatus,
   role,
+  shareholderBookConfirmed,
   tradeId,
 }: {
   tradeId: string;
   currentStatus: Trade["status"];
   role: UserRole;
+  shareholderBookConfirmed: boolean;
 }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -40,6 +42,11 @@ export function TradeStatusDropdown({
 
   function updateStatus(status: Trade["status"]) {
     if (status === currentStatus) {
+      return;
+    }
+
+    if (status === "settled" && !shareholderBookConfirmed) {
+      toast.error("Confirm the profit book in the Financial tab before settling this trade.");
       return;
     }
 

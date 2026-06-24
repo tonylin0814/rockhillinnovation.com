@@ -53,6 +53,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
+import { buildDownloadUrl } from "@/lib/download";
 import type {
   DevelopmentCostType,
   DevelopmentVersionStatus,
@@ -614,7 +615,13 @@ export function DevelopmentTab({
                               {statusBadge(version.status)}
                               {version.file_onedrive_url ? (
                                 <Button asChild size="icon" variant="ghost">
-                                  <a href={version.file_onedrive_url} rel="noreferrer" target="_blank">
+                                  <a
+                                    download
+                                    href={buildDownloadUrl(
+                                      version.file_onedrive_url,
+                                      `${version.version_label}-design-file`
+                                    )}
+                                  >
                                     <ExternalLink className="h-4 w-4" />
                                   </a>
                                 </Button>

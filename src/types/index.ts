@@ -483,6 +483,19 @@ export type TradeLedgerEntry = {
   recorder?: { id: string; name: string } | null;
 };
 
+export type TradeExpense = {
+  id: string;
+  trade_id: string;
+  description: string;
+  amount_usd: number;
+  expense_date: string;
+  category: "bank_fee" | "reimbursement" | "shipping" | "duty" | "misc";
+  notes: string | null;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
 export type ShareholderBook = {
   id: string;
   trade_id: string;

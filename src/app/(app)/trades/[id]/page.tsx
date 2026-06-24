@@ -5,12 +5,12 @@ import { ClientQuotationsTab } from "@/components/trades/ClientQuotationsTab";
 import { DevelopmentTab } from "@/components/trades/DevelopmentTab";
 import { DocumentsTab } from "@/components/trades/DocumentsTab";
 import { ExchangeRatesCard } from "@/components/trades/ExchangeRatesCard";
+import { FinancialTab } from "@/components/trades/FinancialTab";
 import { InvoicesTab } from "@/components/trades/InvoicesTab";
 import { JudyChat } from "@/components/trades/JudyChat";
 import { LedgerTab } from "@/components/trades/LedgerTab";
 import { ManagePartnersDialog } from "@/components/trades/ManagePartnersDialog";
 import { OrderLinesTab } from "@/components/trades/OrderLinesTab";
-import { ShareholderBookCard } from "@/components/trades/ShareholderBookCard";
 import { ShareholderRulesEditor } from "@/components/trades/ShareholderRulesEditor";
 import { SupplierQuotesTab } from "@/components/trades/SupplierQuotesTab";
 import { TradeEditDialog } from "@/components/trades/TradeEditDialog";
@@ -40,6 +40,7 @@ import type {
   TradeDevelopmentCost,
   TradeDevelopmentVersion,
   TradeDocument,
+  TradeExpense,
   TradeLedgerEntry,
   TradeParticipant,
   TradeShareholder,
@@ -138,6 +139,7 @@ export default async function TradeWorkspacePage({ params }: { params: { id: str
     { data: devCosts, error: devCostsError },
     { data: acceptedQuotationLines, error: acceptedQuotationLinesError },
     { data: confirmedQuoteLines, error: confirmedQuoteLinesError },
+    { data: tradeExpenses, error: tradeExpensesError },
   ] = await Promise.all([
     supabase
       .from("trades")
@@ -247,6 +249,11 @@ export default async function TradeWorkspacePage({ params }: { params: { id: str
       .select("total_price_rmb, session:supplier_quote_sessions!inner(status, trade_id)")
       .eq("supplier_quote_sessions.trade_id", params.id)
       .eq("supplier_quote_sessions.status", "confirmed"),
+    supabase
+      .from("trade_expenses")
+      .select("*")
+      .eq("trade_id", params.id)
+      .order("expense_date", { ascending: false }),
   ]);
 
   if (
@@ -271,7 +278,8 @@ export default async function TradeWorkspacePage({ params }: { params: { id: str
     devVersionsError ||
     devCostsError ||
     acceptedQuotationLinesError ||
-    confirmedQuoteLinesError
+    confirmedQuoteLinesError ||
+    tradeExpensesError
   ) {
     return (
       <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm font-medium text-red-700">
@@ -296,7 +304,8 @@ export default async function TradeWorkspacePage({ params }: { params: { id: str
           devVersionsError?.message ??
           devCostsError?.message ??
           acceptedQuotationLinesError?.message ??
-          confirmedQuoteLinesError?.message}
+          confirmedQuoteLinesError?.message ??
+          tradeExpensesError?.message}
       </div>
     );
   }
@@ -355,6 +364,8 @@ export default async function TradeWorkspacePage({ params }: { params: { id: str
   const shareholderBookData = (shareholderBook ?? null) as ShareholderBook | null;
   const developmentVersions = (devVersions ?? []) as TradeDevelopmentVersion[];
   const developmentCosts = (devCosts ?? []) as TradeDevelopmentCost[];
+  const tradeExpenseRows = (tradeExpenses ?? []) as TradeExpense[];
+  const shareholderBookConfirmed = shareholderBookData?.status === "confirmed";
   const depositRate = exchangeRateRows.find((rate) => rate.payment_type === "deposit") ?? null;
   const finalRate = exchangeRateRows.find((rate) => rate.payment_type === "final") ?? null;
   function round2(value: number) {
@@ -414,7 +425,12 @@ export default async function TradeWorkspacePage({ params }: { params: { id: str
             {` - ${formatDate(trade.trade_date)}`}
           </p>
         </div>
-        <TradeStatusDropdown currentStatus={trade.status} role={currentRole} tradeId={trade.id} />
+        <TradeStatusDropdown
+          currentStatus={trade.status}
+          role={currentRole}
+          shareholderBookConfirmed={shareholderBookConfirmed}
+          tradeId={trade.id}
+        />
       </div>
 
       <Tabs className="space-y-4" defaultValue="summary">
@@ -424,6 +440,7 @@ export default async function TradeWorkspacePage({ params }: { params: { id: str
           <TabsTrigger value="quotes">Quotes</TabsTrigger>
           <TabsTrigger value="quotations">Quotations</TabsTrigger>
           <TabsTrigger value="order-lines">Order Lines</TabsTrigger>
+          <TabsTrigger value="financial">Financial</TabsTrigger>
           <TabsTrigger value="invoices">Invoices</TabsTrigger>
           <TabsTrigger value="ledger">Ledger</TabsTrigger>
           <TabsTrigger value="documents">Documents</TabsTrigger>
@@ -532,6 +549,17 @@ export default async function TradeWorkspacePage({ params }: { params: { id: str
             workingExchangeRate={trade.working_exchange_rate}
           />
         </TabsContent>
+        <TabsContent value="financial">
+          <FinancialTab
+            book={shareholderBookData}
+            canManage={canManage}
+            clientInvoices={clientInvoiceRows}
+            supplierInvoices={supplierInvoiceOutgoingRows}
+            tradeExpenses={tradeExpenseRows}
+            tradeId={trade.id}
+            workingExchangeRate={trade.working_exchange_rate}
+          />
+        </TabsContent>
         <TabsContent value="documents">
           <DocumentsTab initialDocuments={tradeDocumentRows} tradeCode={trade.trade_id} tradeId={trade.id} />
         </TabsContent>
@@ -605,7 +633,6 @@ export default async function TradeWorkspacePage({ params }: { params: { id: str
             shareholders={tradeShareholderRows}
             tradeId={trade.id}
           />
-          <ShareholderBookCard book={shareholderBookData} canManage={canManage} tradeId={trade.id} />
         </TabsContent>
         <TabsContent value="judy">
           <JudyChat tradeId={trade.id} />

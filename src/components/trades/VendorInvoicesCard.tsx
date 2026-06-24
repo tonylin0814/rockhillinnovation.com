@@ -23,6 +23,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { buildDownloadUrl } from "@/lib/download";
 import type { ExpenseVendorInvoice, TradeShareholder } from "@/types";
 import { GenerateVendorInvoiceDialog } from "./GenerateVendorInvoiceDialog";
 
@@ -157,10 +158,9 @@ export function VendorInvoicesCard({
                   <TableCell>
                     {invoice.pdf_onedrive_url ? (
                       <a
+                        download
                         className="font-medium text-[#0d1b34] underline-offset-4 hover:underline"
-                        href={invoice.pdf_onedrive_url}
-                        rel="noreferrer"
-                        target="_blank"
+                        href={buildDownloadUrl(invoice.pdf_onedrive_url, `vendor-invoice-${invoice.id}.pdf`)}
                       >
                         Download
                       </a>
