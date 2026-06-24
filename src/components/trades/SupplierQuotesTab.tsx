@@ -30,6 +30,7 @@ type ProductOption = {
   code: string;
   supplier_product_code: string | null;
   name_english: string;
+  latest_cost_rmb?: number | null;
 };
 
 type LoadedQuoteLines = {

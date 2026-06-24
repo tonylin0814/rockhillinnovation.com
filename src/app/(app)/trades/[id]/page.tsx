@@ -269,13 +269,43 @@ export default async function TradeWorkspacePage({ params }: { params: { id: str
     notFound();
   }
 
+  const activeProductRows = (activeProducts ?? []) as Product[];
+  const activeProductIds = activeProductRows.map((product) => product.id);
+  const latestCostByProductId = new Map<string, number>();
+
+  if (activeProductIds.length) {
+    const { data: latestCosts, error: latestCostsError } = await supabase
+      .from("product_cost_history")
+      .select("product_id, unit_cost_rmb")
+      .in("product_id", activeProductIds)
+      .order("quoted_date", { ascending: false })
+      .order("created_at", { ascending: false });
+
+    if (latestCostsError) {
+      return (
+        <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm font-medium text-red-700">
+          {latestCostsError.message}
+        </div>
+      );
+    }
+
+    for (const row of (latestCosts ?? []) as { product_id: string; unit_cost_rmb: number | string }[]) {
+      if (!latestCostByProductId.has(row.product_id)) {
+        latestCostByProductId.set(row.product_id, Number(row.unit_cost_rmb));
+      }
+    }
+  }
+
   const trade = data as Trade;
   const tradeParticipants = (participants ?? []) as TradeParticipant[];
   const clientOptions = (clients ?? []) as TradeClientOption[];
   const partnerOptions = (partners ?? []) as TradePartnerOption[];
   const orderLineRows = (orderLines ?? []) as OrderLine[];
   const componentDemandRows = (componentDemand ?? []) as ComponentDemand[];
-  const activeProductOptions = (activeProducts ?? []) as Product[];
+  const activeProductOptions = activeProductRows.map((product) => ({
+    ...product,
+    latest_cost_rmb: latestCostByProductId.get(product.id) ?? null,
+  }));
   const tradeShareholderRows = (tradeShareholders ?? []) as TradeShareholder[];
   const activeVendorOptions = (activeVendors ?? []) as ExpenseVendor[];
   const quoteSessionRows = (quoteSessions ?? []) as SupplierQuoteSession[];
