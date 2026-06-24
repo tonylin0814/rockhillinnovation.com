@@ -1,5 +1,5 @@
 import { buildBaseHtml } from "@/lib/templates/base";
-import type { CompanySettings, InvoiceAdjustmentLine } from "@/types";
+import type { CompanyBankingAccount, CompanySettings, InvoiceAdjustmentLine } from "@/types";
 
 type InvoiceLine = {
   itemCode?: string | null;
@@ -11,6 +11,7 @@ type InvoiceLine = {
 
 type BuildProFormaParams = {
   adjustmentLines?: InvoiceAdjustmentLine[];
+  bankingAccount?: CompanyBankingAccount | null;
   billToAddress?: string | null;
   billToName?: string;
   clientAddress?: string | null;
@@ -57,6 +58,104 @@ function multiline(value: string | null) {
   return escapeHtml(value ?? "").replace(/\n/g, "<br />");
 }
 
+function buildBankingPage(
+  account: CompanyBankingAccount | null,
+  invoiceNumber: string,
+  billToName: string,
+  logoBase64: string | null,
+  companyInfo: CompanySettings | null
+): string {
+  if (!account) return "";
+
+  const companyName = companyInfo?.company_name ?? "ROCK HILL INNOVATION CO., LTD";
+  const logoHtml = logoBase64
+    ? `<img src="${logoBase64}" alt="${escapeHtml(companyName)}" class="doc-logo" />`
+    : `<div style="color:#0d1b34;font-size:16pt;font-weight:800;margin-bottom:6px;">${escapeHtml(companyName)}</div>`;
+
+  const addressLines = [
+    account.bank_address ? null : companyInfo?.address_line1,
+    companyInfo?.address_line2,
+    companyInfo?.city_state,
+  ].filter(Boolean);
+  const contactLine = [companyInfo?.email, companyInfo?.phone]
+    .filter(Boolean)
+    .map((value) => escapeHtml(value!))
+    .join(" &nbsp;|&nbsp; ");
+
+  const rows: Array<[string, string | null | undefined]> = [
+    ["Bank", account.bank_name],
+    ["Branch", account.bank_branch],
+    ["Bank address", account.bank_address],
+    ["Beneficiary", account.account_name],
+    ["Account number", account.account_number],
+    ["SWIFT / BIC", account.swift_code],
+    ["Routing / ABA", account.routing_number],
+    ["IBAN", account.iban],
+    ["Intermediary bank", account.intermediary_bank],
+  ];
+
+  const rowsHtml = rows
+    .filter(([, value]) => value)
+    .map(
+      ([label, value]) => `
+      <tr>
+        <td style="border:none;border-top:1px solid #eee;padding:11px 14px;font-size:9pt;color:#5a6270;white-space:nowrap;vertical-align:top;width:1.8in;">${escapeHtml(label)}</td>
+        <td style="border:none;border-top:1px solid #eee;padding:11px 14px;font-size:10pt;color:#0d1b34;font-weight:600;">${escapeHtml(value!)}</td>
+      </tr>`
+    )
+    .join("");
+
+  const currencyLabel = account.label ?? `${account.currency} Wire Transfer`;
+
+  return `
+    <div class="page-break"></div>
+
+    <div class="doc-header">
+      <div>
+        ${logoHtml}
+        ${addressLines.map((line) => `<div class="doc-address-line">${escapeHtml(line!)}</div>`).join("")}
+        ${contactLine ? `<div class="doc-address-line">${contactLine}</div>` : ""}
+      </div>
+      <div class="doc-type-badge" style="font-size:12pt;padding:10px 18px;white-space:nowrap;">BANKING INFO</div>
+    </div>
+
+    <div style="margin-bottom:22px;">
+      <div style="font-size:8pt;color:#5a6270;margin-bottom:2px;">Re: Invoice</div>
+      <div style="color:#0d1b34;font-weight:700;font-size:12pt;">
+        ${escapeHtml(invoiceNumber)}
+        <span style="font-weight:400;font-size:9pt;color:#5a6270;">- ${escapeHtml(billToName)}</span>
+      </div>
+      <div style="margin-top:12px;background:#f5f6f8;border-left:3px solid #0d1b34;padding:10px 16px;font-size:9pt;color:#444;-webkit-print-color-adjust:exact;print-color-adjust:exact;">
+        Please wire your payment to the account below.
+        <strong style="color:#0d1b34;">Always include your invoice number as the wire reference</strong>
+        so we can match your payment immediately.
+      </div>
+    </div>
+
+    <div style="border:1px solid #e4e6ea;border-radius:4px;overflow:hidden;-webkit-print-color-adjust:exact;print-color-adjust:exact;">
+      <div style="background:#0d1b34;color:#fff;padding:12px 16px;-webkit-print-color-adjust:exact;print-color-adjust:exact;">
+        <span style="font-size:9pt;font-weight:600;letter-spacing:0.06em;opacity:0.7;">${escapeHtml(account.currency)}</span>
+        &nbsp;&nbsp;
+        <span style="font-size:11pt;font-weight:700;">${escapeHtml(currencyLabel)}</span>
+      </div>
+      <table style="width:100%;border-collapse:collapse;margin:0;">${rowsHtml}</table>
+      ${
+        account.notes
+          ? `
+        <div style="padding:10px 14px;background:#f5f6f8;border-top:1px solid #e4e6ea;font-size:8.5pt;color:#5a6270;font-style:italic;-webkit-print-color-adjust:exact;print-color-adjust:exact;">
+          ${escapeHtml(account.notes)}
+        </div>`
+          : ""
+      }
+    </div>
+
+    <div style="margin-top:20px;background:#fff8e7;border:1px solid #f0d070;border-left:3px solid #d4a000;padding:10px 14px;font-size:8.5pt;color:#5a4200;border-radius:0 4px 4px 0;-webkit-print-color-adjust:exact;print-color-adjust:exact;">
+      <strong>Important:</strong>
+      Bank fees are the sender's responsibility. If your bank deducts a fee that results in a shortfall,
+      please arrange an additional transfer to cover the difference.
+    </div>`;
+}
+
 function companyAddressLines(companyInfo: CompanySettings | null) {
   return [
     companyInfo?.address_line1 ?? "5F., No. 7, Ln. 332, Sec. 2, Zhongshan Rd., Zhonghe Dist.",
@@ -78,6 +177,7 @@ function round2(value: number) {
 
 export function buildProFormaHtml({
   adjustmentLines = [],
+  bankingAccount = null,
   billToAddress,
   billToName,
   clientAddress,
@@ -246,6 +346,8 @@ export function buildProFormaHtml({
     ${paymentScheduleHtml}
 
     ${notes ? `<div class="info-block no-break"><strong>Notes:</strong> ${multiline(notes)}</div>` : ""}
+
+    ${buildBankingPage(bankingAccount, invoiceNumber, resolvedBillToName, logoBase64, companyInfo)}
   `;
 
   return buildBaseHtml({ companyInfo, content, logoBase64, title: `Invoice ${invoiceNumber}` });
