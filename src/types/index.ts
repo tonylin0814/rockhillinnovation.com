@@ -367,6 +367,16 @@ export type SupplierInvoiceOutgoing = {
   created_at: string;
   supplier_invoice_ref: string | null;
   supplier_stated_amount_rmb: number | null;
+  adjustments?: SupplierInvoiceAdjustment[];
+};
+
+export type SupplierInvoiceAdjustment = {
+  id: string;
+  invoice_id: string;
+  description: string;
+  amount_rmb: number;
+  notes: string | null;
+  created_at: string;
 };
 
 export type ExpenseVendorInvoice = {

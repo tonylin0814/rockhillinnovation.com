@@ -6,7 +6,7 @@ export type SupplierInvoiceLine = {
   quantity: number;
   unitPriceRmb: number;
   totalRmb: number;
-  paymentCategory: "outsourced" | "produced" | "misc_expense";
+  paymentCategory: "outsourced" | "produced" | "misc_expense" | "adjustment";
 };
 
 function escapeHtml(value: string) {
@@ -44,6 +44,7 @@ function multiline(value: string | null) {
 }
 
 const categoryLabels: Record<SupplierInvoiceLine["paymentCategory"], string> = {
+  adjustment: "Adjustment",
   misc_expense: "Misc Expense",
   outsourced: "Outsourced",
   produced: "Produced",

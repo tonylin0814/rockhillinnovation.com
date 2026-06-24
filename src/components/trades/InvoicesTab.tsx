@@ -2,7 +2,7 @@
 
 import { ChevronDown, FileText, Mail, MoreHorizontal } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useTransition } from "react";
+import { Fragment, useTransition } from "react";
 import { toast } from "sonner";
 
 import { updateInvoiceStatus } from "@/app/actions/invoices";
@@ -378,42 +378,70 @@ export function InvoicesTab({
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {initialSupplierInvoices.map((invoice) => (
-                    <TableRow key={invoice.id}>
-                      <TableCell className="font-mono text-xs">{invoice.invoice_number}</TableCell>
-                      <TableCell>
-                        <SupplierTypeBadge type={invoice.invoice_type} />
-                      </TableCell>
-                      <TableCell>{formatDate(invoice.invoice_date)}</TableCell>
-                      <TableCell>
-                        <StatusBadge status={invoice.status} />
-                      </TableCell>
-                      <TableCell>{formatRmb(invoice.total_rmb)}</TableCell>
-                      <TableCell>{invoice.total_usd != null ? formatUsd(invoice.total_usd) : "-"}</TableCell>
-                      <TableCell>
-                        {invoice.pdf_onedrive_url ? (
-                          <a
-                            className="font-medium text-[#0d1b34] underline-offset-4 hover:underline"
-                            href={invoice.pdf_onedrive_url}
-                            rel="noreferrer"
-                            target="_blank"
-                          >
-                            Download
-                          </a>
-                        ) : (
-                          "-"
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        <SupplierInvoiceMatchDialog canManage={canManage} invoice={invoice} />
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex justify-end">
-                          {canManage ? <SupplierInvoiceStatusDropdown invoice={invoice} /> : null}
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                  {initialSupplierInvoices.map((invoice) => {
+                    const adjustments = invoice.adjustments ?? [];
+
+                    return (
+                      <Fragment key={invoice.id}>
+                        <TableRow>
+                          <TableCell className="font-mono text-xs">{invoice.invoice_number}</TableCell>
+                          <TableCell>
+                            <SupplierTypeBadge type={invoice.invoice_type} />
+                          </TableCell>
+                          <TableCell>{formatDate(invoice.invoice_date)}</TableCell>
+                          <TableCell>
+                            <StatusBadge status={invoice.status} />
+                          </TableCell>
+                          <TableCell>{formatRmb(invoice.total_rmb)}</TableCell>
+                          <TableCell>{invoice.total_usd != null ? formatUsd(invoice.total_usd) : "-"}</TableCell>
+                          <TableCell>
+                            {invoice.pdf_onedrive_url ? (
+                              <a
+                                className="font-medium text-[#0d1b34] underline-offset-4 hover:underline"
+                                href={invoice.pdf_onedrive_url}
+                                rel="noreferrer"
+                                target="_blank"
+                              >
+                                Download
+                              </a>
+                            ) : (
+                              "-"
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            <SupplierInvoiceMatchDialog canManage={canManage} invoice={invoice} />
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex justify-end">
+                              {canManage ? <SupplierInvoiceStatusDropdown invoice={invoice} /> : null}
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                        {invoice.invoice_type === "final" && adjustments.length ? (
+                          <TableRow className="bg-slate-50">
+                            <TableCell colSpan={9}>
+                              <div className="space-y-2 py-2">
+                                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                                  Adjustments
+                                </p>
+                                <div className="space-y-1">
+                                  {adjustments.map((adjustment) => (
+                                    <div
+                                      className="flex flex-col gap-1 text-sm sm:flex-row sm:items-center sm:justify-between"
+                                      key={adjustment.id}
+                                    >
+                                      <span className="text-[#0d1b34]">{adjustment.description}</span>
+                                      <span className="font-medium text-[#0d1b34]">{formatRmb(adjustment.amount_rmb)}</span>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ) : null}
+                      </Fragment>
+                    );
+                  })}
                 </TableBody>
               </Table>
             </CardContent>

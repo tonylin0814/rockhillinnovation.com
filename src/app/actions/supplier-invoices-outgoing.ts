@@ -12,6 +12,10 @@ import { buildSupplierInvoiceOutgoingHtml } from "@/lib/templates/supplier-invoi
 export type ActionResult = { success?: true; error?: string; invoiceId?: string; downloadUrl?: string };
 
 type InvoiceKind = "deposit" | "final";
+type SupplierInvoiceAdjustmentInput = {
+  amount_rmb: number;
+  description: string;
+};
 
 function emptyToNull(value: FormDataEntryValue | null): string | null {
   if (typeof value !== "string") {
@@ -30,6 +34,11 @@ const invoiceSchema = z.object({
   invoice_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Invalid date"),
   invoice_number: z.string().trim().min(1, "Invoice number is required"),
   notes: z.string().trim().nullable(),
+});
+
+const adjustmentSchema = z.object({
+  amount_rmb: z.coerce.number().positive("Adjustment amount must be greater than zero"),
+  description: z.string().trim().min(1, "Adjustment description is required"),
 });
 
 const matchSchema = z.object({
@@ -51,6 +60,36 @@ async function requireManager() {
   }
 
   return { user };
+}
+
+function parseAdjustments(formData: FormData, invoiceType: InvoiceKind) {
+  if (invoiceType !== "final") {
+    return { adjustments: [] as SupplierInvoiceAdjustmentInput[] };
+  }
+
+  const raw = emptyToNull(formData.get("adjustments_json"));
+
+  if (!raw) {
+    return { adjustments: [] as SupplierInvoiceAdjustmentInput[] };
+  }
+
+  try {
+    const parsedJson = JSON.parse(raw);
+    const parsed = z.array(adjustmentSchema).safeParse(parsedJson);
+
+    if (!parsed.success) {
+      return { error: parsed.error.issues[0]?.message ?? "Invalid adjustment lines" };
+    }
+
+    return {
+      adjustments: parsed.data.map((adjustment) => ({
+        amount_rmb: roundMoney(adjustment.amount_rmb),
+        description: adjustment.description,
+      })),
+    };
+  } catch {
+    return { error: "Invalid adjustment lines" };
+  }
 }
 
 export async function generateSupplierInvoiceOutgoing(
@@ -77,6 +116,12 @@ export async function generateSupplierInvoiceOutgoing(
 
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Invalid invoice" };
+  }
+
+  const parsedAdjustments = parseAdjustments(formData, invoiceType);
+
+  if ("error" in parsedAdjustments) {
+    return { error: parsedAdjustments.error };
   }
 
   const supabase = createServerSupabaseClient();
@@ -215,14 +260,31 @@ export async function generateSupplierInvoiceOutgoing(
     };
   });
 
-  const totalRmb = roundMoney(invoiceLines.reduce((sum, line) => sum + line.pdf.totalRmb, 0));
+  const adjustmentLines = parsedAdjustments.adjustments.map((adjustment, index) => ({
+    dbLine: {
+      amount_rmb: adjustment.amount_rmb,
+      description: adjustment.description,
+    },
+    pdf: {
+      descriptionChinese: null,
+      descriptionEnglish: adjustment.description,
+      paymentCategory: "adjustment" as const,
+      quantity: 1,
+      totalRmb: adjustment.amount_rmb,
+      unitPriceRmb: adjustment.amount_rmb,
+    },
+    sortOrder: invoiceLines.length + index + 1,
+  }));
+  const baseTotalRmb = roundMoney(invoiceLines.reduce((sum, line) => sum + line.pdf.totalRmb, 0));
+  const adjustmentTotalRmb = roundMoney(adjustmentLines.reduce((sum, line) => sum + line.pdf.totalRmb, 0));
+  const totalRmb = roundMoney(baseTotalRmb + adjustmentTotalRmb);
   const totalUsd = exchangeRate ? roundMoney(totalRmb / exchangeRate) : null;
   const html = buildSupplierInvoiceOutgoingHtml({
     exchangeRate,
     invoiceDate: parsed.data.invoice.invoice_date,
     invoiceNumber: parsed.data.invoice.invoice_number,
     invoiceType,
-    lines: invoiceLines.map((line) => line.pdf),
+    lines: [...invoiceLines.map((line) => line.pdf), ...adjustmentLines.map((line) => line.pdf)],
     notes: parsed.data.invoice.notes,
     supplierAddress,
     supplierName,
@@ -276,6 +338,21 @@ export async function generateSupplierInvoiceOutgoing(
 
   if (linesInsertError) {
     return { error: linesInsertError.message };
+  }
+
+  if (adjustmentLines.length) {
+    const { error: adjustmentError } = await supabase.from("supplier_invoice_adjustments").insert(
+      adjustmentLines.map((line) => ({
+        amount_rmb: line.dbLine.amount_rmb,
+        description: line.dbLine.description,
+        invoice_id: invoice.id,
+        notes: null,
+      }))
+    );
+
+    if (adjustmentError) {
+      return { error: adjustmentError.message };
+    }
   }
 
   const { error: documentError } = await supabase.from("trade_documents").insert({
