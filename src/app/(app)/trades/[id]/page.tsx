@@ -13,6 +13,7 @@ import { JudyChat } from "@/components/trades/JudyChat";
 import { LedgerTab } from "@/components/trades/LedgerTab";
 import { ManagePartnersDialog } from "@/components/trades/ManagePartnersDialog";
 import { OrderLinesTab } from "@/components/trades/OrderLinesTab";
+import { PackingTab } from "@/components/trades/PackingTab";
 import { ShareholderRulesEditor } from "@/components/trades/ShareholderRulesEditor";
 import { SupplierQuotesTab } from "@/components/trades/SupplierQuotesTab";
 import { TradeEditDialog } from "@/components/trades/TradeEditDialog";
@@ -47,6 +48,7 @@ import type {
   TradeExpense,
   TradeLedgerEntry,
   TradeMilestone,
+  TradePackingPlan,
   TradeParticipant,
   TradeShareholder,
   UserRole,
@@ -145,6 +147,7 @@ export default async function TradeWorkspacePage({ params }: { params: { id: str
     { data: devVersions, error: devVersionsError },
     { data: devCosts, error: devCostsError },
     { data: diaryEntries, error: diaryEntriesError },
+    { data: packingPlan, error: packingPlanError },
     { data: acceptedQuotationLines, error: acceptedQuotationLinesError },
     { data: confirmedQuoteLines, error: confirmedQuoteLinesError },
     { data: tradeExpenses, error: tradeExpensesError },
@@ -254,6 +257,11 @@ export default async function TradeWorkspacePage({ params }: { params: { id: str
       .eq("trade_id", params.id)
       .order("created_at", { ascending: false }),
     supabase
+      .from("trade_packing_plans")
+      .select("*, pallets:trade_packing_pallets(*, cases:trade_packing_cases(*))")
+      .eq("trade_id", params.id)
+      .maybeSingle(),
+    supabase
       .from("client_quotation_lines")
       .select("total_price_usd, session:client_quotation_sessions!inner(status, trade_id)")
       .eq("client_quotation_sessions.trade_id", params.id)
@@ -293,6 +301,7 @@ export default async function TradeWorkspacePage({ params }: { params: { id: str
     devVersionsError ||
     devCostsError ||
     diaryEntriesError ||
+    packingPlanError ||
     acceptedQuotationLinesError ||
     confirmedQuoteLinesError ||
     tradeExpensesError
@@ -321,6 +330,7 @@ export default async function TradeWorkspacePage({ params }: { params: { id: str
           devVersionsError?.message ??
           devCostsError?.message ??
           diaryEntriesError?.message ??
+          packingPlanError?.message ??
           acceptedQuotationLinesError?.message ??
           confirmedQuoteLinesError?.message ??
           tradeExpensesError?.message}
@@ -397,6 +407,17 @@ export default async function TradeWorkspacePage({ params }: { params: { id: str
   const developmentVersions = (devVersions ?? []) as TradeDevelopmentVersion[];
   const developmentCosts = (devCosts ?? []) as TradeDevelopmentCost[];
   const diaryEntryRows = (diaryEntries ?? []) as TradeDiaryEntry[];
+  const normalizedPackingPlan = packingPlan
+    ? ({
+        ...packingPlan,
+        pallets: ((packingPlan.pallets ?? []) as TradePackingPlan["pallets"])
+          .map((pallet) => ({
+            ...pallet,
+            cases: [...(pallet.cases ?? [])].sort((a, b) => a.sort_order - b.sort_order),
+          }))
+          .sort((a, b) => a.sort_order - b.sort_order),
+      } as TradePackingPlan)
+    : null;
   const tradeExpenseRows = (tradeExpenses ?? []) as TradeExpense[];
   const shareholderBookConfirmed = shareholderBookData?.status === "confirmed";
   const depositRate = exchangeRateRows.find((rate) => rate.payment_type === "deposit") ?? null;
@@ -475,6 +496,7 @@ export default async function TradeWorkspacePage({ params }: { params: { id: str
           <TabsTrigger value="quotes">Quotes</TabsTrigger>
           <TabsTrigger value="quotations">Quotations</TabsTrigger>
           <TabsTrigger value="order-lines">Order Lines</TabsTrigger>
+          {canManage ? <TabsTrigger value="packing">Packing</TabsTrigger> : null}
           {canViewFinancials ? <TabsTrigger value="financial">Financial</TabsTrigger> : null}
           <TabsTrigger value="invoices">Invoices</TabsTrigger>
           <TabsTrigger value="ledger">Ledger</TabsTrigger>
@@ -601,6 +623,11 @@ export default async function TradeWorkspacePage({ params }: { params: { id: str
             workingExchangeRate={trade.working_exchange_rate}
           />
         </TabsContent>
+        {canManage ? (
+          <TabsContent value="packing">
+            <PackingTab canManage={canManage} initialPlan={normalizedPackingPlan} tradeId={trade.id} />
+          </TabsContent>
+        ) : null}
         {canViewFinancials ? (
           <TabsContent value="financial">
             <FinancialTab

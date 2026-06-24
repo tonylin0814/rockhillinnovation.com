@@ -659,3 +659,49 @@ export type ShareholderPayout = {
   created_by: string | null;
   created_at: string;
 };
+
+export type ContainerType = "20ft" | "40ft" | "40hq";
+export type PackingPlanStatus = "draft" | "confirmed";
+
+export type TradePalletCase = {
+  id: string;
+  plan_id: string;
+  pallet_id: string;
+  product_id: string;
+  product_code: string;
+  product_name: string;
+  case_number: number;
+  case_label: string;
+  qty_in_case: number;
+  weight_kg: number;
+  sort_order: number;
+};
+
+export type TradePalletRow = {
+  id: string;
+  plan_id: string;
+  pallet_number: number;
+  pallet_label: string;
+  is_mixed: boolean;
+  total_cases: number;
+  total_weight_kg: number | null;
+  notes: string | null;
+  sort_order: number;
+  cases: TradePalletCase[];
+};
+
+export type TradePackingPlan = {
+  id: string;
+  trade_id: string;
+  container_type: ContainerType;
+  pallet_length_cm: number;
+  pallet_width_cm: number;
+  pallet_height_cm: number;
+  pallet_max_weight_kg: number;
+  forklift_clearance_cm: number;
+  status: PackingPlanStatus;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+  pallets: TradePalletRow[];
+};
