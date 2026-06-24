@@ -42,7 +42,6 @@ export default async function HistoryPage() {
       .select(
         "*, product:products(id, code, supplier_product_code, name_english, name_chinese), session:client_quotation_sessions(id, session_number, quote_date, status, trade:trades(id, trade_id))"
       )
-      .order("created_at", { ascending: false })
       .limit(300),
     supabase
       .from("products")
