@@ -2,7 +2,6 @@ import Link from "next/link";
 
 import { VendorFormDialog } from "@/components/vendors/VendorFormDialog";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Table,
@@ -104,14 +103,17 @@ export default async function VendorsPage() {
                 <TableHead>Country</TableHead>
                 <TableHead>Letterhead</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {(vendors as ExpenseVendor[]).length ? (
                 (vendors as ExpenseVendor[]).map((vendor) => (
                   <TableRow key={vendor.id}>
-                    <TableCell className="font-semibold text-[#0d1b34]">{vendor.code}</TableCell>
+                    <TableCell className="font-semibold text-[#0d1b34]">
+                      <Link className="transition-colors hover:text-blue-700 hover:underline" href={`/vendors/${vendor.id}`}>
+                        {vendor.code}
+                      </Link>
+                    </TableCell>
                     <TableCell>
                       <VendorTypeBadge type={vendor.vendor_type} />
                     </TableCell>
@@ -126,16 +128,11 @@ export default async function VendorsPage() {
                     <TableCell>
                       <StatusBadge status={vendor.status} />
                     </TableCell>
-                    <TableCell className="text-right">
-                      <Button asChild size="sm" variant="outline">
-                        <Link href={`/vendors/${vendor.id}`}>View</Link>
-                      </Button>
-                    </TableCell>
                   </TableRow>
                 ))
               ) : (
                 <TableRow>
-                  <TableCell className="text-slate-500" colSpan={6}>
+                  <TableCell className="text-slate-500" colSpan={5}>
                     No vendors yet.
                   </TableCell>
                 </TableRow>

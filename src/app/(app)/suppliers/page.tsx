@@ -2,7 +2,6 @@ import Link from "next/link";
 
 import { SupplierFormDialog } from "@/components/suppliers/SupplierFormDialog";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Table,
@@ -94,14 +93,17 @@ export default async function SuppliersPage() {
                 <TableHead>Country</TableHead>
                 <TableHead>Invoice Format</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {(suppliers as Supplier[]).length ? (
                 (suppliers as Supplier[]).map((supplier) => (
                   <TableRow key={supplier.id}>
-                    <TableCell className="font-semibold text-[#0d1b34]">{supplier.code}</TableCell>
+                    <TableCell className="font-semibold text-[#0d1b34]">
+                      <Link className="transition-colors hover:text-blue-700 hover:underline" href={`/suppliers/${supplier.id}`}>
+                        {supplier.code}
+                      </Link>
+                    </TableCell>
                     <TableCell>{supplier.name_chinese ?? "—"}</TableCell>
                     <TableCell>{supplier.country ?? "—"}</TableCell>
                     <TableCell>
@@ -110,16 +112,11 @@ export default async function SuppliersPage() {
                     <TableCell>
                       <StatusBadge status={supplier.status} />
                     </TableCell>
-                    <TableCell className="text-right">
-                      <Button asChild size="sm" variant="outline">
-                        <Link href={`/suppliers/${supplier.id}`}>View</Link>
-                      </Button>
-                    </TableCell>
                   </TableRow>
                 ))
               ) : (
                 <TableRow>
-                  <TableCell className="text-slate-500" colSpan={6}>
+                  <TableCell className="text-slate-500" colSpan={5}>
                     No suppliers yet.
                   </TableCell>
                 </TableRow>
