@@ -14,6 +14,7 @@ import { ShareholderBookCard } from "@/components/trades/ShareholderBookCard";
 import { ShareholderRulesEditor } from "@/components/trades/ShareholderRulesEditor";
 import { SupplierQuotesTab } from "@/components/trades/SupplierQuotesTab";
 import { TradeEditDialog } from "@/components/trades/TradeEditDialog";
+import { TradePnlCard } from "@/components/trades/TradePnlCard";
 import { TradeStatusDropdown } from "@/components/trades/TradeStatusDropdown";
 import { VendorInvoicesCard } from "@/components/trades/VendorInvoicesCard";
 import type { TradeClientOption, TradePartnerOption } from "@/components/trades/NewTradeDialog";
@@ -135,6 +136,8 @@ export default async function TradeWorkspacePage({ params }: { params: { id: str
     { data: shareholderBook, error: shareholderBookError },
     { data: devVersions, error: devVersionsError },
     { data: devCosts, error: devCostsError },
+    { data: acceptedQuotationLines, error: acceptedQuotationLinesError },
+    { data: confirmedQuoteLines, error: confirmedQuoteLinesError },
   ] = await Promise.all([
     supabase
       .from("trades")
@@ -234,6 +237,16 @@ export default async function TradeWorkspacePage({ params }: { params: { id: str
       .select("*")
       .eq("trade_id", params.id)
       .order("created_at", { ascending: true }),
+    supabase
+      .from("client_quotation_lines")
+      .select("total_price_usd, session:client_quotation_sessions!inner(status, trade_id)")
+      .eq("client_quotation_sessions.trade_id", params.id)
+      .eq("client_quotation_sessions.status", "accepted"),
+    supabase
+      .from("supplier_quote_lines")
+      .select("total_price_rmb, session:supplier_quote_sessions!inner(status, trade_id)")
+      .eq("supplier_quote_sessions.trade_id", params.id)
+      .eq("supplier_quote_sessions.status", "confirmed"),
   ]);
 
   if (
@@ -256,7 +269,9 @@ export default async function TradeWorkspacePage({ params }: { params: { id: str
     ledgerEntriesError ||
     shareholderBookError ||
     devVersionsError ||
-    devCostsError
+    devCostsError ||
+    acceptedQuotationLinesError ||
+    confirmedQuoteLinesError
   ) {
     return (
       <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm font-medium text-red-700">
@@ -279,7 +294,9 @@ export default async function TradeWorkspacePage({ params }: { params: { id: str
           ledgerEntriesError?.message ??
           shareholderBookError?.message ??
           devVersionsError?.message ??
-          devCostsError?.message}
+          devCostsError?.message ??
+          acceptedQuotationLinesError?.message ??
+          confirmedQuoteLinesError?.message}
       </div>
     );
   }
@@ -338,6 +355,46 @@ export default async function TradeWorkspacePage({ params }: { params: { id: str
   const shareholderBookData = (shareholderBook ?? null) as ShareholderBook | null;
   const developmentVersions = (devVersions ?? []) as TradeDevelopmentVersion[];
   const developmentCosts = (devCosts ?? []) as TradeDevelopmentCost[];
+  const depositRate = exchangeRateRows.find((rate) => rate.payment_type === "deposit") ?? null;
+  const finalRate = exchangeRateRows.find((rate) => rate.payment_type === "final") ?? null;
+  function round2(value: number) {
+    return Math.round((value + Number.EPSILON) * 100) / 100;
+  }
+
+  const revenueUsd: number | null =
+    acceptedQuotationLines && acceptedQuotationLines.length > 0
+      ? round2(acceptedQuotationLines.reduce((sum, line) => sum + Number(line.total_price_usd ?? 0), 0))
+      : null;
+
+  const costRmb: number | null =
+    confirmedQuoteLines && confirmedQuoteLines.length > 0
+      ? round2(confirmedQuoteLines.reduce((sum, line) => sum + Number(line.total_price_rmb ?? 0), 0))
+      : null;
+
+  const absorbedDevCostRmb = round2(
+    developmentCosts.filter((cost) => cost.is_absorbed).reduce((sum, cost) => sum + Number(cost.amount_rmb ?? 0), 0)
+  );
+  const absorbedDevCostCad = round2(
+    developmentCosts.filter((cost) => cost.is_absorbed).reduce((sum, cost) => sum + Number(cost.amount_cad ?? 0), 0)
+  );
+  const absorbedDevCostUsd = round2(
+    developmentCosts.filter((cost) => cost.is_absorbed).reduce((sum, cost) => sum + Number(cost.amount_usd ?? 0), 0)
+  );
+
+  function computeMargin(revenue: number | null, cost: number | null, rate: number | null) {
+    if (revenue == null || cost == null || !rate) {
+      return null;
+    }
+
+    const costUsd = round2(cost / rate);
+    const margin = round2(revenue - costUsd);
+    const marginPct = revenue > 0 ? round2((margin / revenue) * 100) : null;
+    return { costUsd, margin, marginPct };
+  }
+
+  const workingPnl = computeMargin(revenueUsd, costRmb, trade.working_exchange_rate);
+  const depositPnl = computeMargin(revenueUsd, costRmb, depositRate?.rate_rmb_per_usd ?? null);
+  const finalPnl = computeMargin(revenueUsd, costRmb, finalRate?.rate_rmb_per_usd ?? null);
   const participantPartnerIds = tradeParticipants.map((participant) => participant.user_id);
 
   return (
@@ -367,9 +424,9 @@ export default async function TradeWorkspacePage({ params }: { params: { id: str
           <TabsTrigger value="quotes">Quotes</TabsTrigger>
           <TabsTrigger value="quotations">Quotations</TabsTrigger>
           <TabsTrigger value="order-lines">Order Lines</TabsTrigger>
-          <TabsTrigger value="documents">Documents</TabsTrigger>
           <TabsTrigger value="invoices">Invoices</TabsTrigger>
           <TabsTrigger value="ledger">Ledger</TabsTrigger>
+          <TabsTrigger value="documents">Documents</TabsTrigger>
           <TabsTrigger value="shareholders">Shareholders</TabsTrigger>
           <TabsTrigger value="judy">Judy AI</TabsTrigger>
         </TabsList>
@@ -425,6 +482,20 @@ export default async function TradeWorkspacePage({ params }: { params: { id: str
               initialRates={exchangeRateRows}
               tradeId={trade.id}
               workingExchangeRate={trade.working_exchange_rate}
+            />
+
+            <TradePnlCard
+              absorbedDevCostCad={absorbedDevCostCad}
+              absorbedDevCostRmb={absorbedDevCostRmb}
+              absorbedDevCostUsd={absorbedDevCostUsd}
+              costRmb={costRmb}
+              depositPnl={depositPnl}
+              depositRateValue={depositRate?.rate_rmb_per_usd ?? null}
+              finalPnl={finalPnl}
+              finalRateValue={finalRate?.rate_rmb_per_usd ?? null}
+              revenueUsd={revenueUsd}
+              workingPnl={workingPnl}
+              workingRateValue={trade.working_exchange_rate}
             />
           </div>
         </TabsContent>
