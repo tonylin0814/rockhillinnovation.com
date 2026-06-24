@@ -1,5 +1,7 @@
 "use server";
 
+import fs from "fs";
+import path from "path";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
@@ -8,7 +10,7 @@ import { uploadToOneDrive } from "@/lib/onedrive";
 import { generatePdf } from "@/lib/pdf";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { buildProFormaHtml } from "@/lib/templates/pro-forma";
-import type { ClientInvoice } from "@/types";
+import type { ClientInvoice, InvoiceAdjustmentLine } from "@/types";
 
 type ActionResult = {
   success?: true;
@@ -16,18 +18,6 @@ type ActionResult = {
   downloadUrl?: string;
   error?: string;
 };
-
-type InvoiceKind = "pro_forma" | "deposit" | "final";
-
-const invoiceSchema = z.object({
-  invoice_number: z.string().trim().min(1, "Invoice number is required"),
-  invoice_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Invoice date is required"),
-  due_date: z
-    .string()
-    .regex(/^\d{4}-\d{2}-\d{2}$/, "Due date must be a valid date")
-    .nullable(),
-  notes: z.string().trim().nullable(),
-});
 
 const invoiceStatusSchema = z.enum(["draft", "sent", "paid"]);
 
@@ -41,7 +31,7 @@ async function requireInvoiceManager() {
   return { user };
 }
 
-function emptyToNull(value: FormDataEntryValue | null) {
+function emptyToNull(value: FormDataEntryValue | null): string | null {
   if (typeof value !== "string") {
     return null;
   }
@@ -63,48 +53,79 @@ function roundMoney(value: number) {
   return Math.round((value + Number.EPSILON) * 100) / 100;
 }
 
-function suffixInvoiceNumber(baseNumber: string, invoiceType: InvoiceKind) {
-  if (invoiceType === "deposit") {
-    return `${baseNumber}-D`;
+function parseAdjustmentLines(formData: FormData): InvoiceAdjustmentLine[] {
+  const raw = formData.get("adjustment_lines_json");
+
+  if (typeof raw !== "string" || !raw.trim()) {
+    return [];
   }
 
-  return baseNumber;
+  try {
+    const parsed = JSON.parse(raw);
+
+    if (!Array.isArray(parsed)) {
+      return [];
+    }
+
+    return parsed.filter(
+      (adjustment): adjustment is InvoiceAdjustmentLine =>
+        typeof adjustment === "object" &&
+        adjustment !== null &&
+        typeof adjustment.description === "string" &&
+        typeof adjustment.amount_usd === "number"
+    );
+  } catch {
+    return [];
+  }
 }
 
-async function generateClientInvoice(
-  tradeId: string,
-  formData: FormData,
-  invoiceType: InvoiceKind
-): Promise<ActionResult> {
+function loadLogoBase64(): string | null {
+  try {
+    const logoPath = path.join(process.cwd(), "public", "brand", "rockhill-logo-nav-cropped.png");
+    const buffer = fs.readFileSync(logoPath);
+    return `data:image/png;base64,${buffer.toString("base64")}`;
+  } catch {
+    return null;
+  }
+}
+
+export async function generateCommercialInvoice(tradeId: string, formData: FormData): Promise<ActionResult> {
   const access = await requireInvoiceManager();
 
   if ("error" in access) {
     return { error: access.error };
   }
 
-  const parsed = z
-    .object({
-      tradeId: z.string().uuid(),
-      invoice: invoiceSchema,
-    })
-    .safeParse({
-      tradeId,
-      invoice: {
-        due_date: emptyToNull(formData.get("due_date")),
-        invoice_date: formData.get("invoice_date"),
-        invoice_number: formData.get("invoice_number"),
-        notes: emptyToNull(formData.get("notes")),
-      },
-    });
+  const invoiceNumber = emptyToNull(formData.get("invoice_number"));
+  const invoiceDate = emptyToNull(formData.get("invoice_date"));
+  const depositDueDateRaw = emptyToNull(formData.get("deposit_due_date"));
+  const depositPctRaw = formData.get("deposit_pct");
+  const paymentTerms = emptyToNull(formData.get("payment_terms"));
+  const notes = emptyToNull(formData.get("notes"));
 
-  if (!parsed.success) {
-    return { error: parsed.error.issues[0]?.message ?? "Invalid invoice" };
+  if (!invoiceNumber) {
+    return { error: "Invoice number is required" };
   }
+
+  if (!invoiceDate || !/^\d{4}-\d{2}-\d{2}$/.test(invoiceDate)) {
+    return { error: "Invoice date is required" };
+  }
+
+  const depositPct = Math.min(100, Math.max(0, Number(depositPctRaw) || 50));
+  const depositDueDate =
+    depositDueDateRaw && /^\d{4}-\d{2}-\d{2}$/.test(depositDueDateRaw) ? depositDueDateRaw : null;
+  const adjustmentLines = parseAdjustmentLines(formData);
+  const logoBase64 = loadLogoBase64();
 
   const supabase = createServerSupabaseClient();
   const { data: trade, error: tradeError } = await supabase
     .from("trades")
-    .select("id, trade_id, client:clients(id, name, address, currency, deposit_pct, final_pct)")
+    .select(
+      `id, trade_id,
+       client:clients(id, name, address, currency, shipping_address),
+       order_lines(id, original_item_name, quantity, unit_price_usd, total_price_usd, sort_order,
+                   product:products(id, code, name_english))`
+    )
     .eq("id", tradeId)
     .maybeSingle();
 
@@ -116,69 +137,59 @@ async function generateClientInvoice(
     return { error: "Trade not found" };
   }
 
-  const { data: orderLines, error: orderLinesError } = await supabase
-    .from("order_lines")
-    .select("id, original_item_name, quantity, unit_price_usd, total_price_usd, sort_order, product:products(id, name_english)")
-    .eq("trade_id", tradeId)
-    .order("sort_order", { ascending: true });
-
-  if (orderLinesError) {
-    return { error: orderLinesError.message };
-  }
-
-  if (!orderLines?.length) {
-    return { error: "Add order lines before generating an invoice" };
-  }
-
   const client = Array.isArray(trade.client) ? trade.client[0] : trade.client;
 
   if (!client) {
-    return { error: "Trade client not found" };
+    return { error: "No client linked to this trade" };
   }
 
-  const pct =
-    invoiceType === "deposit"
-      ? Number(client.deposit_pct ?? 50)
-      : invoiceType === "final"
-        ? Number(client.final_pct ?? 50)
-        : 100;
-  const percentageMultiplier = pct / 100;
-  const invoiceNumber = suffixInvoiceNumber(parsed.data.invoice.invoice_number, invoiceType);
-  const suffixLabel =
-    invoiceType === "deposit" ? ` (Deposit ${pct}%)` : invoiceType === "final" ? ` (Final ${pct}%)` : "";
+  const rawLines = Array.isArray(trade.order_lines) ? trade.order_lines : [];
+  const invoiceLines = rawLines
+    .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
+    .map((line) => {
+      const product = Array.isArray(line.product) ? line.product[0] : line.product;
+      const quantity = Number(line.quantity);
+      const unitPrice = Number(line.unit_price_usd);
+      const total = roundMoney(quantity * unitPrice);
 
-  const invoiceLines = orderLines.map((line, index) => {
-    const product = Array.isArray(line.product) ? line.product[0] : line.product;
-    const quantity = Number(line.quantity);
-    const unitPrice = Number(line.unit_price_usd);
-    const originalTotal = Number(line.total_price_usd ?? quantity * unitPrice);
-    const total = invoiceType === "pro_forma" ? originalTotal : roundMoney(originalTotal * percentageMultiplier);
-    const dbQuantity = invoiceType === "pro_forma" || unitPrice === 0 ? quantity : total / unitPrice;
+      return {
+        dbQuantity: quantity,
+        description: line.original_item_name ?? product?.name_english ?? "Item",
+        itemCode: product?.code ?? null,
+        orderLineId: line.id,
+        quantity,
+        sortOrder: Number(line.sort_order ?? 0),
+        total,
+        unitPrice,
+      };
+    });
 
-    return {
-      dbQuantity,
-      description: `${line.original_item_name ?? product?.name_english ?? "Item"}${suffixLabel}`,
-      orderLineId: line.id,
-      quantity,
-      sortOrder: Number(line.sort_order ?? index + 1),
-      total,
-      unitPrice,
-    };
-  });
+  if (!invoiceLines.length) {
+    return { error: "Add order lines before generating an invoice" };
+  }
+
   const subtotal = roundMoney(invoiceLines.reduce((sum, line) => sum + line.total, 0));
-  const total = subtotal;
+  const adjustmentsTotal = adjustmentLines.reduce((sum, adjustment) => sum + adjustment.amount_usd, 0);
+  const totalUsd = roundMoney(subtotal + adjustmentsTotal);
+
   const html = buildProFormaHtml({
-    clientAddress: client.address ?? null,
-    clientName: client.name,
+    adjustmentLines,
+    billToAddress: client.address ?? null,
+    billToName: client.name,
     currency: client.currency ?? "USD",
-    invoiceDate: normalizeDate(parsed.data.invoice.invoice_date),
+    depositDueDate: depositDueDate ? normalizeDate(depositDueDate) : null,
+    depositPct,
+    invoiceDate: normalizeDate(invoiceDate),
     invoiceNumber,
-    invoiceType,
     lines: invoiceLines,
-    notes: parsed.data.invoice.notes,
+    logoBase64,
+    notes,
+    paymentTerms,
+    shipToAddress: client.shipping_address ?? null,
+    shipToName: client.name,
     subtotal,
-    total,
   });
+
   const pdfBuffer = await generatePdf(html);
   const fileName = `${invoiceNumber}.pdf`;
   const uploaded = await uploadToOneDrive({
@@ -192,15 +203,18 @@ async function generateClientInvoice(
   const { data: invoice, error: invoiceError } = await supabase
     .from("client_invoices")
     .insert({
-      due_date: parsed.data.invoice.due_date,
-      invoice_date: parsed.data.invoice.invoice_date,
+      adjustment_lines: adjustmentLines,
+      deposit_pct: depositPct,
+      due_date: depositDueDate,
+      invoice_date: invoiceDate,
       invoice_number: invoiceNumber,
-      invoice_type: invoiceType,
-      notes: parsed.data.invoice.notes,
+      invoice_type: "commercial",
+      notes,
+      payment_terms: paymentTerms,
       pdf_onedrive_url: uploaded.webUrl,
       status: "draft",
       subtotal_usd: subtotal,
-      total_usd: total,
+      total_usd: totalUsd,
       trade_id: tradeId,
     })
     .select("id")
@@ -227,10 +241,10 @@ async function generateClientInvoice(
 
   const { error: documentError } = await supabase.from("trade_documents").insert({
     document_category: "invoice",
-    document_type: invoiceType,
+    document_type: "commercial",
     file_name: fileName,
     file_size_bytes: pdfBuffer.length,
-    notes: parsed.data.invoice.notes,
+    notes,
     onedrive_file_id: uploaded.fileId,
     onedrive_url: uploaded.webUrl,
     related_party: "client",
@@ -248,17 +262,14 @@ async function generateClientInvoice(
   return { success: true, downloadUrl: uploaded.webUrl, invoiceId: invoice.id };
 }
 
-export async function generateProForma(tradeId: string, formData: FormData): Promise<ActionResult> {
-  return generateClientInvoice(tradeId, formData, "pro_forma");
-}
+export const generateProForma = (tradeId: string, formData: FormData) =>
+  generateCommercialInvoice(tradeId, formData);
 
-export async function generateDepositInvoice(tradeId: string, formData: FormData): Promise<ActionResult> {
-  return generateClientInvoice(tradeId, formData, "deposit");
-}
+export const generateDepositInvoice = (tradeId: string, formData: FormData) =>
+  generateCommercialInvoice(tradeId, formData);
 
-export async function generateFinalInvoice(tradeId: string, formData: FormData): Promise<ActionResult> {
-  return generateClientInvoice(tradeId, formData, "final");
-}
+export const generateFinalInvoice = (tradeId: string, formData: FormData) =>
+  generateCommercialInvoice(tradeId, formData);
 
 export async function updateInvoiceStatus(
   invoiceId: string,
@@ -271,10 +282,7 @@ export async function updateInvoiceStatus(
   }
 
   const parsed = z
-    .object({
-      invoiceId: z.string().uuid(),
-      status: invoiceStatusSchema,
-    })
+    .object({ invoiceId: z.string().uuid(), status: invoiceStatusSchema })
     .safeParse({ invoiceId, status });
 
   if (!parsed.success) {
