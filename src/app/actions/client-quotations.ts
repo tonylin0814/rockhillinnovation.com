@@ -6,6 +6,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
 import { getCurrentUser } from "@/lib/auth";
+import { logActivity } from "@/lib/activity-log";
 import { uploadToOneDrive } from "@/lib/onedrive";
 import { generatePdf } from "@/lib/pdf";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
@@ -151,6 +152,15 @@ export async function createQuotationSession(tradeId: string, formData: FormData
     return { error: error.message };
   }
 
+  await logActivity({
+    tradeId,
+    user: access.user,
+    action: "created",
+    targetTable: "client_quotation_sessions",
+    targetId: data.id,
+    summary: `New quotation session created`,
+  });
+
   revalidatePath(`/trades/${tradeId}`);
   return { success: true, id: data.id };
 }
@@ -196,6 +206,15 @@ export async function updateQuotationSessionStatus(
   if (error) {
     return { error: error.message };
   }
+
+  await logActivity({
+    tradeId: session.trade_id,
+    user: access.user,
+    action: "updated",
+    targetTable: "client_quotation_sessions",
+    targetId: sessionId,
+    summary: `Quotation status changed to ${status}`,
+  });
 
   revalidatePath(`/trades/${session.trade_id}`);
   return { success: true };
@@ -325,6 +344,15 @@ export async function generateQuotationPdf(
     return { error: documentError.message };
   }
 
+  await logActivity({
+    tradeId: session.trade_id,
+    user,
+    action: "updated",
+    targetTable: "client_quotation_sessions",
+    targetId: sessionId,
+    summary: `Quotation PDF generated: ${quotationRef}`,
+  });
+
   revalidatePath(`/trades/${session.trade_id}`);
   return { success: true, downloadUrl: uploaded.webUrl };
 }
@@ -420,6 +448,15 @@ export async function saveQuotationLines(sessionId: string, lines: QuotationLine
       return { error: insertError.message };
     }
   }
+
+  await logActivity({
+    tradeId: session.trade_id,
+    user: access.user,
+    action: "updated",
+    targetTable: "client_quotation_lines",
+    targetId: sessionId,
+    summary: `Quotation lines saved (${parsed.data.lines.length} lines)`,
+  });
 
   revalidatePath(`/trades/${session.trade_id}`);
   return { success: true };
