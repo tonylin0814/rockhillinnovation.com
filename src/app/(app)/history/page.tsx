@@ -2,6 +2,9 @@ import { HistoryTabs } from "@/components/history/HistoryTabs";
 import { getCurrentUser } from "@/lib/auth";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 function firstJoin<T>(value: T | T[] | null | undefined): T | null {
   return Array.isArray(value) ? value[0] ?? null : value ?? null;
 }
@@ -39,6 +42,7 @@ export default async function HistoryPage() {
       .select(
         "*, product:products(id, code, supplier_product_code, name_english, name_chinese), session:client_quotation_sessions(id, session_number, quote_date, status, trade:trades(id, trade_id))"
       )
+      .order("created_at", { ascending: false })
       .limit(300),
     supabase
       .from("products")
