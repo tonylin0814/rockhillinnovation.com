@@ -1,5 +1,5 @@
 import { buildBaseHtml } from "@/lib/templates/base";
-import type { InvoiceAdjustmentLine } from "@/types";
+import type { CompanySettings, InvoiceAdjustmentLine } from "@/types";
 
 type InvoiceLine = {
   itemCode?: string | null;
@@ -15,6 +15,7 @@ type BuildProFormaParams = {
   billToName?: string;
   clientAddress?: string | null;
   clientName?: string;
+  companyInfo?: CompanySettings | null;
   currency: string;
   depositDueDate?: string | null;
   depositPct?: number;
@@ -56,6 +57,21 @@ function multiline(value: string | null) {
   return escapeHtml(value ?? "").replace(/\n/g, "<br />");
 }
 
+function companyAddressLines(companyInfo: CompanySettings | null) {
+  return [
+    companyInfo?.address_line1 ?? "5F., No. 7, Ln. 332, Sec. 2, Zhongshan Rd., Zhonghe Dist.",
+    companyInfo?.address_line2,
+    companyInfo?.city_state ?? "New Taipei City, Taiwan 235026",
+  ].filter(Boolean);
+}
+
+function companyContactLine(companyInfo: CompanySettings | null) {
+  return [companyInfo?.email ?? "packaging@rockhill.com.tw", companyInfo?.phone ?? "(+886)2-22452580"]
+    .filter(Boolean)
+    .map((value) => escapeHtml(value!))
+    .join(" &nbsp;|&nbsp; ");
+}
+
 function round2(value: number) {
   return Math.round((value + Number.EPSILON) * 100) / 100;
 }
@@ -66,6 +82,7 @@ export function buildProFormaHtml({
   billToName,
   clientAddress,
   clientName,
+  companyInfo = null,
   currency,
   depositDueDate = null,
   depositPct = 50,
@@ -88,9 +105,12 @@ export function buildProFormaHtml({
   const balanceAmount = round2(grandTotal - depositAmount);
   const showSchedule = depositPct > 0 && depositPct < 100;
 
+  const companyName = companyInfo?.company_name ?? "ROCK HILL INNOVATION CO., LTD";
   const logoHtml = logoBase64
-    ? `<img src="${logoBase64}" alt="Rock Hill Innovation" class="doc-logo" />`
-    : `<div style="color:#0d1b34;font-size:16pt;font-weight:800;letter-spacing:0.02em;margin-bottom:6px;">ROCK HILL INNOVATION CO., LTD</div>`;
+    ? `<img src="${logoBase64}" alt="${escapeHtml(companyName)}" class="doc-logo" />`
+    : `<div style="color:#0d1b34;font-size:16pt;font-weight:800;letter-spacing:0.02em;margin-bottom:6px;">${escapeHtml(companyName)}</div>`;
+  const addressLines = companyAddressLines(companyInfo);
+  const contactLine = companyContactLine(companyInfo);
 
   const adjustmentsHtml = adjustmentLines.length
     ? `<table class="adjustments-table no-break">
@@ -148,9 +168,8 @@ export function buildProFormaHtml({
     <div class="doc-header">
       <div>
         ${logoHtml}
-        <div class="doc-address-line">5F., No. 7, Ln. 332, Sec. 2, Zhongshan Rd., Zhonghe Dist.</div>
-        <div class="doc-address-line">New Taipei City, Taiwan 235026</div>
-        <div class="doc-address-line">packaging@rockhill.com.tw &nbsp;|&nbsp; (+886)2-22452580</div>
+        ${addressLines.map((line) => `<div class="doc-address-line">${escapeHtml(line!)}</div>`).join("")}
+        ${contactLine ? `<div class="doc-address-line">${contactLine}</div>` : ""}
       </div>
       <div class="doc-type-badge">INVOICE</div>
     </div>
@@ -229,5 +248,5 @@ export function buildProFormaHtml({
     ${notes ? `<div class="info-block no-break"><strong>Notes:</strong> ${multiline(notes)}</div>` : ""}
   `;
 
-  return buildBaseHtml({ content, logoBase64, title: `Invoice ${invoiceNumber}` });
+  return buildBaseHtml({ companyInfo, content, logoBase64, title: `Invoice ${invoiceNumber}` });
 }

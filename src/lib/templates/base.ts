@@ -8,6 +8,7 @@ function escapeHtml(value: string) {
 }
 
 export function buildBaseHtml({
+  companyInfo = null,
   content,
   logoBase64 = null,
   styles = "",
@@ -16,8 +17,22 @@ export function buildBaseHtml({
   title: string;
   content: string;
   logoBase64?: string | null;
+  companyInfo?: {
+    email: string | null;
+    phone: string | null;
+    website: string | null;
+  } | null;
   styles?: string;
 }): string {
+  const footerContact = [
+    companyInfo?.email ?? "packaging@rockhill.com.tw",
+    companyInfo?.website ?? "www.rockhillinnovation.com",
+    companyInfo?.phone ?? "(+886)2-22452580",
+  ]
+    .filter(Boolean)
+    .map((value) => escapeHtml(value!))
+    .join(" &nbsp;|&nbsp; ");
+
   return `<!doctype html>
 <html lang="en">
   <head>
@@ -301,7 +316,7 @@ export function buildBaseHtml({
   <body>
     ${content}
     <div class="page-footer-contact">
-      packaging@rockhill.com.tw &nbsp;|&nbsp; www.rockhillinnovation.com &nbsp;|&nbsp; (+886)2-22452580
+      ${footerContact}
     </div>
     <div class="page-footer-bar"></div>
   </body>

@@ -1,4 +1,5 @@
 import { buildBaseHtml } from "@/lib/templates/base";
+import type { CompanySettings } from "@/types";
 
 type QuotationLine = {
   itemCode: string | null;
@@ -33,9 +34,25 @@ function multiline(value: string | null) {
   return escapeHtml(value ?? "").replace(/\n/g, "<br />");
 }
 
+function companyAddressLines(companyInfo: CompanySettings | null) {
+  return [
+    companyInfo?.address_line1 ?? "5F., No. 7, Ln. 332, Sec. 2, Zhongshan Rd., Zhonghe Dist.",
+    companyInfo?.address_line2,
+    companyInfo?.city_state ?? "New Taipei City 235026, Taiwan",
+  ].filter(Boolean);
+}
+
+function companyContactLine(companyInfo: CompanySettings | null) {
+  return [companyInfo?.email ?? "packaging@rockhill.com.tw", companyInfo?.phone ?? "(+886)2-22452580"]
+    .filter(Boolean)
+    .map((value) => escapeHtml(value!))
+    .join(" &nbsp;|&nbsp; ");
+}
+
 export function buildClientQuotationHtml({
   billToAddress,
   billToName,
+  companyInfo = null,
   currency,
   lines,
   logoBase64,
@@ -55,18 +72,21 @@ export function buildClientQuotationHtml({
   notes: string | null;
   currency: string;
   logoBase64: string | null;
+  companyInfo?: CompanySettings | null;
 }): string {
+  const companyName = companyInfo?.company_name ?? "ROCK HILL INNOVATION CO., LTD";
+  const addressLines = companyAddressLines(companyInfo);
+  const contactLine = companyContactLine(companyInfo);
   const logoHtml = logoBase64
-    ? `<img src="${logoBase64}" alt="Rock Hill Innovation" class="doc-logo" />`
-    : `<div style="color:#0d1b34;font-size:16pt;font-weight:800;margin-bottom:6px;">ROCK HILL INNOVATION CO., LTD</div>`;
+    ? `<img src="${logoBase64}" alt="${escapeHtml(companyName)}" class="doc-logo" />`
+    : `<div style="color:#0d1b34;font-size:16pt;font-weight:800;margin-bottom:6px;">${escapeHtml(companyName)}</div>`;
 
   const content = `
     <div class="doc-header">
       <div>
         ${logoHtml}
-        <div class="doc-address-line">5F., No. 7, Ln. 332, Sec. 2, Zhongshan Rd., Zhonghe Dist.</div>
-        <div class="doc-address-line">New Taipei City, Taiwan 235026</div>
-        <div class="doc-address-line">packaging@rockhill.com.tw &nbsp;|&nbsp; (+886)2-22452580</div>
+        ${addressLines.map((line) => `<div class="doc-address-line">${escapeHtml(line!)}</div>`).join("")}
+        ${contactLine ? `<div class="doc-address-line">${contactLine}</div>` : ""}
       </div>
       <div class="doc-type-badge">QUOTATION</div>
     </div>
@@ -98,10 +118,9 @@ export function buildClientQuotationHtml({
       </div>
       <div>
         <div class="label">Prepared By</div>
-        <div class="doc-party-name">Rock Hill Innovation Co., Ltd</div>
+        <div class="doc-party-name">${escapeHtml(companyName)}</div>
         <div class="doc-party-address">
-          5F., No. 7, Ln. 332, Sec. 2, Zhongshan Rd.<br />
-          Zhonghe Dist., New Taipei City 235026, Taiwan
+          ${addressLines.map((line) => escapeHtml(line!)).join("<br />")}
         </div>
       </div>
     </div>
@@ -154,5 +173,5 @@ export function buildClientQuotationHtml({
     ${notes ? `<div class="info-block no-break"><strong>Notes:</strong> ${multiline(notes)}</div>` : ""}
   `;
 
-  return buildBaseHtml({ content, logoBase64, title: `Quotation ${quotationRef}` });
+  return buildBaseHtml({ companyInfo, content, logoBase64, title: `Quotation ${quotationRef}` });
 }
