@@ -211,14 +211,82 @@ function RatePanel({
   );
 }
 
+function RateImpactItem({
+  actualRate,
+  label,
+  workingExchangeRate,
+}: {
+  label: string;
+  actualRate: ExchangeRate | null;
+  workingExchangeRate: number | null;
+}) {
+  if (!workingExchangeRate || !actualRate?.rate_rmb_per_usd) {
+    return null;
+  }
+
+  const variance = ((actualRate.rate_rmb_per_usd - workingExchangeRate) / workingExchangeRate) * 100;
+  const isFavourable = variance > 0;
+  const isNeutral = Math.abs(variance) < 0.005;
+
+  return (
+    <div>
+      <p className="text-xs text-slate-500">Estimate &rarr; {label}</p>
+      <p className="text-sm font-semibold text-[#0d1b34]">
+        {formatRate(workingExchangeRate)} &rarr; {formatRate(actualRate.rate_rmb_per_usd)}
+        <span className={isNeutral ? "text-slate-500" : isFavourable ? "text-green-600" : "text-red-600"}>
+          {" "}
+          ({variance > 0 ? "+" : ""}
+          {variance.toFixed(2)}%)
+        </span>
+      </p>
+      <p className="text-xs text-slate-500">
+        {isNeutral
+          ? "No meaningful movement"
+          : isFavourable
+            ? "Favourable - RMB weakened"
+            : "Unfavourable - RMB strengthened"}
+      </p>
+    </div>
+  );
+}
+
+function RateImpactSection({
+  depositRate,
+  finalRate,
+  workingExchangeRate,
+}: {
+  depositRate: ExchangeRate | null;
+  finalRate: ExchangeRate | null;
+  workingExchangeRate: number | null;
+}) {
+  const hasDepositImpact = Boolean(workingExchangeRate && depositRate?.rate_rmb_per_usd);
+  const hasFinalImpact = Boolean(workingExchangeRate && finalRate?.rate_rmb_per_usd);
+
+  if (!hasDepositImpact && !hasFinalImpact) {
+    return null;
+  }
+
+  return (
+    <div className="rounded-lg border border-slate-200 bg-slate-50 p-4 space-y-3">
+      <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Rate Movement vs. Estimate</p>
+      <div className="grid gap-2 sm:grid-cols-2">
+        <RateImpactItem actualRate={depositRate} label="Deposit" workingExchangeRate={workingExchangeRate} />
+        <RateImpactItem actualRate={finalRate} label="Final" workingExchangeRate={workingExchangeRate} />
+      </div>
+    </div>
+  );
+}
+
 export function ExchangeRatesCard({
   canManage,
   initialRates,
   tradeId,
+  workingExchangeRate,
 }: {
   tradeId: string;
   initialRates: ExchangeRate[];
   canManage: boolean;
+  workingExchangeRate: number | null;
 }) {
   const depositRate = initialRates.find((rate) => rate.payment_type === "deposit") ?? null;
   const finalRate = initialRates.find((rate) => rate.payment_type === "final") ?? null;
@@ -228,15 +296,28 @@ export function ExchangeRatesCard({
       <CardHeader>
         <CardTitle>Exchange Rates (RMB / USD)</CardTitle>
       </CardHeader>
-      <CardContent className="grid gap-4 lg:grid-cols-2">
-        <RatePanel
-          canManage={canManage}
-          existing={depositRate}
-          label="Deposit Rate"
-          paymentType="deposit"
-          tradeId={tradeId}
+      <CardContent className="space-y-4">
+        <div className="grid gap-4 lg:grid-cols-2">
+          <RatePanel
+            canManage={canManage}
+            existing={depositRate}
+            label="Deposit Rate"
+            paymentType="deposit"
+            tradeId={tradeId}
+          />
+          <RatePanel
+            canManage={canManage}
+            existing={finalRate}
+            label="Final Rate"
+            paymentType="final"
+            tradeId={tradeId}
+          />
+        </div>
+        <RateImpactSection
+          depositRate={depositRate}
+          finalRate={finalRate}
+          workingExchangeRate={workingExchangeRate}
         />
-        <RatePanel canManage={canManage} existing={finalRate} label="Final Rate" paymentType="final" tradeId={tradeId} />
       </CardContent>
     </Card>
   );

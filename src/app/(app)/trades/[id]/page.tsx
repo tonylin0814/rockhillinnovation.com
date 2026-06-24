@@ -420,7 +420,12 @@ export default async function TradeWorkspacePage({ params }: { params: { id: str
               </CardContent>
             </Card>
 
-            <ExchangeRatesCard canManage={canManage} initialRates={exchangeRateRows} tradeId={trade.id} />
+            <ExchangeRatesCard
+              canManage={canManage}
+              initialRates={exchangeRateRows}
+              tradeId={trade.id}
+              workingExchangeRate={trade.working_exchange_rate}
+            />
           </div>
         </TabsContent>
 
