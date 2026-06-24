@@ -224,7 +224,7 @@ function VersionDialog({
                 <SelectItem value="none">Use text override</SelectItem>
                 {products.map((product) => (
                   <SelectItem key={product.id} value={product.id}>
-                    {product.code} - {product.name_english}
+                    {product.name_english}
                   </SelectItem>
                 ))}
               </SelectContent>
