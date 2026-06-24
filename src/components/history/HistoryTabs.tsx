@@ -50,7 +50,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 
 type ProductOption = {
@@ -655,13 +654,31 @@ export function HistoryTabs({
   }, [quoteSearch, quoteSortDirection, quoteSortKey, sortedQuotes]);
 
   return (
-    <Tabs className="space-y-4" onValueChange={handleTabChange} value={activeTab}>
-      <TabsList>
-        <TabsTrigger value="cost">Cost History</TabsTrigger>
-        <TabsTrigger value="quote">Quote History</TabsTrigger>
-      </TabsList>
+    <div className="space-y-4">
+      <div className="inline-flex h-9 items-center rounded-lg bg-slate-100 p-1 text-slate-600">
+        <Button
+          className={`h-7 px-3 text-sm ${
+            activeTab === "cost" ? "bg-white text-[#0d1b34] shadow" : "bg-transparent hover:bg-white/60"
+          }`}
+          onClick={() => handleTabChange("cost")}
+          type="button"
+          variant="ghost"
+        >
+          Cost History
+        </Button>
+        <Button
+          className={`h-7 px-3 text-sm ${
+            activeTab === "quote" ? "bg-white text-[#0d1b34] shadow" : "bg-transparent hover:bg-white/60"
+          }`}
+          onClick={() => handleTabChange("quote")}
+          type="button"
+          variant="ghost"
+        >
+          Quote History
+        </Button>
+      </div>
 
-      <TabsContent value="cost">
+      {activeTab === "cost" ? (
         <div className="rounded-lg border border-slate-200 bg-white shadow-sm">
           <div className="flex items-center justify-between gap-3 border-b border-slate-200 p-4">
             <h2 className="text-lg font-semibold text-[#0d1b34]">Cost History</h2>
@@ -774,9 +791,9 @@ export function HistoryTabs({
             </TableBody>
           </Table>
         </div>
-      </TabsContent>
+      ) : null}
 
-      <TabsContent value="quote">
+      {activeTab === "quote" ? (
         <div className="rounded-lg border border-slate-200 bg-white shadow-sm">
           <div className="flex items-center justify-between gap-3 border-b border-slate-200 p-4">
             <h2 className="text-lg font-semibold text-[#0d1b34]">Quote History</h2>
@@ -862,7 +879,7 @@ export function HistoryTabs({
             </TableBody>
           </Table>
         </div>
-      </TabsContent>
-    </Tabs>
+      ) : null}
+    </div>
   );
 }
