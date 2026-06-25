@@ -39,6 +39,19 @@ const materialLabels: Record<PalletMaterial, string> = {
   wood: "Wood",
 };
 
+function formatWholeNumber(value: number | string | null | undefined) {
+  if (value === null || value === undefined || value === "") {
+    return "-";
+  }
+
+  const numericValue = typeof value === "number" ? value : Number(String(value).replace(/,/g, ""));
+  if (!Number.isFinite(numericValue)) {
+    return String(value);
+  }
+
+  return Math.round(numericValue).toLocaleString("en-US", { maximumFractionDigits: 0 });
+}
+
 function ProfileDialog({
   children,
   profile,
@@ -239,7 +252,7 @@ export function PalletProfilesClient({ profiles }: { profiles: PalletProfile[] }
                   <TableCell>
                     {profile.length_cm} x {profile.width_cm} x {profile.height_cm}
                   </TableCell>
-                  <TableCell>{profile.max_weight_kg} kg</TableCell>
+                  <TableCell>{formatWholeNumber(profile.max_weight_kg)} kg</TableCell>
                   <TableCell>
                     {profile.is_default ? <Badge className="bg-green-600">Default</Badge> : <span className="text-slate-400">-</span>}
                   </TableCell>

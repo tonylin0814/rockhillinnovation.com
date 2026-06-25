@@ -278,7 +278,7 @@ export function PalletCalculatorClient({
                 <SelectContent>
                   {palletProfiles.map((profile) => (
                     <SelectItem key={profile.id} value={profile.id}>
-                      {profile.name} - {profile.length_cm}x{profile.width_cm}x{profile.height_cm}cm · {profile.max_weight_kg}kg
+                      {profile.name} - {profile.length_cm}x{profile.width_cm}x{profile.height_cm}cm · {formatNumber(Number(profile.max_weight_kg), 0)}kg
                     </SelectItem>
                   ))}
                 </SelectContent>
