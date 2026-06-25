@@ -377,9 +377,9 @@ export function PalletCalculatorClient({
 
           <div className="grid gap-4 sm:grid-cols-4">
             {[
-              ["Cartons / Layer", calculation?.cartonsPerLayer],
-              ["Cartons / Pallet", calculation?.cartonsPerPallet],
-              ["Items / Pallet", calculation?.itemsPerPallet],
+              ["Cartons / Layer", activePlan?.calculation.cartonsPerLayer],
+              ["Cartons / Pallet", activePlan?.cartonsPerPallet],
+              ["Items / Pallet", activePlan?.itemsPerPallet],
               ["Container Items", containerItems],
             ].map(([label, value]) => (
               <Card className="border-slate-200 shadow-sm" key={label}>
@@ -432,6 +432,7 @@ export function PalletCalculatorClient({
             <CardContent className="space-y-5">
               {isCalculating ? (
                 <div className="space-y-2">
+                  <p className="text-sm font-medium text-[#0d1b34]">Judy is answering...</p>
                   <div className="h-4 w-3/4 animate-pulse rounded bg-slate-200" />
                   <div className="h-4 w-full animate-pulse rounded bg-slate-200" />
                   <div className="h-4 w-2/3 animate-pulse rounded bg-slate-200" />

@@ -83,7 +83,6 @@ export function calculatePallet(carton: CartonInput, pallet: PalletInput): Palle
   const orientations = [
     evaluateOrientation("L x W base", carton, pallet, carton.lengthCm, carton.widthCm),
     evaluateOrientation("W x L base", carton, pallet, carton.widthCm, carton.lengthCm),
-    evaluateOrientation("Sideways", carton, pallet, carton.lengthCm, carton.heightCm, carton.widthCm),
   ];
 
   return orientations.reduce((best, candidate) => {
@@ -106,9 +105,7 @@ export function buildPalletTopViewSvg(
 ) {
   const orientation = calculation.orientation === "W x L base"
     ? { length: carton.widthCm, width: carton.lengthCm }
-    : calculation.orientation === "Sideways"
-      ? { length: carton.lengthCm, width: carton.heightCm }
-      : { length: carton.lengthCm, width: carton.widthCm };
+    : { length: carton.lengthCm, width: carton.widthCm };
   const cartonsX = Math.floor(pallet.lengthCm / orientation.length);
   const cartonsY = Math.floor(pallet.widthCm / orientation.width);
   const scale = Math.min(620 / pallet.lengthCm, 360 / pallet.widthCm);
