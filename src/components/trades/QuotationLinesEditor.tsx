@@ -58,9 +58,11 @@ function rowsFromLines(lines: ClientQuotationLine[]): EditableQuotationLine[] {
   }));
 }
 
-function formatUsd(value: number) {
+function formatUsd(value: number, digits = 2) {
   return new Intl.NumberFormat("en-US", {
     currency: "USD",
+    maximumFractionDigits: digits,
+    minimumFractionDigits: digits,
     style: "currency",
   }).format(value);
 }
@@ -88,12 +90,8 @@ function formatDate(value: string) {
   }).format(new Date(value));
 }
 
-function formatRmbUnit(value: number) {
-  return formatRmb(value, 3);
-}
-
-function formatRmbTotal(value: number) {
-  return formatRmb(value, 2);
+function formatExchangeRate(value: number | null) {
+  return typeof value === "number" && value > 0 ? `Rate: ${formatRmb(value, 2)} / $1` : "Rate: -";
 }
 
 function formatPercent(value: number | null) {
@@ -158,7 +156,8 @@ export function QuotationLinesEditor({
   const hasExchangeRate = typeof workingExchangeRate === "number" && workingExchangeRate > 0;
   const runningCostTotal = rows.reduce((total, row) => {
     const product = row.product_id === "none" ? null : productById.get(row.product_id);
-    return total + (Number(row.quantity) || 0) * (product?.latest_cost_rmb ?? 0);
+    const costUsd = hasExchangeRate ? (product?.latest_cost_rmb ?? 0) / workingExchangeRate : 0;
+    return total + (Number(row.quantity) || 0) * costUsd;
   }, 0);
   const runningQuoteTotal = rows.reduce(
     (total, row) => total + (Number(row.quantity) || 0) * (Number(row.unit_price_usd) || 0),
@@ -312,7 +311,14 @@ export function QuotationLinesEditor({
             <TableHead>Code</TableHead>
             <TableHead>Product</TableHead>
             <TableHead className="w-[101px]">Qty</TableHead>
-            <TableHead>Cost (RMB)</TableHead>
+            <TableHead>
+              <div className="space-y-0.5">
+                <span>Cost (USD)</span>
+                <span className="block text-[11px] font-medium normal-case text-slate-500">
+                  {formatExchangeRate(workingExchangeRate)}
+                </span>
+              </div>
+            </TableHead>
             <TableHead>Quote</TableHead>
             <TableHead>Prv. Quote</TableHead>
             <TableHead>Profit</TableHead>
@@ -379,7 +385,7 @@ export function QuotationLinesEditor({
                       formatQuantity(Number(row.quantity) || 0)
                     )}
                   </TableCell>
-                  <TableCell>{formatRmbUnit(unitCostRmb)}</TableCell>
+                  <TableCell>{costUsd === null ? "-" : formatUsd(costUsd, 3)}</TableCell>
                   <TableCell>
                     {isEditing ? (
                       <Input
@@ -467,7 +473,7 @@ export function QuotationLinesEditor({
             <TableCell className="font-semibold" colSpan={4}>
               Total
             </TableCell>
-            <TableCell className="font-semibold">{formatRmbTotal(runningCostTotal)}</TableCell>
+            <TableCell className="font-semibold">{hasExchangeRate ? formatUsd(runningCostTotal, 3) : "-"}</TableCell>
             <TableCell />
             <TableCell />
             <TableCell />
