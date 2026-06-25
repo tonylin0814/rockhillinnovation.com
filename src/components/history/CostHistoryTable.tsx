@@ -62,7 +62,7 @@ export type CostHistoryRow = {
 };
 
 type SortDirection = "asc" | "desc";
-type CostSortKey = "date" | "product" | "supplier" | "moq" | "unit" | "quality" | "carton" | "source";
+type CostSortKey = "date" | "product" | "productName" | "moq" | "unit" | "quality" | "carton" | "source";
 
 function formatDate(value: string) {
   return new Intl.DateTimeFormat("en-US", { dateStyle: "medium", timeZone: "UTC" }).format(new Date(value));
@@ -70,6 +70,22 @@ function formatDate(value: string) {
 
 function formatRmb(value: number | null | undefined) {
   return typeof value === "number" ? `\u00A5${value.toFixed(4)}` : "-";
+}
+
+function formatMoq(value: string | null | undefined) {
+  if (!value) {
+    return "-";
+  }
+
+  const numericValue = Number(value.replace(/,/g, ""));
+
+  if (!Number.isFinite(numericValue)) {
+    return value;
+  }
+
+  return new Intl.NumberFormat("en-US", {
+    maximumFractionDigits: 0,
+  }).format(numericValue);
 }
 
 function compareValues(a: string | number | null | undefined, b: string | number | null | undefined) {
@@ -374,9 +390,9 @@ export function CostHistoryTable({
           date: [a.quoted_date, b.quoted_date],
           moq: [a.moq, b.moq],
           product: [a.product?.code, b.product?.code],
+          productName: [a.product?.name_english, b.product?.name_english],
           quality: [a.quality, b.quality],
           source: [a.source, b.source],
-          supplier: [a.supplier_product_code ?? a.supplier?.code, b.supplier_product_code ?? b.supplier?.code],
           unit: [a.unit_cost_rmb, b.unit_cost_rmb],
         };
         const comparison = compareValues(values[costSortKey][0], values[costSortKey][1]);
@@ -424,8 +440,13 @@ export function CostHistoryTable({
             <SortHeader activeKey={costSortKey} columnKey="product" direction={costSortDirection} onSort={handleCostSort}>
               Rock Hill Code
             </SortHeader>
-            <SortHeader activeKey={costSortKey} columnKey="supplier" direction={costSortDirection} onSort={handleCostSort}>
-              Supplier Code
+            <SortHeader
+              activeKey={costSortKey}
+              columnKey="productName"
+              direction={costSortDirection}
+              onSort={handleCostSort}
+            >
+              Product Name
             </SortHeader>
             <SortHeader
               activeKey={costSortKey}
@@ -469,8 +490,8 @@ export function CostHistoryTable({
               <TableRow key={row.id}>
                 <TableCell>{formatDate(row.quoted_date)}</TableCell>
                 <TableCell>{row.product?.code ?? "-"}</TableCell>
-                <TableCell>{row.supplier_product_code ?? row.supplier?.code ?? "-"}</TableCell>
-                <TableCell>{row.moq ?? "-"}</TableCell>
+                <TableCell>{row.product?.name_english ?? "-"}</TableCell>
+                <TableCell>{formatMoq(row.moq)}</TableCell>
                 <TableCell className="text-right font-medium">{formatRmb(row.unit_cost_rmb)}</TableCell>
                 <TableCell>{row.quality ?? "-"}</TableCell>
                 <TableCell>{row.carton_box_packaging ? "Yes" : "No"}</TableCell>

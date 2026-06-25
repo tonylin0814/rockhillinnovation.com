@@ -38,8 +38,21 @@ function formatDate(value: string) {
   return new Intl.DateTimeFormat("en-US", { dateStyle: "medium", timeZone: "UTC" }).format(new Date(value));
 }
 
+function formatQuantity(value: number | null | undefined) {
+  return typeof value === "number"
+    ? new Intl.NumberFormat("en-US", {
+        maximumFractionDigits: 0,
+      }).format(value)
+    : "-";
+}
+
 function formatUsd(value: number | null | undefined) {
-  return typeof value === "number" ? `$${value.toFixed(4)}` : "-";
+  return typeof value === "number"
+    ? new Intl.NumberFormat("en-US", {
+        maximumFractionDigits: 2,
+        minimumFractionDigits: 2,
+      }).format(value)
+    : "-";
 }
 
 function compareValues(a: string | number | null | undefined, b: string | number | null | undefined) {
@@ -342,7 +355,7 @@ export function QuoteHistoryTable({ quoteRows }: { quoteRows: QuotationHistory[]
               direction={quoteSortDirection}
               onSort={handleQuoteSort}
             >
-              Quantity
+              Qty
             </SortHeader>
             <SortHeader
               activeKey={quoteSortKey}
@@ -373,7 +386,7 @@ export function QuoteHistoryTable({ quoteRows }: { quoteRows: QuotationHistory[]
                 <TableCell>{row.trade_id ?? "-"}</TableCell>
                 <TableCell>{row.rock_hill_code}</TableCell>
                 <TableCell>{row.product_name}</TableCell>
-                <TableCell className="text-right">{row.quantity}</TableCell>
+                <TableCell className="text-right">{formatQuantity(row.quantity)}</TableCell>
                 <TableCell className="text-right">{formatUsd(row.quoted_usd)}</TableCell>
                 <TableCell>{row.notes ?? "-"}</TableCell>
                 <TableCell>{formatDate(row.created_at)}</TableCell>
