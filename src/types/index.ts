@@ -187,6 +187,11 @@ export type Product = {
   notes: string | null;
   packaging_required: boolean;
   has_carton: boolean;
+  product_length_cm: number | null;
+  product_width_cm: number | null;
+  product_height_cm: number | null;
+  product_weight_kg: number | null;
+  product_art_notes: string | null;
   qty_per_carton: number | null;
   carton_height_cm: number | null;
   carton_width_cm: number | null;

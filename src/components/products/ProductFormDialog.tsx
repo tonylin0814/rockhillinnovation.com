@@ -362,6 +362,83 @@ export function ProductFormDialog({
             </div>
           </section>
 
+          <section className="space-y-4 rounded-lg border-2 border-slate-300 p-4">
+            <div>
+              <h3 className="text-sm font-semibold uppercase tracking-wide text-blue-700">Product Specification</h3>
+              <p className="text-xs text-slate-500">Physical dimensions and weight of the product itself.</p>
+            </div>
+
+            <div className="flex flex-wrap items-end gap-3">
+              <div className="space-y-2">
+                <Label>Product Dimensions (cm)</Label>
+                <div className="flex flex-wrap gap-2">
+                  <Input
+                    aria-label="Product height in cm"
+                    className="w-24"
+                    defaultValue={initialData?.product_height_cm ?? ""}
+                    disabled={isPending}
+                    max="9999.99"
+                    min="0"
+                    name="product_height_cm"
+                    placeholder="H cm"
+                    step="0.01"
+                    type="number"
+                  />
+                  <Input
+                    aria-label="Product width in cm"
+                    className="w-24"
+                    defaultValue={initialData?.product_width_cm ?? ""}
+                    disabled={isPending}
+                    max="9999.99"
+                    min="0"
+                    name="product_width_cm"
+                    placeholder="W cm"
+                    step="0.01"
+                    type="number"
+                  />
+                  <Input
+                    aria-label="Product length in cm"
+                    className="w-24"
+                    defaultValue={initialData?.product_length_cm ?? ""}
+                    disabled={isPending}
+                    max="9999.99"
+                    min="0"
+                    name="product_length_cm"
+                    placeholder="L cm"
+                    step="0.01"
+                    type="number"
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="product_weight_kg">Product Weight (kg)</Label>
+                <Input
+                  className="w-32"
+                  defaultValue={initialData?.product_weight_kg ?? ""}
+                  disabled={isPending}
+                  id="product_weight_kg"
+                  min="0"
+                  name="product_weight_kg"
+                  placeholder="0.000"
+                  step="0.001"
+                  type="number"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="product_art_notes">Art / Design Notes</Label>
+              <Textarea
+                className="min-h-[80px]"
+                defaultValue={initialData?.product_art_notes ?? ""}
+                disabled={isPending}
+                id="product_art_notes"
+                name="product_art_notes"
+                placeholder="Colors, finish, logo placement, print specs, material details..."
+              />
+            </div>
+          </section>
+
           {mode === "create" && productType === "set" ? (
             <section className="space-y-4 rounded-lg border-2 border-slate-300 p-4">
               <div>

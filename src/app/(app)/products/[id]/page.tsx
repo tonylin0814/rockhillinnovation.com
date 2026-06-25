@@ -88,6 +88,10 @@ function formatPackagingValue(value: number | null | undefined, suffix = "") {
   return `${Number.isInteger(value) ? value.toFixed(0) : value.toString()}${suffix}`;
 }
 
+function hasNumberValue(value: number | null | undefined) {
+  return typeof value === "number";
+}
+
 function calculateQtyItemsPerPallet(product: Product) {
   if (typeof product.qty_per_carton !== "number" || typeof product.cartons_per_pallet !== "number") {
     return null;
@@ -319,6 +323,46 @@ export default async function ProductDetailPage({
               </Card>
             </>
           ) : null}
+
+          <Card className="border-slate-200 shadow-sm">
+            <CardHeader>
+              <CardTitle className="text-sm font-semibold uppercase tracking-wide text-blue-700">
+                Product Specification
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3 text-sm">
+              {hasNumberValue(product.product_height_cm) ||
+              hasNumberValue(product.product_width_cm) ||
+              hasNumberValue(product.product_length_cm) ? (
+                <div>
+                  <p className="text-xs text-slate-500">Dimensions (H x W x L)</p>
+                  <p className="font-medium text-[#0d1b34]">
+                    {product.product_height_cm ?? "-"} x {product.product_width_cm ?? "-"} x{" "}
+                    {product.product_length_cm ?? "-"} cm
+                  </p>
+                </div>
+              ) : null}
+              {hasNumberValue(product.product_weight_kg) ? (
+                <div>
+                  <p className="text-xs text-slate-500">Weight</p>
+                  <p className="font-medium text-[#0d1b34]">{product.product_weight_kg} kg</p>
+                </div>
+              ) : null}
+              {product.product_art_notes ? (
+                <div>
+                  <p className="text-xs text-slate-500">Art / Design Notes</p>
+                  <p className="whitespace-pre-wrap text-[#0d1b34]">{product.product_art_notes}</p>
+                </div>
+              ) : null}
+              {!hasNumberValue(product.product_height_cm) &&
+              !hasNumberValue(product.product_width_cm) &&
+              !hasNumberValue(product.product_length_cm) &&
+              !hasNumberValue(product.product_weight_kg) &&
+              !product.product_art_notes ? (
+                <p className="text-slate-400">No specification entered.</p>
+              ) : null}
+            </CardContent>
+          </Card>
 
           {product.packaging_required ? (
             <Card className="border-slate-200 shadow-sm">

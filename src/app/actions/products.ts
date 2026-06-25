@@ -46,6 +46,11 @@ const productSchema = z
     notes: z.string().trim().nullable(),
     packaging_required: z.coerce.boolean().default(false),
     has_carton: z.coerce.boolean().default(false),
+    product_length_cm: nullableNonNegativeNumber(),
+    product_width_cm: nullableNonNegativeNumber(),
+    product_height_cm: nullableNonNegativeNumber(),
+    product_weight_kg: nullableNonNegativeNumber(),
+    product_art_notes: z.string().trim().nullable(),
     qty_per_carton: nullableNonNegativeNumber(),
     carton_height_cm: nullableNonNegativeNumber(),
     carton_width_cm: nullableNonNegativeNumber(),
@@ -165,6 +170,21 @@ function valuesFromForm(formData: FormData, fallback?: Product) {
       ? formData.get("packaging_required") === "true"
       : fallback?.packaging_required ?? false,
     has_carton: formData.has("has_carton") ? formData.get("has_carton") === "true" : fallback?.has_carton ?? false,
+    product_length_cm: formData.has("product_length_cm")
+      ? formData.get("product_length_cm")
+      : fallback?.product_length_cm ?? null,
+    product_width_cm: formData.has("product_width_cm")
+      ? formData.get("product_width_cm")
+      : fallback?.product_width_cm ?? null,
+    product_height_cm: formData.has("product_height_cm")
+      ? formData.get("product_height_cm")
+      : fallback?.product_height_cm ?? null,
+    product_weight_kg: formData.has("product_weight_kg")
+      ? formData.get("product_weight_kg")
+      : fallback?.product_weight_kg ?? null,
+    product_art_notes: formData.has("product_art_notes")
+      ? emptyToNull(formData.get("product_art_notes"))
+      : fallback?.product_art_notes ?? null,
     qty_per_carton: formData.has("qty_per_carton") ? formData.get("qty_per_carton") : fallback?.qty_per_carton ?? null,
     carton_height_cm: formData.has("carton_height_cm")
       ? formData.get("carton_height_cm")
