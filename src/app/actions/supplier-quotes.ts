@@ -197,6 +197,69 @@ export async function updateQuoteSessionStatus(
   return { success: true };
 }
 
+export async function deleteQuoteSession(sessionId: string): Promise<ActionResult> {
+  const access = await requireQuoteManager();
+
+  if ("error" in access) {
+    return { error: access.error };
+  }
+
+  const parsed = z.string().uuid().safeParse(sessionId);
+
+  if (!parsed.success) {
+    return { error: "Invalid quote session" };
+  }
+
+  const supabase = createServerSupabaseClient();
+  const { data: session, error: sessionError } = await supabase
+    .from("supplier_quote_sessions")
+    .select("id, trade_id")
+    .eq("id", parsed.data)
+    .maybeSingle();
+
+  if (sessionError) {
+    return { error: sessionError.message };
+  }
+
+  if (!session) {
+    return { error: "Quote session not found" };
+  }
+
+  const { error: deleteError } = await supabase.from("supplier_quote_sessions").delete().eq("id", parsed.data);
+
+  if (deleteError) {
+    return { error: deleteError.message };
+  }
+
+  const { data: remainingSessions, error: remainingError } = await supabase
+    .from("supplier_quote_sessions")
+    .select("id")
+    .eq("trade_id", session.trade_id)
+    .order("session_number", { ascending: true })
+    .order("created_at", { ascending: true });
+
+  if (remainingError) {
+    return { error: remainingError.message };
+  }
+
+  const sessionsToRenumber = remainingSessions ?? [];
+
+  for (let index = 0; index < sessionsToRenumber.length; index += 1) {
+    const remainingSession = sessionsToRenumber[index];
+    const { error: updateError } = await supabase
+      .from("supplier_quote_sessions")
+      .update({ session_number: index + 1 })
+      .eq("id", remainingSession.id);
+
+    if (updateError) {
+      return { error: updateError.message };
+    }
+  }
+
+  revalidatePath(`/trades/${session.trade_id}`);
+  return { success: true };
+}
+
 export async function saveQuoteLines(sessionId: string, lines: QuoteLineInput[]): Promise<ActionResult> {
   const access = await requireQuoteManager();
 

@@ -1,11 +1,22 @@
 "use client";
 
-import { BarChart2, CheckCircle2, ChevronsUpDown, FileText, RotateCcw } from "lucide-react";
+import { BarChart2, CheckCircle2, ChevronsUpDown, FileText, RotateCcw, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
 
-import { updateQuoteSessionStatus } from "@/app/actions/supplier-quotes";
+import { deleteQuoteSession, updateQuoteSessionStatus } from "@/app/actions/supplier-quotes";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -124,6 +135,31 @@ export function SupplierQuotesTab({
       }
 
       toast.success(status === "confirmed" ? "Quote session confirmed" : "Quote session superseded");
+      router.refresh();
+    });
+  }
+
+  function deleteSession(sessionId: string) {
+    setPendingSessionId(sessionId);
+
+    startTransition(async () => {
+      const result = await deleteQuoteSession(sessionId);
+
+      setPendingSessionId(null);
+
+      if (result.error) {
+        toast.error(result.error);
+        return;
+      }
+
+      setExpandedSessionId((currentSessionId) => (currentSessionId === sessionId ? null : currentSessionId));
+      setLoadedLines((currentLines) => {
+        const nextLines = { ...currentLines };
+        delete nextLines[sessionId];
+        return nextLines;
+      });
+      window.localStorage.removeItem(`rockhill:supplier-quote-lines:${sessionId}`);
+      toast.success("Quote round deleted");
       router.refresh();
     });
   }
@@ -288,6 +324,35 @@ export function SupplierQuotesTab({
                       >
                         View Lines
                       </Button>
+                      {canManage ? (
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button disabled={isSessionPending} size="sm" variant="outline">
+                              <Trash2 className="mr-2 h-4 w-4" />
+                              Delete
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Delete Round {session.session_number}?</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                This deletes the quote round and its lines. Remaining rounds will be renumbered
+                                automatically.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel disabled={isSessionPending}>Cancel</AlertDialogCancel>
+                              <AlertDialogAction
+                                className="bg-red-600 hover:bg-red-700"
+                                disabled={isSessionPending}
+                                onClick={() => deleteSession(session.id)}
+                              >
+                                Delete
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      ) : null}
                     </div>
                   </div>
                 </CardHeader>
