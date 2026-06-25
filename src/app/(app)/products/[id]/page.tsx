@@ -412,10 +412,10 @@ export default async function ProductDetailPage({
               hasNumberValue(product.product_width_cm) ||
               hasNumberValue(product.product_length_cm) ? (
                 <div>
-                  <p className="text-xs text-slate-500">Dimensions (H x W x L)</p>
+                  <p className="text-xs text-slate-500">Dimensions (L x W x H)</p>
                   <p className="font-medium text-[#0d1b34]">
-                    {product.product_height_cm ?? "-"} x {product.product_width_cm ?? "-"} x{" "}
-                    {product.product_length_cm ?? "-"} cm
+                    {product.product_length_cm ?? "-"} x {product.product_width_cm ?? "-"} x{" "}
+                    {product.product_height_cm ?? "-"} cm
                   </p>
                 </div>
               ) : null}
@@ -451,9 +451,9 @@ export default async function ProductDetailPage({
                   <DetailRow label="Qty per Carton" value={formatWholeNumber(product.qty_per_carton)} />
                   <DetailRow
                     label="Carton Dimensions"
-                    value={`${formatPackagingValue(product.carton_height_cm)} H x ${formatPackagingValue(
+                    value={`${formatPackagingValue(product.carton_length_cm)} L x ${formatPackagingValue(
                       product.carton_width_cm
-                    )} W x ${formatPackagingValue(product.carton_length_cm)} L cm`}
+                    )} W x ${formatPackagingValue(product.carton_height_cm)} H cm`}
                   />
                   <DetailRow label="Carton Weight" value={formatPackagingValue(product.carton_weight_kg, " kg")} />
                 </div>

@@ -395,14 +395,14 @@ export function ProductFormDialog({
                 <Label>Product Dimensions (cm)</Label>
                 <div className="flex flex-wrap gap-2">
                   <Input
-                    aria-label="Product height in cm"
+                    aria-label="Product length in cm"
                     className="w-24"
-                    defaultValue={initialData?.product_height_cm ?? ""}
+                    defaultValue={initialData?.product_length_cm ?? ""}
                     disabled={isPending}
                     max="9999.99"
                     min="0"
-                    name="product_height_cm"
-                    placeholder="H cm"
+                    name="product_length_cm"
+                    placeholder="L cm"
                     step="0.01"
                     type="number"
                   />
@@ -419,14 +419,14 @@ export function ProductFormDialog({
                     type="number"
                   />
                   <Input
-                    aria-label="Product length in cm"
+                    aria-label="Product height in cm"
                     className="w-24"
-                    defaultValue={initialData?.product_length_cm ?? ""}
+                    defaultValue={initialData?.product_height_cm ?? ""}
                     disabled={isPending}
                     max="9999.99"
                     min="0"
-                    name="product_length_cm"
-                    placeholder="L cm"
+                    name="product_height_cm"
+                    placeholder="H cm"
                     step="0.01"
                     type="number"
                   />
@@ -601,14 +601,14 @@ export function ProductFormDialog({
                     <Label>Carton Dimensions / Weight</Label>
                     <div className="flex flex-wrap gap-2">
                       <Input
-                        aria-label="Carton height in cm"
+                        aria-label="Carton length in cm"
                         className="w-24"
-                        defaultValue={initialData?.carton_height_cm ?? ""}
+                        defaultValue={initialData?.carton_length_cm ?? ""}
                         disabled={isPending}
                         max="999.99"
                         min="0"
-                        name="carton_height_cm"
-                        placeholder="H cm"
+                        name="carton_length_cm"
+                        placeholder="L cm"
                         step="0.01"
                         type="number"
                       />
@@ -625,14 +625,14 @@ export function ProductFormDialog({
                         type="number"
                       />
                       <Input
-                        aria-label="Carton length in cm"
+                        aria-label="Carton height in cm"
                         className="w-24"
-                        defaultValue={initialData?.carton_length_cm ?? ""}
+                        defaultValue={initialData?.carton_height_cm ?? ""}
                         disabled={isPending}
                         max="999.99"
                         min="0"
-                        name="carton_length_cm"
-                        placeholder="L cm"
+                        name="carton_height_cm"
+                        placeholder="H cm"
                         step="0.01"
                         type="number"
                       />
