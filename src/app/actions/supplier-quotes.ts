@@ -170,14 +170,21 @@ export async function updateQuoteSessionStatus(
   }
 
   if (status === "confirmed") {
-    const { error: supersedeError } = await supabase
+    const { data: confirmedSession, error: confirmedSessionError } = await supabase
       .from("supplier_quote_sessions")
-      .update({ status: "superseded" })
+      .select("id, session_number")
       .eq("trade_id", session.trade_id)
-      .neq("id", sessionId);
+      .eq("status", "confirmed")
+      .neq("id", sessionId)
+      .limit(1)
+      .maybeSingle();
 
-    if (supersedeError) {
-      return { error: supersedeError.message };
+    if (confirmedSessionError) {
+      return { error: confirmedSessionError.message };
+    }
+
+    if (confirmedSession) {
+      return { error: `Only one quote session can be confirmed. Round ${confirmedSession.session_number} is already confirmed.` };
     }
   }
 

@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { toast } from "sonner";
 
-import { saveQuotationLines } from "@/app/actions/client-quotations";
+import { importQuotationLinesFromConfirmedQuote, saveQuotationLines } from "@/app/actions/client-quotations";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -221,6 +221,31 @@ export function QuotationLinesEditor({
         notes: "",
       },
     ]);
+  }
+
+  function importFromQuotes() {
+    startTransition(async () => {
+      const result = await importQuotationLinesFromConfirmedQuote(sessionId);
+
+      if (result.error) {
+        toast.error(result.error);
+        return;
+      }
+
+      const importedLines = result.lines ?? [];
+
+      setRows(
+        importedLines.map((line) => ({
+          item_description: line.item_description,
+          notes: line.notes,
+          product_id: line.product_id ?? "none",
+          quantity: line.quantity,
+          unit_price_usd: line.unit_price_usd,
+        }))
+      );
+      setIsEditing(true);
+      toast.success(`Imported ${importedLines.length} line${importedLines.length === 1 ? "" : "s"} from Quotes`);
+    });
   }
 
   function removeRow(index: number) {
@@ -451,10 +476,15 @@ export function QuotationLinesEditor({
 
       {isEditing ? (
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <Button onClick={addLine} type="button" variant="outline">
-            <Plus className="mr-2 h-4 w-4" />
-            Add Line
-          </Button>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button onClick={addLine} type="button" variant="outline">
+              <Plus className="mr-2 h-4 w-4" />
+              Add Line
+            </Button>
+            <Button disabled={isPending} onClick={importFromQuotes} type="button" variant="outline">
+              Import from Quotes
+            </Button>
+          </div>
           <div className="flex justify-end gap-2">
             <Button
               disabled={isPending}

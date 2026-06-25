@@ -27,6 +27,14 @@ type QuotationLineInput = {
   notes: string | null;
 };
 
+type ImportedQuotationLine = {
+  product_id: string | null;
+  item_description: string;
+  quantity: number;
+  unit_price_usd: number;
+  notes: string;
+};
+
 const quotationSessionSchema = z.object({
   quote_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Quote date is required"),
   notes: z.string().trim().nullable(),
@@ -460,4 +468,83 @@ export async function saveQuotationLines(sessionId: string, lines: QuotationLine
 
   revalidatePath(`/trades/${session.trade_id}`);
   return { success: true };
+}
+
+export async function importQuotationLinesFromConfirmedQuote(
+  sessionId: string
+): Promise<{ success?: true; lines?: ImportedQuotationLine[]; error?: string }> {
+  const access = await requireQuotationManager();
+
+  if ("error" in access) {
+    return { error: access.error };
+  }
+
+  const parsed = z.string().uuid().safeParse(sessionId);
+
+  if (!parsed.success) {
+    return { error: "Invalid quotation session" };
+  }
+
+  const supabase = createServerSupabaseClient();
+  const { data: quotationSession, error: quotationSessionError } = await supabase
+    .from("client_quotation_sessions")
+    .select("id, trade_id, status")
+    .eq("id", parsed.data)
+    .maybeSingle();
+
+  if (quotationSessionError) {
+    return { error: quotationSessionError.message };
+  }
+
+  if (!quotationSession) {
+    return { error: "Quotation session not found" };
+  }
+
+  if (quotationSession.status !== "draft") {
+    return { error: "Only draft quotation sessions can import quote lines" };
+  }
+
+  const { data: confirmedSessions, error: confirmedSessionsError } = await supabase
+    .from("supplier_quote_sessions")
+    .select("id, session_number")
+    .eq("trade_id", quotationSession.trade_id)
+    .eq("status", "confirmed")
+    .order("session_number", { ascending: true });
+
+  if (confirmedSessionsError) {
+    return { error: confirmedSessionsError.message };
+  }
+
+  if (!confirmedSessions?.length) {
+    return { error: "No confirmed quote session found to import from" };
+  }
+
+  if (confirmedSessions.length > 1) {
+    return { error: "More than one quote session is confirmed. Please leave only one confirmed round before importing." };
+  }
+
+  const confirmedSession = confirmedSessions[0];
+  const { data: quoteLines, error: quoteLinesError } = await supabase
+    .from("supplier_quote_lines")
+    .select("product_id, item_name_english, quantity, sort_order, product:products(name_english)")
+    .eq("session_id", confirmedSession.id)
+    .order("sort_order", { ascending: true });
+
+  if (quoteLinesError) {
+    return { error: quoteLinesError.message };
+  }
+
+  const lines = (quoteLines ?? []).map((line) => {
+    const product = Array.isArray(line.product) ? line.product[0] : line.product;
+
+    return {
+      item_description: line.item_name_english ?? product?.name_english ?? "",
+      notes: "",
+      product_id: line.product_id ?? null,
+      quantity: Number(line.quantity),
+      unit_price_usd: 0,
+    };
+  });
+
+  return { success: true, lines };
 }
