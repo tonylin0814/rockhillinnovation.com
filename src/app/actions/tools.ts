@@ -12,7 +12,7 @@ import {
   type PalletInput,
 } from "@/lib/pallet-calculator";
 import { generatePdf } from "@/lib/pdf";
-import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { createServerSupabaseAdmin, createServerSupabaseClient } from "@/lib/supabase/server";
 import { buildPalletCalculationHtml } from "@/lib/templates/pallet-calculator";
 import { getCurrentUser, requireManager } from "@/lib/auth";
 
@@ -173,7 +173,7 @@ export async function exportCalculatorToProduct(
 
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Invalid carton data" };
 
-  const supabase = createServerSupabaseClient();
+  const supabase = createServerSupabaseAdmin();
   const { error } = await supabase
     .from("products")
     .update({

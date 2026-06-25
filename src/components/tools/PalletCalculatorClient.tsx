@@ -115,7 +115,8 @@ export function PalletCalculatorClient({
   const finalHeight = calculation && selectedProfile
     ? Number(selectedProfile.height_cm) + calculation.palletHeightCm + forkliftClearance
     : null;
-  const finalHeightFits = finalHeight !== null ? finalHeight <= containerHeight : null;
+  const finalHeightFitsStd = finalHeight !== null ? finalHeight <= CONTAINER_HEIGHTS_CM["std"] : null;
+  const finalHeightFitsHq = finalHeight !== null ? finalHeight <= CONTAINER_HEIGHTS_CM["40hq"] : null;
 
   function selectProduct(productId: string) {
     setSelectedProductId(productId);
@@ -355,7 +356,7 @@ export function PalletCalculatorClient({
                 <p className="text-sm text-slate-500">Click Calculate & Ask Judy to see stacking instructions.</p>
               )}
 
-              {calculation && selectedProfile && finalHeight !== null && finalHeightFits !== null ? (
+              {calculation && selectedProfile && finalHeight !== null ? (
                 <div className="rounded-lg border border-slate-200 bg-slate-50 p-4 font-mono text-sm">
                   <div className="grid grid-cols-[9rem_1fr] gap-y-1">
                     <span>Pallet height:</span>
@@ -366,12 +367,21 @@ export function PalletCalculatorClient({
                     <span>{formatNumber(forkliftClearance)} cm</span>
                   </div>
                   <div className="my-2 border-t border-slate-300" />
-                  <div className="flex flex-wrap items-center gap-2 font-semibold">
-                    <span>Total height:</span>
-                    <span>{formatNumber(finalHeight)} cm</span>
-                    <span className={finalHeightFits ? "text-green-600" : "text-amber-600"}>
-                      {finalHeightFits ? "Fits" : "Check height"} vs {CONTAINER_PRESETS[containerType].label} {CONTAINER_HEIGHTS_CM[containerType]} cm
-                    </span>
+                  <div className="space-y-1 font-semibold">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span>Total height:</span>
+                      <span>{formatNumber(finalHeight)} cm</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-sm font-normal">
+                      <span className={finalHeightFitsStd ? "text-green-600" : "text-red-600"}>
+                        {finalHeightFitsStd ? "Fits" : "Does not fit"} 20 ft / 40 ft container ({CONTAINER_HEIGHTS_CM["std"]} cm)
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2 text-sm font-normal">
+                      <span className={finalHeightFitsHq ? "text-green-600" : "text-red-600"}>
+                        {finalHeightFitsHq ? "Fits" : "Does not fit"} 40 ft HQ container ({CONTAINER_HEIGHTS_CM["40hq"]} cm)
+                      </span>
+                    </div>
                   </div>
                 </div>
               ) : null}
