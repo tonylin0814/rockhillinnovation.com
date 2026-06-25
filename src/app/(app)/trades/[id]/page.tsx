@@ -129,6 +129,7 @@ export default async function TradeWorkspacePage({ params }: { params: { id: str
     { data: activeProducts, error: activeProductsError },
     { data: tradeShareholders, error: tradeShareholdersError },
     { data: activeVendors, error: activeVendorsError },
+    { data: activeSuppliers, error: activeSuppliersError },
     { data: quoteSessions, error: quoteSessionsError },
     { data: quotationSessions, error: quotationSessionsError },
     { data: tradeDocuments, error: tradeDocumentsError },
@@ -180,6 +181,11 @@ export default async function TradeWorkspacePage({ params }: { params: { id: str
       .order("person_name", { ascending: true }),
     supabase
       .from("expense_vendors")
+      .select("id, name, code")
+      .eq("status", "active")
+      .order("code", { ascending: true }),
+    supabase
+      .from("suppliers")
       .select("id, name, code")
       .eq("status", "active")
       .order("code", { ascending: true }),
@@ -274,6 +280,7 @@ export default async function TradeWorkspacePage({ params }: { params: { id: str
     activeProductsError ||
     tradeShareholdersError ||
     activeVendorsError ||
+    activeSuppliersError ||
     quoteSessionsError ||
     quotationSessionsError ||
     tradeDocumentsError ||
@@ -301,6 +308,7 @@ export default async function TradeWorkspacePage({ params }: { params: { id: str
           activeProductsError?.message ??
           tradeShareholdersError?.message ??
           activeVendorsError?.message ??
+          activeSuppliersError?.message ??
           quoteSessionsError?.message ??
           quotationSessionsError?.message ??
           tradeDocumentsError?.message ??
@@ -437,6 +445,7 @@ export default async function TradeWorkspacePage({ params }: { params: { id: str
   }));
   const tradeShareholderRows = (tradeShareholders ?? []) as TradeShareholder[];
   const activeVendorOptions = (activeVendors ?? []) as ExpenseVendor[];
+  const activeSupplierOptions = (activeSuppliers ?? []) as { id: string; name: string; code: string }[];
   const quoteSessionRows = (quoteSessions ?? []) as SupplierQuoteSession[];
   const quotationSessionRows = (quotationSessions ?? []) as ClientQuotationSession[];
   const tradeDocumentRows = (tradeDocuments ?? []) as TradeDocument[];
@@ -685,6 +694,8 @@ export default async function TradeWorkspacePage({ params }: { params: { id: str
             canManage={canManage}
             initialInvoices={clientInvoiceRows}
             initialSupplierInvoices={supplierInvoiceOutgoingRows}
+            orderNumber={trade.order_number ?? trade.trade_id}
+            suppliers={activeSupplierOptions}
             tradeId={trade.id}
           />
         </TabsContent>

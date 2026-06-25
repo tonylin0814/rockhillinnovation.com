@@ -32,6 +32,7 @@ import { GenerateSupplierInvoiceDialog } from "./GenerateSupplierInvoiceDialog";
 import { SupplierInvoiceMatchDialog } from "./SupplierInvoiceMatchDialog";
 
 const statusLabels = { draft: "Draft", paid: "Paid", sent: "Sent" } as const;
+type SupplierOption = { code: string; id: string; name: string };
 const statusClasses: Record<string, string> = {
   draft: "border-slate-200 bg-slate-100 text-slate-700",
   paid: "border-green-200 bg-green-50 text-green-700",
@@ -163,10 +164,10 @@ function SendInvoiceButton({ invoice }: { invoice: ClientInvoice }) {
   );
 }
 
-function GenerateClientInvoiceMenu({ tradeId }: { tradeId: string }) {
+function GenerateClientInvoiceMenu({ orderNumber, tradeId }: { orderNumber?: string | null; tradeId: string }) {
   return (
     <div className="flex justify-end">
-      <GenerateInvoiceDialog tradeId={tradeId}>
+      <GenerateInvoiceDialog orderNumber={orderNumber} tradeId={tradeId}>
         <Button className="bg-[#0d1b34] hover:bg-[#13294d]">
           <FileText className="mr-2 h-4 w-4" />
           Generate Invoice
@@ -224,10 +225,18 @@ function SupplierInvoiceStatusDropdown({ invoice }: { invoice: SupplierInvoiceOu
   );
 }
 
-function GenerateSupplierInvoiceMenu({ tradeId }: { tradeId: string }) {
+function GenerateSupplierInvoiceMenu({
+  orderNumber,
+  suppliers,
+  tradeId,
+}: {
+  orderNumber?: string | null;
+  suppliers: SupplierOption[];
+  tradeId: string;
+}) {
   return (
     <div className="flex justify-end">
-      <GenerateSupplierInvoiceDialog tradeId={tradeId} type="deposit">
+      <GenerateSupplierInvoiceDialog orderNumber={orderNumber} suppliers={suppliers} tradeId={tradeId} type="deposit">
         <Button className="rounded-r-none bg-[#0d1b34] hover:bg-[#13294d]">
           <FileText className="mr-2 h-4 w-4" />
           Generate Supplier Invoice
@@ -244,10 +253,10 @@ function GenerateSupplierInvoiceMenu({ tradeId }: { tradeId: string }) {
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
-          <GenerateSupplierInvoiceDialog tradeId={tradeId} type="deposit">
+          <GenerateSupplierInvoiceDialog orderNumber={orderNumber} suppliers={suppliers} tradeId={tradeId} type="deposit">
             <DropdownMenuItem onSelect={(event) => event.preventDefault()}>Deposit Invoice</DropdownMenuItem>
           </GenerateSupplierInvoiceDialog>
-          <GenerateSupplierInvoiceDialog tradeId={tradeId} type="final">
+          <GenerateSupplierInvoiceDialog orderNumber={orderNumber} suppliers={suppliers} tradeId={tradeId} type="final">
             <DropdownMenuItem onSelect={(event) => event.preventDefault()}>Final Invoice</DropdownMenuItem>
           </GenerateSupplierInvoiceDialog>
         </DropdownMenuContent>
@@ -260,19 +269,23 @@ export function InvoicesTab({
   canManage,
   initialInvoices,
   initialSupplierInvoices,
+  orderNumber,
+  suppliers,
   tradeId,
 }: {
   tradeId: string;
   canManage: boolean;
   initialInvoices: ClientInvoice[];
   initialSupplierInvoices: SupplierInvoiceOutgoing[];
+  orderNumber?: string | null;
+  suppliers: SupplierOption[];
 }) {
   return (
     <div className="space-y-8">
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <h2 className="text-base font-semibold text-[#0d1b34]">Client Invoices</h2>
-          {canManage ? <GenerateClientInvoiceMenu tradeId={tradeId} /> : null}
+          {canManage ? <GenerateClientInvoiceMenu orderNumber={orderNumber} tradeId={tradeId} /> : null}
         </div>
 
         {initialInvoices.length ? (
@@ -337,7 +350,9 @@ export function InvoicesTab({
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <h2 className="text-base font-semibold text-[#0d1b34]">Supplier Invoices (Outgoing)</h2>
-          {canManage ? <GenerateSupplierInvoiceMenu tradeId={tradeId} /> : null}
+          {canManage ? (
+            <GenerateSupplierInvoiceMenu orderNumber={orderNumber} suppliers={suppliers} tradeId={tradeId} />
+          ) : null}
         </div>
 
         {initialSupplierInvoices.length ? (

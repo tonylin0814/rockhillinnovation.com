@@ -32,8 +32,10 @@ function createAdjustmentRow(): AdjustmentRow {
 
 export function GenerateInvoiceDialog({
   children,
+  orderNumber,
   tradeId,
 }: {
+  orderNumber?: string | null;
   tradeId: string;
   type?: unknown;
   children: ReactNode;
@@ -111,9 +113,11 @@ export function GenerateInvoiceDialog({
             <Label htmlFor="invoice_number">Invoice Number</Label>
             <Input
               disabled={isPending}
+              defaultValue={orderNumber ?? ""}
               id="invoice_number"
               name="invoice_number"
-              placeholder="e.g. MLP-042826"
+              placeholder="Order number"
+              readOnly
               required
             />
           </div>
