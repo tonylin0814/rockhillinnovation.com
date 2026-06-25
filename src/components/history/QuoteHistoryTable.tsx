@@ -48,10 +48,10 @@ function formatQuantity(value: number | null | undefined) {
 
 function formatUsd(value: number | null | undefined) {
   return typeof value === "number"
-    ? new Intl.NumberFormat("en-US", {
+    ? `$${new Intl.NumberFormat("en-US", {
         maximumFractionDigits: 2,
         minimumFractionDigits: 2,
-      }).format(value)
+      }).format(value)}`
     : "-";
 }
 
