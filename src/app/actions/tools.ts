@@ -16,8 +16,6 @@ import { createServerSupabaseAdmin, createServerSupabaseClient } from "@/lib/sup
 import { buildPalletCalculationHtml } from "@/lib/templates/pallet-calculator";
 import { getCurrentUser, requireManager } from "@/lib/auth";
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-
 type ActionResult = {
   success?: true;
   url?: string;
@@ -122,12 +120,14 @@ export async function getJudyPalletExplanation(payload: {
 }): Promise<{ explanation?: string; error?: string }> {
   const user = await getCurrentUser();
   if (!user) return { error: "Unauthorized" };
-  if (!process.env.OPENAI_API_KEY) return { error: "AI not configured" };
+  const apiKey = process.env.OPENAI_API_KEY;
+  if (!apiKey) return { error: "AI not configured" };
 
   const { buildJudyPalletPrompt } = await import("@/lib/judy-pallet-prompt");
   const prompt = buildJudyPalletPrompt(payload);
 
   try {
+    const openai = new OpenAI({ apiKey });
     const completion = await openai.chat.completions.create({
       max_tokens: 1024,
       messages: [
