@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import OpenAI from "openai";
 import { z } from "zod";
 
 import {
@@ -14,6 +15,8 @@ import { generatePdf } from "@/lib/pdf";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { buildPalletCalculationHtml } from "@/lib/templates/pallet-calculator";
 import { getCurrentUser, requireManager } from "@/lib/auth";
+
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 type ActionResult = {
   success?: true;
@@ -119,31 +122,23 @@ export async function getJudyPalletExplanation(payload: {
 }): Promise<{ explanation?: string; error?: string }> {
   const user = await getCurrentUser();
   if (!user) return { error: "Unauthorized" };
-  if (!process.env.ANTHROPIC_API_KEY) return { error: "AI not configured" };
+  if (!process.env.OPENAI_API_KEY) return { error: "AI not configured" };
 
   const { buildJudyPalletPrompt } = await import("@/lib/judy-pallet-prompt");
   const prompt = buildJudyPalletPrompt(payload);
 
   try {
-    const response = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: {
-        "anthropic-version": "2023-06-01",
-        "content-type": "application/json",
-        "x-api-key": process.env.ANTHROPIC_API_KEY,
-      },
-      body: JSON.stringify({
-        max_tokens: 1024,
-        messages: [{ role: "user", content: prompt.user }],
-        model: "claude-haiku-4-5-20251001",
-        system: prompt.system,
-      }),
+    const completion = await openai.chat.completions.create({
+      max_tokens: 1024,
+      messages: [
+        { content: prompt.system, role: "system" },
+        { content: prompt.user, role: "user" },
+      ],
+      model: "gpt-4o-mini",
+      temperature: 0.2,
     });
 
-    if (!response.ok) return { error: "AI request failed" };
-
-    const data = await response.json();
-    const text = data.content?.[0]?.text ?? "";
+    const text = completion.choices[0]?.message.content ?? "";
     return { explanation: text };
   } catch {
     return { error: "Failed to reach AI service" };
