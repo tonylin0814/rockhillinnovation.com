@@ -64,7 +64,10 @@ function rowsFromLines(lines: SupplierQuoteLine[]): EditableQuoteLine[] {
 }
 
 function formatRmb(value: number, digits = 2) {
-  return `\u00A5${value.toFixed(digits)}`;
+  return `\u00A5${new Intl.NumberFormat("en-US", {
+    maximumFractionDigits: digits,
+    minimumFractionDigits: digits,
+  }).format(value)}`;
 }
 
 function formatQuantity(value: number) {
@@ -79,7 +82,7 @@ function formatRmbUnit(value: number) {
 }
 
 function formatRmbTotal(value: number) {
-  return `\u00A5${value.toFixed(2)}`;
+  return formatRmb(value, 2);
 }
 
 function formatUsd(value: number) {
