@@ -276,7 +276,7 @@ export function QuoteLinesEditor({
             <TableHead className="w-14">#</TableHead>
             <TableHead>Code</TableHead>
             <TableHead>Product</TableHead>
-            <TableHead className="w-[99px]">Qty</TableHead>
+            <TableHead className="w-[101px]">Qty</TableHead>
             <TableHead>Cost (RMB)</TableHead>
             <TableHead>Quote</TableHead>
             <TableHead>Prv. Quote</TableHead>
@@ -330,7 +330,7 @@ export function QuoteLinesEditor({
                   <TableCell>
                     {isEditing ? (
                       <Input
-                        className="w-[99px]"
+                        className="w-[101px]"
                         min="0.001"
                         onChange={(event) => updateRow(index, { quantity: Number(event.currentTarget.value) || 1 })}
                         step="0.001"
