@@ -147,6 +147,7 @@ export function QuotationLinesEditor({
   const router = useRouter();
   const [isEditing, setIsEditing] = useState(false);
   const [rows, setRows] = useState<EditableQuotationLine[]>(() => rowsFromLines(initialLines));
+  const [focusedQuoteIndex, setFocusedQuoteIndex] = useState<number | null>(null);
   const [isPending, startTransition] = useTransition();
   const sortedProducts = useMemo(() => [...availableProducts].sort(compareProductsByName), [availableProducts]);
   const productById = useMemo(
@@ -387,10 +388,19 @@ export function QuotationLinesEditor({
                         onChange={(event) =>
                           updateRow(index, { unit_price_usd: Number(event.currentTarget.value) || 0 })
                         }
-                        onBlur={() => updateRow(index, { unit_price_usd: Number(row.unit_price_usd.toFixed(2)) })}
+                        onBlur={() => {
+                          updateRow(index, { unit_price_usd: Number(row.unit_price_usd.toFixed(2)) });
+                          setFocusedQuoteIndex(null);
+                        }}
+                        onFocus={(event) => {
+                          setFocusedQuoteIndex(index);
+                          event.currentTarget.select();
+                        }}
                         step="0.01"
                         type="number"
-                        value={formatNumberInput(row.unit_price_usd)}
+                        value={
+                          focusedQuoteIndex === index ? String(row.unit_price_usd) : formatNumberInput(row.unit_price_usd)
+                        }
                       />
                     ) : (
                       formatUsd(row.unit_price_usd)
