@@ -25,9 +25,9 @@ export type PalletCalculation = {
 };
 
 export const CONTAINER_PRESETS = {
-  "20GP": { label: "20GP", pallets: 10 },
-  "40GP": { label: "40GP", pallets: 20 },
-  "40HQ": { label: "40HQ", pallets: 22 },
+  "20ft": { label: "20GP", pallets: 10 },
+  "40ft": { label: "40GP", pallets: 20 },
+  "40hq": { label: "40HQ", pallets: 20 },
 } as const;
 
 type OrientationResult = PalletCalculation & {

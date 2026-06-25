@@ -93,11 +93,11 @@ function hasNumberValue(value: number | null | undefined) {
 }
 
 function calculateQtyItemsPerPallet(product: Product) {
-  if (typeof product.qty_per_carton !== "number" || typeof product.cartons_per_pallet !== "number") {
+  if (typeof product.qty_per_carton !== "number" || typeof product.cartons_per_pallet_std !== "number") {
     return null;
   }
 
-  return product.qty_per_carton * product.cartons_per_pallet;
+  return product.qty_per_carton * product.cartons_per_pallet_std;
 }
 
 function formatCartonFlag(value: string | null | undefined) {
@@ -180,7 +180,7 @@ export default async function ProductDetailPage({
     const { data: components, error: componentsError } = await supabase
       .from("product_components")
       .select(
-        "*, component:products!product_components_component_product_id_fkey(id, code, supplier_product_code, name_english, name_chinese, product_type, supplier_id, payment_category, status, notes, packaging_required, has_carton, qty_per_carton, carton_height_cm, carton_width_cm, carton_length_cm, carton_weight_kg, cartons_per_pallet, pallet_length_cm, pallet_width_cm, pallet_height_cm, pallet_max_weight_kg, country_of_origin, product_images, created_at, updated_at, supplier:suppliers(id, name, code))"
+        "*, component:products!product_components_component_product_id_fkey(id, code, supplier_product_code, name_english, name_chinese, product_type, supplier_id, payment_category, status, notes, packaging_required, has_carton, product_length_cm, product_width_cm, product_height_cm, product_weight_kg, product_art_notes, qty_per_carton, carton_height_cm, carton_width_cm, carton_length_cm, carton_weight_kg, cartons_per_pallet_std, cartons_per_pallet_hq, country_of_origin, product_images, created_at, updated_at, supplier:suppliers(id, name, code))"
       )
       .eq("set_product_id", params.id)
       .order("sort_order", { ascending: true });
@@ -379,7 +379,14 @@ export default async function ProductDetailPage({
                     )} W x ${formatPackagingValue(product.carton_length_cm)} L cm`}
                   />
                   <DetailRow label="Carton Weight" value={formatPackagingValue(product.carton_weight_kg, " kg")} />
-                  <DetailRow label="Cartons per Pallet" value={formatPackagingValue(product.cartons_per_pallet)} />
+                  <DetailRow
+                    label="Cartons / Pallet (20' & 40')"
+                    value={formatPackagingValue(product.cartons_per_pallet_std)}
+                  />
+                  <DetailRow
+                    label="Cartons / Pallet (40'HQ)"
+                    value={formatPackagingValue(product.cartons_per_pallet_hq)}
+                  />
                   <DetailRow
                     label="Qty Items per Pallet"
                     value={formatPackagingValue(calculateQtyItemsPerPallet(product))}

@@ -197,17 +197,29 @@ export type Product = {
   carton_width_cm: number | null;
   carton_length_cm: number | null;
   carton_weight_kg: number | null;
-  cartons_per_pallet: number | null;
-  pallet_length_cm: number | null;
-  pallet_width_cm: number | null;
-  pallet_height_cm: number | null;
-  pallet_max_weight_kg: number | null;
+  cartons_per_pallet_std: number | null;
+  cartons_per_pallet_hq: number | null;
   country_of_origin: string;
   product_images: ProductImage[];
   created_at: string;
   updated_at: string;
   supplier?: { id: string; name: string; code: string } | null;
   components?: { id: string }[] | null;
+};
+
+export type PalletMaterial = "wood" | "plastic" | "paper_honeycomb";
+
+export type PalletProfile = {
+  id: string;
+  name: string;
+  material: PalletMaterial;
+  length_cm: number;
+  width_cm: number;
+  height_cm: number;
+  max_weight_kg: number;
+  notes: string | null;
+  is_default: boolean;
+  created_at: string;
 };
 
 export type ProductImage = {

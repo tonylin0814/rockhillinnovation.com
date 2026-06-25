@@ -40,6 +40,7 @@ const historySubItems = [
 
 const toolsNavItems = [
   { label: "Pallet Calculator", href: "/tools/pallet-calculator", icon: Package2 },
+  { label: "Pallet Profiles", href: "/tools/pallet-profiles", icon: Package2 },
 ];
 
 const adminNavItems = [

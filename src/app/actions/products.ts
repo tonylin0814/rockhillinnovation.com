@@ -56,11 +56,8 @@ const productSchema = z
     carton_width_cm: nullableNonNegativeNumber(),
     carton_length_cm: nullableNonNegativeNumber(),
     carton_weight_kg: nullableNonNegativeNumber(),
-    cartons_per_pallet: nullableNonNegativeNumber(),
-    pallet_length_cm: nullableNonNegativeNumber(),
-    pallet_width_cm: nullableNonNegativeNumber(),
-    pallet_height_cm: nullableNonNegativeNumber(),
-    pallet_max_weight_kg: nullableNonNegativeNumber(),
+    cartons_per_pallet_std: nullableNonNegativeNumber(),
+    cartons_per_pallet_hq: nullableNonNegativeNumber(),
     country_of_origin: z.string().trim().min(1, "Country of origin is required").default("CHINA"),
   })
   .superRefine((value, context) => {
@@ -82,11 +79,8 @@ const productSchema = z
     carton_width_cm: value.packaging_required ? value.carton_width_cm : null,
     carton_length_cm: value.packaging_required ? value.carton_length_cm : null,
     carton_weight_kg: value.packaging_required ? value.carton_weight_kg : null,
-    cartons_per_pallet: value.packaging_required ? value.cartons_per_pallet : null,
-    pallet_length_cm: value.packaging_required ? value.pallet_length_cm : null,
-    pallet_width_cm: value.packaging_required ? value.pallet_width_cm : null,
-    pallet_height_cm: value.packaging_required ? value.pallet_height_cm : null,
-    pallet_max_weight_kg: value.packaging_required ? value.pallet_max_weight_kg : null,
+    cartons_per_pallet_std: value.packaging_required ? value.cartons_per_pallet_std : null,
+    cartons_per_pallet_hq: value.packaging_required ? value.cartons_per_pallet_hq : null,
     country_of_origin: value.country_of_origin || "CHINA",
   }));
 
@@ -198,21 +192,12 @@ function valuesFromForm(formData: FormData, fallback?: Product) {
     carton_weight_kg: formData.has("carton_weight_kg")
       ? formData.get("carton_weight_kg")
       : fallback?.carton_weight_kg ?? null,
-    cartons_per_pallet: formData.has("cartons_per_pallet")
-      ? formData.get("cartons_per_pallet")
-      : fallback?.cartons_per_pallet ?? null,
-    pallet_length_cm: formData.has("pallet_length_cm")
-      ? formData.get("pallet_length_cm")
-      : fallback?.pallet_length_cm ?? null,
-    pallet_width_cm: formData.has("pallet_width_cm")
-      ? formData.get("pallet_width_cm")
-      : fallback?.pallet_width_cm ?? null,
-    pallet_height_cm: formData.has("pallet_height_cm")
-      ? formData.get("pallet_height_cm")
-      : fallback?.pallet_height_cm ?? null,
-    pallet_max_weight_kg: formData.has("pallet_max_weight_kg")
-      ? formData.get("pallet_max_weight_kg")
-      : fallback?.pallet_max_weight_kg ?? null,
+    cartons_per_pallet_std: formData.has("cartons_per_pallet_std")
+      ? formData.get("cartons_per_pallet_std")
+      : fallback?.cartons_per_pallet_std ?? null,
+    cartons_per_pallet_hq: formData.has("cartons_per_pallet_hq")
+      ? formData.get("cartons_per_pallet_hq")
+      : fallback?.cartons_per_pallet_hq ?? null,
     country_of_origin: formData.has("country_of_origin")
       ? formData.get("country_of_origin")
       : fallback?.country_of_origin ?? "CHINA",

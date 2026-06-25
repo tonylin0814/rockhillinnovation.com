@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { PalletCalculatorClient } from "@/components/tools/PalletCalculatorClient";
 import { getCurrentUser } from "@/lib/auth";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
-import type { Product } from "@/types";
+import type { PalletProfile, Product } from "@/types";
 
 export default async function PalletCalculatorPage() {
   const user = await getCurrentUser();
@@ -24,19 +24,27 @@ export default async function PalletCalculatorPage() {
   }
 
   const supabase = createServerSupabaseClient();
-  const { data, error } = await supabase
-    .from("products")
-    .select("*, supplier:suppliers(id, name, code)")
-    .eq("status", "active")
-    .order("name_english", { ascending: true });
+  const [{ data: products, error: productsError }, { data: palletProfiles, error: profilesError }] = await Promise.all([
+    supabase
+      .from("products")
+      .select("*, supplier:suppliers(id, name, code)")
+      .eq("status", "active")
+      .order("name_english", { ascending: true }),
+    supabase.from("pallet_profiles").select("*").order("name", { ascending: true }),
+  ]);
 
-  if (error) {
+  if (productsError || profilesError) {
     return (
       <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm font-medium text-red-700">
-        {error.message}
+        {productsError?.message ?? profilesError?.message}
       </div>
     );
   }
 
-  return <PalletCalculatorClient products={(data ?? []) as Product[]} />;
+  return (
+    <PalletCalculatorClient
+      palletProfiles={(palletProfiles ?? []) as PalletProfile[]}
+      products={(products ?? []) as Product[]}
+    />
+  );
 }

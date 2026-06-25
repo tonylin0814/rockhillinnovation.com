@@ -78,11 +78,11 @@ export function ProductFormDialog({
   const [packagingRequired, setPackagingRequired] = useState(initialData?.packaging_required ?? false);
   const [hasCarton, setHasCarton] = useState(initialData?.has_carton ?? false);
   const [qtyPerCarton, setQtyPerCarton] = useState(initialData?.qty_per_carton?.toString() ?? "");
-  const [cartonsPerPallet, setCartonsPerPallet] = useState(initialData?.cartons_per_pallet?.toString() ?? "");
+  const [cartonsPerPalletStd, setCartonsPerPalletStd] = useState(initialData?.cartons_per_pallet_std?.toString() ?? "");
   const [setComponentRows, setSetComponentRows] = useState<SetComponentDraft[]>([]);
   const [isPending, startTransition] = useTransition();
-  const qtyItemsPerPallet = Number(qtyPerCarton) > 0 && Number(cartonsPerPallet) > 0
-    ? Number(qtyPerCarton) * Number(cartonsPerPallet)
+  const qtyItemsPerPallet = Number(qtyPerCarton) > 0 && Number(cartonsPerPalletStd) > 0
+    ? Number(qtyPerCarton) * Number(cartonsPerPalletStd)
     : null;
 
   useEffect(() => {
@@ -94,7 +94,7 @@ export function ProductFormDialog({
       setPackagingRequired(initialData?.packaging_required ?? false);
       setHasCarton(initialData?.has_carton ?? false);
       setQtyPerCarton(initialData?.qty_per_carton?.toString() ?? "");
-      setCartonsPerPallet(initialData?.cartons_per_pallet?.toString() ?? "");
+      setCartonsPerPalletStd(initialData?.cartons_per_pallet_std?.toString() ?? "");
       setSetComponentRows([]);
     }
   }, [defaultProductType, initialData, open]);
@@ -577,7 +577,7 @@ export function ProductFormDialog({
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label>Carton Dimensions (cm)</Label>
+                    <Label>Carton Dimensions / Weight</Label>
                     <div className="flex flex-wrap gap-2">
                       <Input
                         aria-label="Carton height in cm"
@@ -615,31 +615,42 @@ export function ProductFormDialog({
                         step="0.01"
                         type="number"
                       />
+                      <Input
+                        aria-label="Carton weight in kg"
+                        className="w-28"
+                        defaultValue={initialData?.carton_weight_kg ?? ""}
+                        disabled={isPending}
+                        min="0"
+                        name="carton_weight_kg"
+                        placeholder="Weight kg"
+                        step="0.01"
+                        type="number"
+                      />
                     </div>
                   </div>
                 </div>
                 <div className="grid gap-4 sm:grid-cols-3">
                   <div className="space-y-2">
-                    <Label htmlFor="carton_weight_kg">Carton Weight (kg)</Label>
+                    <Label htmlFor="cartons_per_pallet_std">Cartons / Pallet (20 ft & 40 ft)</Label>
                     <Input
-                      defaultValue={initialData?.carton_weight_kg ?? ""}
+                      defaultValue={initialData?.cartons_per_pallet_std ?? ""}
                       disabled={isPending}
-                      id="carton_weight_kg"
+                      id="cartons_per_pallet_std"
                       min="0"
-                      name="carton_weight_kg"
-                      step="0.01"
+                      name="cartons_per_pallet_std"
+                      onChange={(event) => setCartonsPerPalletStd(event.target.value)}
+                      step="1"
                       type="number"
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="cartons_per_pallet">Cartons per Pallet</Label>
+                    <Label htmlFor="cartons_per_pallet_hq">Cartons / Pallet (40 ft HQ)</Label>
                     <Input
-                      defaultValue={initialData?.cartons_per_pallet ?? ""}
+                      defaultValue={initialData?.cartons_per_pallet_hq ?? ""}
                       disabled={isPending}
-                      id="cartons_per_pallet"
+                      id="cartons_per_pallet_hq"
                       min="0"
-                      name="cartons_per_pallet"
-                      onChange={(event) => setCartonsPerPallet(event.target.value)}
+                      name="cartons_per_pallet_hq"
                       step="1"
                       type="number"
                     />
@@ -650,62 +661,6 @@ export function ProductFormDialog({
                       {qtyItemsPerPallet ? qtyItemsPerPallet.toLocaleString() : "-"}
                     </p>
                   </div>
-                </div>
-                <div className="rounded-md border border-slate-200 bg-slate-50 p-3">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Pallet Configuration</p>
-                  <div className="mt-3 grid gap-3 sm:grid-cols-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="pallet_length_cm">Pallet L (cm)</Label>
-                      <Input
-                        defaultValue={initialData?.pallet_length_cm ?? ""}
-                        disabled={isPending}
-                        id="pallet_length_cm"
-                        min="0"
-                        name="pallet_length_cm"
-                        step="0.01"
-                        type="number"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="pallet_width_cm">Pallet W (cm)</Label>
-                      <Input
-                        defaultValue={initialData?.pallet_width_cm ?? ""}
-                        disabled={isPending}
-                        id="pallet_width_cm"
-                        min="0"
-                        name="pallet_width_cm"
-                        step="0.01"
-                        type="number"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="pallet_height_cm">Max H (cm)</Label>
-                      <Input
-                        defaultValue={initialData?.pallet_height_cm ?? ""}
-                        disabled={isPending}
-                        id="pallet_height_cm"
-                        min="0"
-                        name="pallet_height_cm"
-                        step="0.01"
-                        type="number"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="pallet_max_weight_kg">Max Weight (kg)</Label>
-                      <Input
-                        defaultValue={initialData?.pallet_max_weight_kg ?? ""}
-                        disabled={isPending}
-                        id="pallet_max_weight_kg"
-                        min="0"
-                        name="pallet_max_weight_kg"
-                        step="0.01"
-                        type="number"
-                      />
-                    </div>
-                  </div>
-                  <p className="mt-2 text-xs text-slate-500">
-                    Leave blank to use the pallet calculator defaults.
-                  </p>
                 </div>
               </div>
             ) : null}

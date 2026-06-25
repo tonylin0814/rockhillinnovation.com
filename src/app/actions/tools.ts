@@ -1,5 +1,6 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
 import {
@@ -12,7 +13,7 @@ import {
 import { generatePdf } from "@/lib/pdf";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { buildPalletCalculationHtml } from "@/lib/templates/pallet-calculator";
-import { getCurrentUser } from "@/lib/auth";
+import { getCurrentUser, requireManager } from "@/lib/auth";
 
 type ActionResult = {
   success?: true;
@@ -98,4 +99,101 @@ export async function generatePalletCalculationPdf(formData: FormData): Promise<
   const pdf = await generatePdf(html);
 
   return { success: true, url: `data:application/pdf;base64,${pdf.toString("base64")}` };
+}
+
+export async function getJudyPalletExplanation(payload: {
+  productName: string;
+  carton: { lengthCm: number; widthCm: number; heightCm: number; weightKg: number; qtyPerCarton: number };
+  pallet: { name: string; lengthCm: number; widthCm: number; heightCm: number; maxWeightKg: number };
+  forkliftClearanceCm: number;
+  calculation: {
+    orientation: string;
+    cartonsPerLayer: number;
+    layerCount: number;
+    cartonsPerPallet: number;
+    itemsPerPallet: number;
+    palletGrossWeightKg: number;
+    stackHeightCm: number;
+    footprintUsedPct: number;
+  };
+}): Promise<{ explanation?: string; error?: string }> {
+  const user = await getCurrentUser();
+  if (!user) return { error: "Unauthorized" };
+  if (!process.env.ANTHROPIC_API_KEY) return { error: "AI not configured" };
+
+  const { buildJudyPalletPrompt } = await import("@/lib/judy-pallet-prompt");
+  const prompt = buildJudyPalletPrompt(payload);
+
+  try {
+    const response = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {
+        "anthropic-version": "2023-06-01",
+        "content-type": "application/json",
+        "x-api-key": process.env.ANTHROPIC_API_KEY,
+      },
+      body: JSON.stringify({
+        max_tokens: 1024,
+        messages: [{ role: "user", content: prompt.user }],
+        model: "claude-haiku-4-5-20251001",
+        system: prompt.system,
+      }),
+    });
+
+    if (!response.ok) return { error: "AI request failed" };
+
+    const data = await response.json();
+    const text = data.content?.[0]?.text ?? "";
+    return { explanation: text };
+  } catch {
+    return { error: "Failed to reach AI service" };
+  }
+}
+
+export async function exportCalculatorToProduct(
+  productId: string,
+  data: {
+    carton_length_cm: number;
+    carton_width_cm: number;
+    carton_height_cm: number;
+    carton_weight_kg: number;
+    qty_per_carton: number;
+  }
+): Promise<{ success?: true; error?: string }> {
+  const access = await requireManager();
+  if ("error" in access) return { error: access.error };
+
+  const parsed = z
+    .object({
+      productId: z.string().uuid(),
+      data: z.object({
+        carton_height_cm: z.coerce.number().positive(),
+        carton_length_cm: z.coerce.number().positive(),
+        carton_weight_kg: z.coerce.number().positive(),
+        carton_width_cm: z.coerce.number().positive(),
+        qty_per_carton: z.coerce.number().positive(),
+      }),
+    })
+    .safeParse({ data, productId });
+
+  if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Invalid carton data" };
+
+  const supabase = createServerSupabaseClient();
+  const { error } = await supabase
+    .from("products")
+    .update({
+      carton_height_cm: parsed.data.data.carton_height_cm,
+      carton_length_cm: parsed.data.data.carton_length_cm,
+      carton_weight_kg: parsed.data.data.carton_weight_kg,
+      carton_width_cm: parsed.data.data.carton_width_cm,
+      packaging_required: true,
+      qty_per_carton: parsed.data.data.qty_per_carton,
+    })
+    .eq("id", parsed.data.productId);
+
+  if (error) return { error: error.message };
+
+  revalidatePath("/products");
+  revalidatePath(`/products/${parsed.data.productId}`);
+  return { success: true };
 }
