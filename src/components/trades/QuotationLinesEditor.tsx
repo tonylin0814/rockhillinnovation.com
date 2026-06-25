@@ -94,7 +94,7 @@ function formatDate(value: string) {
 }
 
 function formatExchangeRate(value: number | null) {
-  return typeof value === "number" && value > 0 ? `Rate: ${formatRmb(value, 2)} / $1` : "Rate: -";
+  return typeof value === "number" && value > 0 ? `Rate: ${value.toFixed(4)}` : "Rate: -";
 }
 
 function formatPercent(value: number | null) {
