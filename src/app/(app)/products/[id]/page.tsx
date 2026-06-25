@@ -88,6 +88,19 @@ function formatPackagingValue(value: number | null | undefined, suffix = "") {
   return `${Number.isInteger(value) ? value.toFixed(0) : value.toString()}${suffix}`;
 }
 
+function formatWholeNumber(value: number | string | null | undefined) {
+  if (value === null || value === undefined || value === "") {
+    return "-";
+  }
+
+  const numericValue = typeof value === "number" ? value : Number(value.replace(/,/g, ""));
+  if (!Number.isFinite(numericValue)) {
+    return String(value);
+  }
+
+  return Math.round(numericValue).toLocaleString("en-US", { maximumFractionDigits: 0 });
+}
+
 function hasNumberValue(value: number | null | undefined) {
   return typeof value === "number";
 }
@@ -371,7 +384,7 @@ export default async function ProductDetailPage({
               </CardHeader>
               <CardContent>
                 <div className="grid gap-x-6 sm:grid-cols-2">
-                  <DetailRow label="Qty per Carton" value={formatPackagingValue(product.qty_per_carton)} />
+                  <DetailRow label="Qty per Carton" value={formatWholeNumber(product.qty_per_carton)} />
                   <DetailRow
                     label="Carton Dimensions"
                     value={`${formatPackagingValue(product.carton_height_cm)} H x ${formatPackagingValue(
@@ -393,7 +406,7 @@ export default async function ProductDetailPage({
                       QTY Items / Pallet (20 ft & 40 ft)
                     </p>
                     <p className="mt-1 text-sm font-semibold text-[#0d1b34]">
-                      {formatPackagingValue(calculateQtyItemsPerPallet(product, product.cartons_per_pallet_std))}
+                      {formatWholeNumber(calculateQtyItemsPerPallet(product, product.cartons_per_pallet_std))}
                     </p>
                   </div>
                   <div className="rounded-md border border-slate-200 bg-slate-50 p-3">
@@ -408,7 +421,7 @@ export default async function ProductDetailPage({
                       QTY Items / Pallet (40 ft HQ)
                     </p>
                     <p className="mt-1 text-sm font-semibold text-[#0d1b34]">
-                      {formatPackagingValue(calculateQtyItemsPerPallet(product, product.cartons_per_pallet_hq))}
+                      {formatWholeNumber(calculateQtyItemsPerPallet(product, product.cartons_per_pallet_hq))}
                     </p>
                   </div>
                 </div>
@@ -428,7 +441,7 @@ export default async function ProductDetailPage({
                 </div>
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Latest MOQ</p>
-                  <p className="mt-1 text-sm text-[#0d1b34]">{latestCost?.moq ?? "-"}</p>
+                  <p className="mt-1 text-sm text-[#0d1b34]">{formatWholeNumber(latestCost?.moq)}</p>
                 </div>
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Latest Date</p>
@@ -461,7 +474,7 @@ export default async function ProductDetailPage({
                       <TableRow key={row.id}>
                         <TableCell>{formatDate(row.quoted_date)}</TableCell>
                         <TableCell>{row.supplier_product_code ?? "-"}</TableCell>
-                        <TableCell>{row.moq ?? "-"}</TableCell>
+                        <TableCell>{formatWholeNumber(row.moq)}</TableCell>
                         <TableCell className="text-right font-medium text-[#0d1b34]">
                           {formatRmb(row.unit_cost_rmb)}
                         </TableCell>
