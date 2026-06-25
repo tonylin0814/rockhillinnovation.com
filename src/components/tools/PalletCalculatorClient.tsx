@@ -112,11 +112,41 @@ export function PalletCalculatorClient({
   const sideViewSvg = calculation && calculationCarton && calculationPallet
     ? buildPalletSideViewSvg(calculationCarton, calculationPallet, calculation)
     : "";
-  const finalHeight = calculation && selectedProfile
-    ? Number(selectedProfile.height_cm) + calculation.palletHeightCm + forkliftClearance
+  const standardPlan = calculation && selectedProfile
+    ? buildContainerPlan("std")
     : null;
-  const finalHeightFitsStd = finalHeight !== null ? finalHeight <= CONTAINER_HEIGHTS_CM["std"] : null;
-  const finalHeightFitsHq = finalHeight !== null ? finalHeight <= CONTAINER_HEIGHTS_CM["40hq"] : null;
+  const hqPlan = calculation && selectedProfile
+    ? buildContainerPlan("40hq")
+    : null;
+
+  function buildContainerPlan(type: ContainerType) {
+    if (!selectedProfile) {
+      return null;
+    }
+
+    const containerHeightCm = CONTAINER_HEIGHTS_CM[type];
+    const palletHeightCm = Number(selectedProfile.height_cm);
+    const availableStackHeightCm = Math.max(0, containerHeightCm - palletHeightCm - forkliftClearance);
+    const result = calculatePallet(carton, {
+      lengthCm: Number(selectedProfile.length_cm),
+      maxHeightCm: availableStackHeightCm,
+      maxWeightKg: Number(selectedProfile.max_weight_kg),
+      widthCm: Number(selectedProfile.width_cm),
+    });
+    const totalHeightCm = palletHeightCm + result.palletHeightCm + forkliftClearance;
+
+    return {
+      availableStackHeightCm,
+      cartonsPerPallet: result.cartonsPerPallet,
+      containerHeightCm,
+      fits: totalHeightCm <= containerHeightCm,
+      itemsPerPallet: result.itemsPerPallet,
+      layerCount: result.layers,
+      palletGrossWeightKg: result.palletGrossWeightKg,
+      stackHeightCm: result.palletHeightCm,
+      totalHeightCm,
+    };
+  }
 
   function selectProduct(productId: string) {
     setSelectedProductId(productId);
@@ -154,16 +184,12 @@ export function PalletCalculatorClient({
       const aiResult = await getJudyPalletExplanation({
         calculation: {
           cartonsPerLayer: result.cartonsPerLayer,
-          cartonsPerPallet: result.cartonsPerPallet,
           footprintUsedPct: result.footprintUsedPct,
-          itemsPerPallet: result.itemsPerPallet,
-          layerCount: result.layers,
           orientation: result.orientation,
-          palletGrossWeightKg: result.palletGrossWeightKg,
-          stackHeightCm: result.palletHeightCm,
         },
         carton,
         forkliftClearanceCm: forkliftClearance,
+        hqPlan: buildContainerPlan("40hq")!,
         pallet: {
           heightCm: Number(selectedProfile.height_cm),
           lengthCm: Number(selectedProfile.length_cm),
@@ -172,6 +198,7 @@ export function PalletCalculatorClient({
           widthCm: Number(selectedProfile.width_cm),
         },
         productName: productName || "Manual product",
+        standardPlan: buildContainerPlan("std")!,
       });
 
       if (aiResult.error) {
@@ -356,30 +383,28 @@ export function PalletCalculatorClient({
                 <p className="text-sm text-slate-500">Click Calculate & Ask Judy to see stacking instructions.</p>
               )}
 
-              {calculation && selectedProfile && finalHeight !== null ? (
+              {calculation && selectedProfile && standardPlan && hqPlan ? (
                 <div className="rounded-lg border border-slate-200 bg-slate-50 p-4 font-mono text-sm">
                   <div className="grid grid-cols-[9rem_1fr] gap-y-1">
                     <span>Pallet height:</span>
                     <span>{formatNumber(Number(selectedProfile.height_cm))} cm</span>
-                    <span>Carton stack:</span>
-                    <span>{formatNumber(calculation.palletHeightCm)} cm</span>
                     <span>Forklift space:</span>
                     <span>{formatNumber(forkliftClearance)} cm</span>
                   </div>
                   <div className="my-2 border-t border-slate-300" />
-                  <div className="space-y-1 font-semibold">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span>Total height:</span>
-                      <span>{formatNumber(finalHeight)} cm</span>
-                    </div>
+                  <div className="space-y-2 font-semibold">
                     <div className="flex items-center gap-2 text-sm font-normal">
-                      <span className={finalHeightFitsStd ? "text-green-600" : "text-red-600"}>
-                        {finalHeightFitsStd ? "Fits" : "Does not fit"} 20 ft / 40 ft container ({CONTAINER_HEIGHTS_CM["std"]} cm)
+                      <span className={standardPlan.fits ? "text-green-600" : "text-red-600"}>
+                        {standardPlan.fits ? "Fits" : "Does not fit"} 20 ft / 40 ft container:
+                        {" "}{formatNumber(standardPlan.totalHeightCm)} cm total
+                        {" "}({standardPlan.layerCount} layers, {formatNumber(standardPlan.stackHeightCm)} cm stack)
                       </span>
                     </div>
                     <div className="flex items-center gap-2 text-sm font-normal">
-                      <span className={finalHeightFitsHq ? "text-green-600" : "text-red-600"}>
-                        {finalHeightFitsHq ? "Fits" : "Does not fit"} 40 ft HQ container ({CONTAINER_HEIGHTS_CM["40hq"]} cm)
+                      <span className={hqPlan.fits ? "text-green-600" : "text-red-600"}>
+                        {hqPlan.fits ? "Fits" : "Does not fit"} 40 ft HQ container:
+                        {" "}{formatNumber(hqPlan.totalHeightCm)} cm total
+                        {" "}({hqPlan.layerCount} layers, {formatNumber(hqPlan.stackHeightCm)} cm stack)
                       </span>
                     </div>
                   </div>

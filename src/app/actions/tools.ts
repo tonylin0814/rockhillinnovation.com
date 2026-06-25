@@ -110,12 +110,29 @@ export async function getJudyPalletExplanation(payload: {
   calculation: {
     orientation: string;
     cartonsPerLayer: number;
+    footprintUsedPct: number;
+  };
+  standardPlan: {
+    containerHeightCm: number;
+    availableStackHeightCm: number;
     layerCount: number;
     cartonsPerPallet: number;
     itemsPerPallet: number;
     palletGrossWeightKg: number;
     stackHeightCm: number;
-    footprintUsedPct: number;
+    totalHeightCm: number;
+    fits: boolean;
+  };
+  hqPlan: {
+    containerHeightCm: number;
+    availableStackHeightCm: number;
+    layerCount: number;
+    cartonsPerPallet: number;
+    itemsPerPallet: number;
+    palletGrossWeightKg: number;
+    stackHeightCm: number;
+    totalHeightCm: number;
+    fits: boolean;
   };
 }): Promise<{ explanation?: string; error?: string }> {
   const user = await getCurrentUser();

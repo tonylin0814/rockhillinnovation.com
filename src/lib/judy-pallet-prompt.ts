@@ -6,12 +6,29 @@ type JudyPalletPayload = {
   calculation: {
     orientation: string;
     cartonsPerLayer: number;
+    footprintUsedPct: number;
+  };
+  standardPlan: {
+    containerHeightCm: number;
+    availableStackHeightCm: number;
     layerCount: number;
     cartonsPerPallet: number;
     itemsPerPallet: number;
     palletGrossWeightKg: number;
     stackHeightCm: number;
-    footprintUsedPct: number;
+    totalHeightCm: number;
+    fits: boolean;
+  };
+  hqPlan: {
+    containerHeightCm: number;
+    availableStackHeightCm: number;
+    layerCount: number;
+    cartonsPerPallet: number;
+    itemsPerPallet: number;
+    palletGrossWeightKg: number;
+    stackHeightCm: number;
+    totalHeightCm: number;
+    fits: boolean;
   };
 };
 
@@ -46,17 +63,34 @@ Forklift clearance required: ${payload.forkliftClearanceCm} cm
 Calculation result:
 - Best orientation: ${payload.calculation.orientation}
 - Cartons per layer: ${payload.calculation.cartonsPerLayer}
-- Number of layers: ${payload.calculation.layerCount}
-- Total cartons per pallet: ${payload.calculation.cartonsPerPallet}
-- Units per pallet: ${payload.calculation.itemsPerPallet}
-- Pallet gross weight: ${payload.calculation.palletGrossWeightKg} kg
-- Carton stack height: ${payload.calculation.stackHeightCm} cm
+- Pallet footprint used: ${payload.calculation.footprintUsedPct}%
+
+Standard container result (20 ft / 40 ft, ${payload.standardPlan.containerHeightCm} cm internal height):
+- Available carton stack height: ${payload.standardPlan.availableStackHeightCm} cm
+- Number of layers: ${payload.standardPlan.layerCount}
+- Total cartons per pallet: ${payload.standardPlan.cartonsPerPallet}
+- Units per pallet: ${payload.standardPlan.itemsPerPallet}
+- Pallet gross weight: ${payload.standardPlan.palletGrossWeightKg} kg
+- Carton stack height: ${payload.standardPlan.stackHeightCm} cm
+- Final total height: ${payload.standardPlan.totalHeightCm} cm
+- Fit result: ${payload.standardPlan.fits ? "PASS" : "FAIL"}
+
+40 ft HQ container result (${payload.hqPlan.containerHeightCm} cm internal height):
+- Available carton stack height: ${payload.hqPlan.availableStackHeightCm} cm
+- Number of layers: ${payload.hqPlan.layerCount}
+- Total cartons per pallet: ${payload.hqPlan.cartonsPerPallet}
+- Units per pallet: ${payload.hqPlan.itemsPerPallet}
+- Pallet gross weight: ${payload.hqPlan.palletGrossWeightKg} kg
+- Carton stack height: ${payload.hqPlan.stackHeightCm} cm
+- Final total height: ${payload.hqPlan.totalHeightCm} cm
+- Fit result: ${payload.hqPlan.fits ? "PASS" : "FAIL"}
 
 Please explain:
-1. How to arrange cartons in each layer (orientation, rows x columns) - this is the same for both container types
-2. For the STANDARD container (20 ft / 40 ft, 239 cm internal height): how many layers fit (weight or height limit, whichever is reached first), and the full height breakdown: empty pallet + carton stack + forklift clearance = total, with pass/fail against 239 cm
-3. For the 40 ft HQ container (269.8 cm internal height): recalculate layers allowed by the extra height, and the full height breakdown: empty pallet + carton stack + forklift clearance = total, with pass/fail against 269.8 cm
-4. A one-line summary comparing both configurations (for example: "Standard: X cartons/pallet; HQ: Y cartons/pallet")`;
+1. How to arrange cartons in each layer. Do not invent row or column counts if they are not explicit.
+2. Use ONLY the standard container numbers above for the standard plan. Do not recalculate them.
+3. Use ONLY the 40 ft HQ numbers above for the HQ plan. Do not recalculate them.
+4. Never say PASS when total height is greater than the container height.
+5. A one-line summary comparing both configurations (for example: "Standard: X cartons/pallet; HQ: Y cartons/pallet")`;
 
   return { system, user };
 }
