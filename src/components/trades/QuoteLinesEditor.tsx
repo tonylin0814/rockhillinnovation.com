@@ -31,6 +31,7 @@ type ProductOption = {
   code: string;
   supplier_product_code: string | null;
   name_english: string;
+  product_type: "part" | "set";
   latest_cost_rmb?: number | null;
   previous_cost_rmb?: number | null;
 };
@@ -125,7 +126,15 @@ export function QuoteLinesEditor({
   );
   const canEdit = canManage && sessionStatus === "draft";
   const runningCostTotal = rows.reduce(
-    (total, row) => total + (Number(row.quantity) || 0) * (Number(row.unit_price_rmb) || 0),
+    (total, row) => {
+      const product = row.product_id === "none" ? null : productById.get(row.product_id);
+
+      if (product?.product_type === "set") {
+        return total;
+      }
+
+      return total + (Number(row.quantity) || 0) * (Number(row.unit_price_rmb) || 0);
+    },
     0
   );
 

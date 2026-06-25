@@ -35,6 +35,25 @@ type ImportedQuotationLine = {
   notes: string;
 };
 
+type QuoteLineForImport = {
+  product_id: string | null;
+  item_name_english: string | null;
+  quantity: number | string;
+  sort_order: number | null;
+  product:
+    | {
+        id: string;
+        name_english: string;
+        product_type: "part" | "set";
+      }
+    | {
+        id: string;
+        name_english: string;
+        product_type: "part" | "set";
+      }[]
+    | null;
+};
+
 const quotationSessionSchema = z.object({
   quote_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Quote date is required"),
   notes: z.string().trim().nullable(),
@@ -526,7 +545,7 @@ export async function importQuotationLinesFromConfirmedQuote(
   const confirmedSession = confirmedSessions[0];
   const { data: quoteLines, error: quoteLinesError } = await supabase
     .from("supplier_quote_lines")
-    .select("product_id, item_name_english, quantity, sort_order, product:products(name_english)")
+    .select("product_id, item_name_english, quantity, sort_order, product:products(id, name_english, product_type)")
     .eq("session_id", confirmedSession.id)
     .order("sort_order", { ascending: true });
 
@@ -534,16 +553,77 @@ export async function importQuotationLinesFromConfirmedQuote(
     return { error: quoteLinesError.message };
   }
 
-  const lines = (quoteLines ?? []).map((line) => {
+  const quoteLineRows = (quoteLines ?? []) as QuoteLineForImport[];
+  const setQuantityByProductId = new Map<string, number>();
+
+  for (const line of quoteLineRows) {
     const product = Array.isArray(line.product) ? line.product[0] : line.product;
 
-    return {
+    if (line.product_id && product?.product_type === "set") {
+      setQuantityByProductId.set(line.product_id, (setQuantityByProductId.get(line.product_id) ?? 0) + Number(line.quantity));
+    }
+  }
+
+  const includedComponentDemandByProductId = new Map<string, number>();
+
+  if (setQuantityByProductId.size) {
+    const { data: setComponents, error: setComponentsError } = await supabase
+      .from("product_components")
+      .select("set_product_id, component_product_id, quantity_per_set")
+      .in("set_product_id", Array.from(setQuantityByProductId.keys()));
+
+    if (setComponentsError) {
+      return { error: setComponentsError.message };
+    }
+
+    for (const component of (setComponents ?? []) as {
+      component_product_id: string;
+      quantity_per_set: number | string;
+      set_product_id: string;
+    }[]) {
+      const setQuantity = setQuantityByProductId.get(component.set_product_id) ?? 0;
+      const componentDemand = setQuantity * Number(component.quantity_per_set);
+
+      includedComponentDemandByProductId.set(
+        component.component_product_id,
+        (includedComponentDemandByProductId.get(component.component_product_id) ?? 0) + componentDemand
+      );
+    }
+  }
+
+  const lines = quoteLineRows.flatMap((line) => {
+    const product = Array.isArray(line.product) ? line.product[0] : line.product;
+    const originalQuantity = Number(line.quantity);
+    let importQuantity = originalQuantity;
+
+    if (line.product_id && product?.product_type !== "set") {
+      const includedDemand = includedComponentDemandByProductId.get(line.product_id) ?? 0;
+      const quantityToSubtract = Math.min(includedDemand, originalQuantity);
+
+      importQuantity = originalQuantity - quantityToSubtract;
+
+      if (quantityToSubtract > 0) {
+        const remainingDemand = includedDemand - quantityToSubtract;
+
+        if (remainingDemand > 0) {
+          includedComponentDemandByProductId.set(line.product_id, remainingDemand);
+        } else {
+          includedComponentDemandByProductId.delete(line.product_id);
+        }
+      }
+    }
+
+    if (importQuantity <= 0) {
+      return [];
+    }
+
+    return [{
       item_description: line.item_name_english ?? product?.name_english ?? "",
       notes: "",
       product_id: line.product_id ?? null,
-      quantity: Number(line.quantity),
+      quantity: importQuantity,
       unit_price_usd: 0,
-    };
+    }];
   });
 
   return { success: true, lines };

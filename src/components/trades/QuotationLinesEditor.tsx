@@ -32,6 +32,7 @@ type ProductOption = {
   code: string;
   supplier_product_code: string | null;
   name_english: string;
+  product_type: "part" | "set";
   latest_cost_rmb?: number | null;
   previous_quote_date?: string | null;
   previous_quote_trade_id?: string | null;
