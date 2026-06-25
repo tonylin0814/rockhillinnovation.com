@@ -50,8 +50,18 @@ type EditableQuotationLine = {
 };
 
 function formatDecimalInput(value: number | string, digits = 2) {
-  const numericValue = Number(value);
+  const numericValue = parseNumericInput(value);
   return Number.isFinite(numericValue) ? numericValue.toFixed(digits) : "";
+}
+
+function parseNumericInput(value: number | string) {
+  const normalizedValue = String(value).replace(/,/g, "").trim();
+  return normalizedValue ? Number(normalizedValue) : Number.NaN;
+}
+
+function formatQuantityInput(value: number | string) {
+  const numericValue = parseNumericInput(value);
+  return Number.isFinite(numericValue) ? formatQuantity(numericValue) : "";
 }
 
 function rowsFromLines(lines: ClientQuotationLine[]): EditableQuotationLine[] {
@@ -60,7 +70,7 @@ function rowsFromLines(lines: ClientQuotationLine[]): EditableQuotationLine[] {
     rowKey: line.id ?? crypto.randomUUID(),
     product_id: line.product_id ?? "none",
     item_description: line.item_description ?? "",
-    quantity: String(line.quantity),
+    quantity: formatQuantityInput(line.quantity),
     unit_price_usd: formatDecimalInput(line.unit_price_usd),
     notes: line.notes ?? "",
   }));
@@ -166,17 +176,17 @@ export function QuotationLinesEditor({
   const runningCostTotal = rows.reduce((total, row) => {
     const product = row.product_id === "none" ? null : productById.get(row.product_id);
     const costUsd = hasExchangeRate ? (product?.latest_cost_rmb ?? 0) / workingExchangeRate : 0;
-    return total + (Number(row.quantity) || 0) * costUsd;
+    return total + (parseNumericInput(row.quantity) || 0) * costUsd;
   }, 0);
   const runningQuoteTotal = rows.reduce(
-    (total, row) => total + (Number(row.quantity) || 0) * (Number(row.unit_price_usd) || 0),
+    (total, row) => total + (parseNumericInput(row.quantity) || 0) * (parseNumericInput(row.unit_price_usd) || 0),
     0
   );
   const runningProfitTotal = hasExchangeRate
     ? rows.reduce((total, row) => {
         const product = row.product_id === "none" ? null : productById.get(row.product_id);
         const costUsd = (product?.latest_cost_rmb ?? 0) / workingExchangeRate;
-        return total + (Number(row.quantity) || 0) * ((Number(row.unit_price_usd) || 0) - costUsd);
+        return total + (parseNumericInput(row.quantity) || 0) * ((parseNumericInput(row.unit_price_usd) || 0) - costUsd);
       }, 0)
     : 0;
   const runningMargin = runningQuoteTotal > 0 && hasExchangeRate ? runningProfitTotal / runningQuoteTotal : null;
@@ -237,7 +247,7 @@ export function QuotationLinesEditor({
         rowKey: crypto.randomUUID(),
         product_id: "none",
         item_description: "",
-        quantity: "1",
+        quantity: formatQuantityInput(1),
         unit_price_usd: "0",
         notes: "",
       },
@@ -261,7 +271,7 @@ export function QuotationLinesEditor({
           item_description: line.item_description,
           notes: line.notes,
           product_id: line.product_id ?? "none",
-          quantity: String(line.quantity),
+          quantity: formatQuantityInput(line.quantity),
           unit_price_usd: formatDecimalInput(line.unit_price_usd),
         }))
       );
@@ -292,6 +302,10 @@ export function QuotationLinesEditor({
     updateRow(index, { unit_price_usd: formatDecimalInput(rows[index].unit_price_usd) });
   }
 
+  function formatQuantityField(index: number) {
+    updateRow(index, { quantity: formatQuantityInput(rows[index].quantity) });
+  }
+
   function focusNextQuoteInput(index: number) {
     const nextInput = document.querySelector<HTMLInputElement>(`[data-quote-input-index="${index + 1}"]`);
 
@@ -309,8 +323,8 @@ export function QuotationLinesEditor({
           id: row.id,
           product_id: row.product_id === "none" ? null : row.product_id,
           item_description: row.item_description || null,
-          quantity: Number(row.quantity) || 0,
-          unit_price_usd: Number(row.unit_price_usd) || 0,
+          quantity: parseNumericInput(row.quantity) || 0,
+          unit_price_usd: parseNumericInput(row.unit_price_usd) || 0,
           notes: row.notes || null,
         }))
       );
@@ -372,8 +386,8 @@ export function QuotationLinesEditor({
               );
               const unitCostRmb = product?.latest_cost_rmb ?? 0;
               const costUsd = hasExchangeRate ? unitCostRmb / workingExchangeRate : null;
-              const quantity = Number(row.quantity) || 0;
-              const unitPriceUsd = Number(row.unit_price_usd) || 0;
+              const quantity = parseNumericInput(row.quantity) || 0;
+              const unitPriceUsd = parseNumericInput(row.unit_price_usd) || 0;
               const profit = costUsd === null ? null : unitPriceUsd - costUsd;
               const quoteTotal = quantity * unitPriceUsd;
               const profitTotal = profit === null ? null : quantity * profit;
@@ -440,14 +454,14 @@ export function QuotationLinesEditor({
                     {isEditing ? (
                       <Input
                         className="w-[101px]"
-                        min="0.001"
+                        inputMode="decimal"
+                        onBlur={() => formatQuantityField(index)}
                         onChange={(event) => updateRow(index, { quantity: event.currentTarget.value })}
-                        step="0.001"
-                        type="number"
+                        type="text"
                         value={row.quantity}
                       />
                     ) : (
-                      formatQuantity(Number(row.quantity) || 0)
+                      formatQuantity(parseNumericInput(row.quantity) || 0)
                     )}
                   </TableCell>
                   <TableCell>{costUsd === null ? "-" : formatUsd(costUsd, 3)}</TableCell>
@@ -472,7 +486,7 @@ export function QuotationLinesEditor({
                         value={row.unit_price_usd}
                       />
                     ) : (
-                      formatUsd(Number(row.unit_price_usd) || 0)
+                      formatUsd(parseNumericInput(row.unit_price_usd) || 0)
                     )}
                   </TableCell>
                   <TableCell>
