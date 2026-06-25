@@ -49,6 +49,11 @@ type EditableQuotationLine = {
   notes: string;
 };
 
+function formatDecimalInput(value: number | string, digits = 2) {
+  const numericValue = Number(value);
+  return Number.isFinite(numericValue) ? numericValue.toFixed(digits) : "";
+}
+
 function rowsFromLines(lines: ClientQuotationLine[]): EditableQuotationLine[] {
   return lines.map((line) => ({
     id: line.id,
@@ -56,7 +61,7 @@ function rowsFromLines(lines: ClientQuotationLine[]): EditableQuotationLine[] {
     product_id: line.product_id ?? "none",
     item_description: line.item_description ?? "",
     quantity: String(line.quantity),
-    unit_price_usd: String(line.unit_price_usd),
+    unit_price_usd: formatDecimalInput(line.unit_price_usd),
     notes: line.notes ?? "",
   }));
 }
@@ -257,7 +262,7 @@ export function QuotationLinesEditor({
           notes: line.notes,
           product_id: line.product_id ?? "none",
           quantity: String(line.quantity),
-          unit_price_usd: String(line.unit_price_usd),
+          unit_price_usd: formatDecimalInput(line.unit_price_usd),
         }))
       );
       setIsEditing(true);
@@ -279,8 +284,12 @@ export function QuotationLinesEditor({
     updateRow(index, {
       product_id: productId,
       item_description: product ? product.name_english : rows[index].item_description,
-      unit_price_usd: String(product?.previous_quote_usd ?? rows[index].unit_price_usd),
+      unit_price_usd: formatDecimalInput(product?.previous_quote_usd ?? rows[index].unit_price_usd),
     });
+  }
+
+  function formatQuoteInput(index: number) {
+    updateRow(index, { unit_price_usd: formatDecimalInput(rows[index].unit_price_usd) });
   }
 
   function focusNextQuoteInput(index: number) {
@@ -447,18 +456,19 @@ export function QuotationLinesEditor({
                       <Input
                         className="w-28"
                         data-quote-input-index={index}
-                        min={0}
+                        inputMode="decimal"
                         onChange={(event) =>
                           updateRow(index, { unit_price_usd: event.currentTarget.value })
                         }
+                        onBlur={() => formatQuoteInput(index)}
                         onKeyDown={(event) => {
                           if (event.key === "Enter") {
                             event.preventDefault();
+                            formatQuoteInput(index);
                             focusNextQuoteInput(index);
                           }
                         }}
-                        step="0.01"
-                        type="number"
+                        type="text"
                         value={row.unit_price_usd}
                       />
                     ) : (
