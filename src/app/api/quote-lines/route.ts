@@ -102,6 +102,7 @@ export async function GET(request: Request) {
   const productsWithCosts = productRows.map((product) => ({
     ...product,
     latest_cost_rmb: latestCostByProductId.get(product.id) ?? null,
+    previous_cost_rmb: latestCostByProductId.get(product.id) ?? null,
     previous_quote_usd: previousQuoteByProductId.get(product.id) ?? null,
     previous_quote_date: previousQuoteMetaByProductId.get(product.id)?.quote_date ?? null,
     previous_quote_trade_id: previousQuoteMetaByProductId.get(product.id)?.trade_id ?? null,

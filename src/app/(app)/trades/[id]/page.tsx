@@ -394,6 +394,7 @@ export default async function TradeWorkspacePage({ params }: { params: { id: str
   const activeProductOptions = activeProductRows.map((product) => ({
     ...product,
     latest_cost_rmb: latestCostByProductId.get(product.id) ?? null,
+    previous_cost_rmb: latestCostByProductId.get(product.id) ?? null,
   }));
   const tradeShareholderRows = (tradeShareholders ?? []) as TradeShareholder[];
   const activeVendorOptions = (activeVendors ?? []) as ExpenseVendor[];
@@ -610,7 +611,6 @@ export default async function TradeWorkspacePage({ params }: { params: { id: str
             canManage={canManage}
             initialSessions={quoteSessionRows}
             tradeId={trade.id}
-            workingExchangeRate={trade.working_exchange_rate}
           />
         </TabsContent>
         <TabsContent value="quotations">

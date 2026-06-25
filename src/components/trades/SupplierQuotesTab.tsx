@@ -42,6 +42,7 @@ type ProductOption = {
   supplier_product_code: string | null;
   name_english: string;
   latest_cost_rmb?: number | null;
+  previous_cost_rmb?: number | null;
   previous_quote_date?: string | null;
   previous_quote_trade_id?: string | null;
   previous_quote_usd?: number | null;
@@ -111,13 +112,11 @@ export function SupplierQuotesTab({
   canManage,
   initialSessions,
   tradeId,
-  workingExchangeRate,
 }: {
   tradeId: string;
   initialSessions: SupplierQuoteSession[];
   availableProducts: ProductOption[];
   canManage: boolean;
-  workingExchangeRate: number | null;
 }) {
   const router = useRouter();
   const [expandedSessionId, setExpandedSessionId] = useState<string | null>(null);
@@ -379,7 +378,6 @@ export function SupplierQuotesTab({
                         sessionId={session.id}
                         sessionStatus={session.status}
                         tradeId={tradeId}
-                        workingExchangeRate={workingExchangeRate}
                       />
                     )}
                   </CardContent>

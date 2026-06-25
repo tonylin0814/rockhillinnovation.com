@@ -20,6 +20,7 @@ type QuoteLineInput = {
   item_name_english: string | null;
   quantity: number;
   unit_price_rmb: number;
+  previous_unit_cost_rmb: number | null;
   unit_quote_usd: number;
   payment_category: "outsourced" | "produced" | "misc_expense" | null;
   notes: string | null;
@@ -40,6 +41,7 @@ const quoteLineSchema = z.object({
   item_name_english: z.string().trim().nullable(),
   quantity: z.coerce.number().positive("Quantity must be greater than 0"),
   unit_price_rmb: z.coerce.number().min(0, "Unit price must be zero or greater"),
+  previous_unit_cost_rmb: z.coerce.number().min(0, "Previous cost must be zero or greater").nullable(),
   unit_quote_usd: z.coerce.number().min(0, "Quote must be zero or greater"),
   payment_category: z.enum(["outsourced", "produced", "misc_expense"]).nullable(),
   notes: z.string().trim().nullable(),
@@ -326,6 +328,7 @@ export async function saveQuoteLines(sessionId: string, lines: QuoteLineInput[])
         item_name_english: normalizeText(values.item_name_english),
         quantity: values.quantity,
         unit_price_rmb: values.unit_price_rmb,
+        previous_unit_cost_rmb: values.previous_unit_cost_rmb,
         unit_quote_usd: values.unit_quote_usd,
         payment_category: values.payment_category,
         notes: normalizeText(values.notes),
@@ -347,6 +350,7 @@ export async function saveQuoteLines(sessionId: string, lines: QuoteLineInput[])
       item_name_english: normalizeText(line.item_name_english),
       quantity: line.quantity,
       unit_price_rmb: line.unit_price_rmb,
+      previous_unit_cost_rmb: line.previous_unit_cost_rmb,
       unit_quote_usd: line.unit_quote_usd,
       payment_category: line.payment_category,
       notes: normalizeText(line.notes),
