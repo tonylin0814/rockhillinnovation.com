@@ -53,7 +53,7 @@ type ProductFormDialogProps = {
 type SetComponentDraft = {
   rowKey: string;
   component_product_id: string;
-  quantity_per_set: number;
+  quantity_per_set: string;
   component: Product | null;
 };
 
@@ -106,7 +106,7 @@ export function ProductFormDialog({
         rowKey: crypto.randomUUID(),
         component: null,
         component_product_id: "",
-        quantity_per_set: 1,
+        quantity_per_set: "1",
       },
     ]);
   }
@@ -127,10 +127,10 @@ export function ProductFormDialog({
     );
   }
 
-  function updateSetComponentQty(index: number, quantity: number) {
+  function updateSetComponentQty(index: number, quantity: string) {
     setSetComponentRows((currentRows) =>
       currentRows.map((row, rowIndex) =>
-        rowIndex === index ? { ...row, quantity_per_set: quantity > 0 ? quantity : 1 } : row
+        rowIndex === index ? { ...row, quantity_per_set: quantity } : row
       )
     );
   }
@@ -190,7 +190,7 @@ export function ProductFormDialog({
           result.id,
           setComponentRows.map((row, index) => ({
             component_product_id: row.component_product_id,
-            quantity_per_set: row.quantity_per_set,
+            quantity_per_set: Number(row.quantity_per_set) || 0,
             sort_order: index + 1,
           }))
         );
@@ -421,7 +421,7 @@ export function ProductFormDialog({
                             disabled={isPending}
                             min={1}
                             onChange={(event) =>
-                              updateSetComponentQty(index, Number(event.currentTarget.value) || 1)
+                              updateSetComponentQty(index, event.currentTarget.value)
                             }
                             type="number"
                             value={row.quantity_per_set}

@@ -39,10 +39,10 @@ type EditableQuoteLine = {
   id?: string;
   product_id: string;
   item_name_english: string;
-  quantity: number;
-  unit_price_rmb: number;
+  quantity: string;
+  unit_price_rmb: string;
   previous_unit_cost_rmb: number | null;
-  unit_quote_usd: number;
+  unit_quote_usd: string;
   sort_order: number;
 };
 
@@ -52,10 +52,10 @@ function rowsFromLines(lines: SupplierQuoteLine[]): EditableQuoteLine[] {
       id: line.id,
       product_id: line.product_id ?? "none",
       item_name_english: line.item_name_english ?? "",
-      quantity: line.quantity,
-      unit_price_rmb: line.unit_price_rmb,
+      quantity: String(line.quantity),
+      unit_price_rmb: String(line.unit_price_rmb),
       previous_unit_cost_rmb: line.previous_unit_cost_rmb ?? null,
-      unit_quote_usd: line.unit_quote_usd ?? 0,
+      unit_quote_usd: String(line.unit_quote_usd ?? 0),
       sort_order: line.sort_order || index + 1,
     }))
     .sort((a, b) => a.sort_order - b.sort_order)
@@ -124,7 +124,10 @@ export function QuoteLinesEditor({
     [rows]
   );
   const canEdit = canManage && sessionStatus === "draft";
-  const runningCostTotal = rows.reduce((total, row) => total + row.quantity * row.unit_price_rmb, 0);
+  const runningCostTotal = rows.reduce(
+    (total, row) => total + (Number(row.quantity) || 0) * (Number(row.unit_price_rmb) || 0),
+    0
+  );
 
   function renumber(nextRows: EditableQuoteLine[]) {
     return nextRows.map((row, index) => ({ ...row, sort_order: index + 1 }));
@@ -177,10 +180,10 @@ export function QuoteLinesEditor({
         {
           product_id: "none",
           item_name_english: "",
-          quantity: 1,
-          unit_price_rmb: 0,
+          quantity: "1",
+          unit_price_rmb: "0",
           previous_unit_cost_rmb: null,
-          unit_quote_usd: 0,
+          unit_quote_usd: "0",
           sort_order: currentRows.length + 1,
         },
       ])
@@ -201,7 +204,7 @@ export function QuoteLinesEditor({
     updateRow(index, {
       product_id: productId,
       item_name_english: product ? product.name_english : rows[index].item_name_english,
-      unit_price_rmb: product?.latest_cost_rmb ?? 0,
+      unit_price_rmb: String(product?.latest_cost_rmb ?? 0),
       previous_unit_cost_rmb: product?.previous_cost_rmb ?? null,
     });
   }
@@ -215,11 +218,11 @@ export function QuoteLinesEditor({
           product_id: row.product_id === "none" ? null : row.product_id,
           item_name_chinese: null,
           item_name_english: row.item_name_english || null,
-          quantity: row.quantity,
-          unit_price_rmb: row.unit_price_rmb,
+          quantity: Number(row.quantity) || 0,
+          unit_price_rmb: Number(row.unit_price_rmb) || 0,
           previous_unit_cost_rmb:
             row.product_id === "none" ? null : productById.get(row.product_id)?.previous_cost_rmb ?? row.previous_unit_cost_rmb,
-          unit_quote_usd: row.unit_quote_usd,
+          unit_quote_usd: Number(row.unit_quote_usd) || 0,
           payment_category: null,
           notes: null,
           sort_order: index + 1,
@@ -272,7 +275,7 @@ export function QuoteLinesEditor({
                   availableProduct.id === row.product_id || !selectedProductIds.has(availableProduct.id)
               );
               const costChange =
-                previousUnitCostRmb === null ? null : row.unit_price_rmb - previousUnitCostRmb;
+                previousUnitCostRmb === null ? null : (Number(row.unit_price_rmb) || 0) - previousUnitCostRmb;
               const costChangePct =
                 previousUnitCostRmb === null || previousUnitCostRmb === 0
                   ? null
@@ -308,13 +311,13 @@ export function QuoteLinesEditor({
                       <Input
                         className="w-[101px]"
                         min="0.001"
-                        onChange={(event) => updateRow(index, { quantity: Number(event.currentTarget.value) || 1 })}
+                        onChange={(event) => updateRow(index, { quantity: event.currentTarget.value })}
                         step="0.001"
                         type="number"
                         value={row.quantity}
                       />
                     ) : (
-                      formatQuantity(row.quantity)
+                      formatQuantity(Number(row.quantity) || 0)
                     )}
                   </TableCell>
                   <TableCell>
@@ -323,14 +326,14 @@ export function QuoteLinesEditor({
                         className="w-28"
                         min={0}
                         onChange={(event) =>
-                          updateRow(index, { unit_price_rmb: Number(event.currentTarget.value) || 0 })
+                          updateRow(index, { unit_price_rmb: event.currentTarget.value })
                         }
                         step="0.001"
                         type="number"
                         value={row.unit_price_rmb}
                       />
                     ) : (
-                      formatRmbUnit(row.unit_price_rmb)
+                      formatRmbUnit(Number(row.unit_price_rmb) || 0)
                     )}
                   </TableCell>
                   <TableCell>{previousUnitCostRmb === null ? "-" : formatRmbUnit(previousUnitCostRmb)}</TableCell>

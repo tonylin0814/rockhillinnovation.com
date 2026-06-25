@@ -42,8 +42,8 @@ type EditableQuotationLine = {
   id?: string;
   product_id: string;
   item_description: string;
-  quantity: number;
-  unit_price_usd: number;
+  quantity: string;
+  unit_price_usd: string;
   notes: string;
 };
 
@@ -52,8 +52,8 @@ function rowsFromLines(lines: ClientQuotationLine[]): EditableQuotationLine[] {
     id: line.id,
     product_id: line.product_id ?? "none",
     item_description: line.item_description ?? "",
-    quantity: line.quantity,
-    unit_price_usd: line.unit_price_usd,
+    quantity: String(line.quantity),
+    unit_price_usd: String(line.unit_price_usd),
     notes: line.notes ?? "",
   }));
 }
@@ -63,10 +63,6 @@ function formatUsd(value: number) {
     currency: "USD",
     style: "currency",
   }).format(value);
-}
-
-function formatNumberInput(value: number, digits = 2) {
-  return Number.isFinite(value) ? value.toFixed(digits) : (0).toFixed(digits);
 }
 
 function formatRmb(value: number, digits = 2) {
@@ -147,7 +143,6 @@ export function QuotationLinesEditor({
   const router = useRouter();
   const [isEditing, setIsEditing] = useState(false);
   const [rows, setRows] = useState<EditableQuotationLine[]>(() => rowsFromLines(initialLines));
-  const [focusedQuoteIndex, setFocusedQuoteIndex] = useState<number | null>(null);
   const [isPending, startTransition] = useTransition();
   const sortedProducts = useMemo(() => [...availableProducts].sort(compareProductsByName), [availableProducts]);
   const productById = useMemo(
@@ -163,14 +158,17 @@ export function QuotationLinesEditor({
   const hasExchangeRate = typeof workingExchangeRate === "number" && workingExchangeRate > 0;
   const runningCostTotal = rows.reduce((total, row) => {
     const product = row.product_id === "none" ? null : productById.get(row.product_id);
-    return total + row.quantity * (product?.latest_cost_rmb ?? 0);
+    return total + (Number(row.quantity) || 0) * (product?.latest_cost_rmb ?? 0);
   }, 0);
-  const runningQuoteTotal = rows.reduce((total, row) => total + row.quantity * row.unit_price_usd, 0);
+  const runningQuoteTotal = rows.reduce(
+    (total, row) => total + (Number(row.quantity) || 0) * (Number(row.unit_price_usd) || 0),
+    0
+  );
   const runningProfitTotal = hasExchangeRate
     ? rows.reduce((total, row) => {
         const product = row.product_id === "none" ? null : productById.get(row.product_id);
         const costUsd = (product?.latest_cost_rmb ?? 0) / workingExchangeRate;
-        return total + row.quantity * (row.unit_price_usd - costUsd);
+        return total + (Number(row.quantity) || 0) * ((Number(row.unit_price_usd) || 0) - costUsd);
       }, 0)
     : 0;
   const runningMargin = runningQuoteTotal > 0 && hasExchangeRate ? runningProfitTotal / runningQuoteTotal : null;
@@ -221,8 +219,8 @@ export function QuotationLinesEditor({
       {
         product_id: "none",
         item_description: "",
-        quantity: 1,
-        unit_price_usd: 0,
+        quantity: "1",
+        unit_price_usd: "0",
         notes: "",
       },
     ]);
@@ -244,8 +242,8 @@ export function QuotationLinesEditor({
           item_description: line.item_description,
           notes: line.notes,
           product_id: line.product_id ?? "none",
-          quantity: line.quantity,
-          unit_price_usd: line.unit_price_usd,
+          quantity: String(line.quantity),
+          unit_price_usd: String(line.unit_price_usd),
         }))
       );
       setIsEditing(true);
@@ -267,7 +265,7 @@ export function QuotationLinesEditor({
     updateRow(index, {
       product_id: productId,
       item_description: product ? product.name_english : rows[index].item_description,
-      unit_price_usd: product?.previous_quote_usd ?? rows[index].unit_price_usd,
+      unit_price_usd: String(product?.previous_quote_usd ?? rows[index].unit_price_usd),
     });
   }
 
@@ -279,8 +277,8 @@ export function QuotationLinesEditor({
           id: row.id,
           product_id: row.product_id === "none" ? null : row.product_id,
           item_description: row.item_description || null,
-          quantity: row.quantity,
-          unit_price_usd: row.unit_price_usd,
+          quantity: Number(row.quantity) || 0,
+          unit_price_usd: Number(row.unit_price_usd) || 0,
           notes: row.notes || null,
         }))
       );
@@ -335,10 +333,12 @@ export function QuotationLinesEditor({
               );
               const unitCostRmb = product?.latest_cost_rmb ?? 0;
               const costUsd = hasExchangeRate ? unitCostRmb / workingExchangeRate : null;
-              const profit = costUsd === null ? null : row.unit_price_usd - costUsd;
-              const quoteTotal = row.quantity * row.unit_price_usd;
-              const profitTotal = profit === null ? null : row.quantity * profit;
-              const margin = row.unit_price_usd > 0 && profit !== null ? profit / row.unit_price_usd : null;
+              const quantity = Number(row.quantity) || 0;
+              const unitPriceUsd = Number(row.unit_price_usd) || 0;
+              const profit = costUsd === null ? null : unitPriceUsd - costUsd;
+              const quoteTotal = quantity * unitPriceUsd;
+              const profitTotal = profit === null ? null : quantity * profit;
+              const margin = unitPriceUsd > 0 && profit !== null ? profit / unitPriceUsd : null;
 
               return (
                 <TableRow key={row.id ?? `new-${index}`}>
@@ -370,13 +370,13 @@ export function QuotationLinesEditor({
                       <Input
                         className="w-[101px]"
                         min="0.001"
-                        onChange={(event) => updateRow(index, { quantity: Number(event.currentTarget.value) || 1 })}
+                        onChange={(event) => updateRow(index, { quantity: event.currentTarget.value })}
                         step="0.001"
                         type="number"
                         value={row.quantity}
                       />
                     ) : (
-                      formatQuantity(row.quantity)
+                      formatQuantity(Number(row.quantity) || 0)
                     )}
                   </TableCell>
                   <TableCell>{formatRmbUnit(unitCostRmb)}</TableCell>
@@ -386,24 +386,14 @@ export function QuotationLinesEditor({
                         className="w-28"
                         min={0}
                         onChange={(event) =>
-                          updateRow(index, { unit_price_usd: Number(event.currentTarget.value) || 0 })
+                          updateRow(index, { unit_price_usd: event.currentTarget.value })
                         }
-                        onBlur={() => {
-                          updateRow(index, { unit_price_usd: Number(row.unit_price_usd.toFixed(2)) });
-                          setFocusedQuoteIndex(null);
-                        }}
-                        onFocus={(event) => {
-                          setFocusedQuoteIndex(index);
-                          event.currentTarget.select();
-                        }}
                         step="0.01"
                         type="number"
-                        value={
-                          focusedQuoteIndex === index ? String(row.unit_price_usd) : formatNumberInput(row.unit_price_usd)
-                        }
+                        value={row.unit_price_usd}
                       />
                     ) : (
-                      formatUsd(row.unit_price_usd)
+                      formatUsd(Number(row.unit_price_usd) || 0)
                     )}
                   </TableCell>
                   <TableCell>

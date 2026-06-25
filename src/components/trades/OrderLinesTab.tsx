@@ -39,8 +39,8 @@ type EditableLine = {
   id?: string;
   original_item_name: string;
   product_id: string;
-  quantity: number;
-  unit_price_usd: number;
+  quantity: string;
+  unit_price_usd: string;
   notes: string;
   sort_order: number;
 };
@@ -51,8 +51,8 @@ function rowsFromLines(lines: OrderLine[]): EditableLine[] {
       id: line.id,
       original_item_name: line.original_item_name ?? "",
       product_id: line.product_id ?? "none",
-      quantity: line.quantity,
-      unit_price_usd: line.unit_price_usd,
+      quantity: String(line.quantity),
+      unit_price_usd: String(line.unit_price_usd),
       notes: line.notes ?? "",
       sort_order: line.sort_order || index + 1,
     }))
@@ -152,8 +152,8 @@ export function OrderLinesTab({
         {
           original_item_name: "",
           product_id: "none",
-          quantity: 1,
-          unit_price_usd: 0,
+          quantity: "1",
+          unit_price_usd: "0",
           notes: "",
           sort_order: currentRows.length + 1,
         },
@@ -177,8 +177,8 @@ export function OrderLinesTab({
           id: row.id,
           original_item_name: row.original_item_name || null,
           product_id: row.product_id === "none" ? null : row.product_id,
-          quantity: row.quantity,
-          unit_price_usd: row.unit_price_usd,
+          quantity: Number(row.quantity) || 0,
+          unit_price_usd: Number(row.unit_price_usd) || 0,
           notes: row.notes || null,
           sort_order: index + 1,
         }))
@@ -224,7 +224,7 @@ export function OrderLinesTab({
               {rows.length ? (
                 rows.map((row, index) => {
                   const selectedProduct = row.product_id === "none" ? null : productById.get(row.product_id);
-                  const total = row.quantity * row.unit_price_usd;
+                  const total = (Number(row.quantity) || 0) * (Number(row.unit_price_usd) || 0);
 
                   return (
                     <TableRow key={row.id ?? `new-${index}`}>
@@ -268,12 +268,12 @@ export function OrderLinesTab({
                           <Input
                             className="w-24"
                             min={1}
-                            onChange={(event) => updateRow(index, { quantity: Number(event.currentTarget.value) || 1 })}
+                            onChange={(event) => updateRow(index, { quantity: event.currentTarget.value })}
                             type="number"
                             value={row.quantity}
                           />
                         ) : (
-                          row.quantity
+                          Number(row.quantity) || 0
                         )}
                       </TableCell>
                       <TableCell>
@@ -282,14 +282,14 @@ export function OrderLinesTab({
                             className="w-28"
                             min={0}
                             onChange={(event) =>
-                              updateRow(index, { unit_price_usd: Number(event.currentTarget.value) || 0 })
+                              updateRow(index, { unit_price_usd: event.currentTarget.value })
                             }
                             step="0.01"
                             type="number"
                             value={row.unit_price_usd}
                           />
                         ) : (
-                          formatUsd(row.unit_price_usd)
+                          formatUsd(Number(row.unit_price_usd) || 0)
                         )}
                       </TableCell>
                       <TableCell>{formatUsd(total)}</TableCell>

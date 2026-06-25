@@ -2,7 +2,7 @@
 
 import { ImageIcon, Loader2, Plus, Upload, X } from "lucide-react";
 import Image from "next/image";
-import { ChangeEvent, useMemo, useState, useTransition } from "react";
+import { ChangeEvent, useState, useTransition } from "react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -10,12 +10,21 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import type { ProductImage } from "@/types";
 
+type ProductImageSlot = ProductImage & { _key: string };
+
 function emptyImage(): ProductImage {
   return {
     file_id: null,
     file_name: null,
     name: "",
     url: null,
+  };
+}
+
+function createImageSlot(image?: ProductImage): ProductImageSlot {
+  return {
+    ...(image ?? emptyImage()),
+    _key: crypto.randomUUID(),
   };
 }
 
@@ -41,16 +50,16 @@ export function ProductImagesEditor({
   initialImages: ProductImage[] | null | undefined;
   productId: string;
 }) {
-  const [images, setImages] = useState<ProductImage[]>(() => normalizeImages(initialImages));
+  const [imageSlots, setImageSlots] = useState<ProductImageSlot[]>(() =>
+    normalizeImages(initialImages).map(createImageSlot)
+  );
   const [files, setFiles] = useState<Record<number, File | null>>({});
   const [savingSlot, setSavingSlot] = useState<number | null>(null);
   const [removingSlot, setRemovingSlot] = useState<number | null>(null);
   const [isPending, startTransition] = useTransition();
-  const slots = useMemo(() => normalizeImages(images), [images]);
-
   function updateName(index: number, name: string) {
-    setImages((current) => {
-      const next = normalizeImages(current);
+    setImageSlots((current) => {
+      const next = current.length ? [...current] : [createImageSlot()];
       next[index] = { ...next[index], name };
       return next;
     });
@@ -61,7 +70,7 @@ export function ProductImagesEditor({
   }
 
   function addImage() {
-    setImages((current) => [...normalizeImages(current), emptyImage()]);
+    setImageSlots((current) => [...current, createImageSlot()]);
   }
 
   function saveSlot(index: number) {
@@ -71,7 +80,7 @@ export function ProductImagesEditor({
     formData.set("action", "save");
     formData.set("product_id", productId);
     formData.set("slot_index", String(index));
-    formData.set("image_name", slots[index].name);
+    formData.set("image_name", imageSlots[index].name);
 
     if (file) {
       formData.set("file", file);
@@ -91,7 +100,8 @@ export function ProductImagesEditor({
           return;
         }
 
-        setImages(normalizeImages(result.images));
+        const nextImages = normalizeImages(result.images);
+        setImageSlots(nextImages.map(createImageSlot));
         setFiles((current) => ({ ...current, [index]: null }));
         toast.success("Product image saved");
       } finally {
@@ -122,7 +132,8 @@ export function ProductImagesEditor({
           return;
         }
 
-        setImages(normalizeImages(result.images));
+        const nextImages = normalizeImages(result.images);
+        setImageSlots(nextImages.map(createImageSlot));
         setFiles((current) => {
           const next = { ...current };
           delete next[index];
@@ -147,8 +158,8 @@ export function ProductImagesEditor({
       ) : null}
 
       <div className="space-y-4">
-        {slots.map((image, index) => (
-          <div className="space-y-3 rounded-lg border border-slate-200 bg-white p-4" key={index}>
+        {imageSlots.map((image, index) => (
+          <div className="space-y-3 rounded-lg border border-slate-200 bg-white p-4" key={image._key}>
             <div className="flex items-center justify-between gap-3">
               <p className="text-sm font-semibold text-[#0d1b34]">Image {index + 1}</p>
               <div className="flex items-center gap-2">

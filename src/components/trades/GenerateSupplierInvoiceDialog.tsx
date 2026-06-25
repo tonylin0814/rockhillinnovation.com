@@ -21,6 +21,7 @@ import { Textarea } from "@/components/ui/textarea";
 
 type InvoiceKind = "deposit" | "final";
 type AdjustmentLine = {
+  _key: string;
   amount_rmb: string;
   description: string;
 };
@@ -152,7 +153,12 @@ export function GenerateSupplierInvoiceDialog({
                 </div>
                 <Button
                   disabled={isPending}
-                  onClick={() => setAdjustments((currentAdjustments) => [...currentAdjustments, { amount_rmb: "", description: "" }])}
+                  onClick={() =>
+                    setAdjustments((currentAdjustments) => [
+                      ...currentAdjustments,
+                      { _key: crypto.randomUUID(), amount_rmb: "", description: "" },
+                    ])
+                  }
                   size="sm"
                   type="button"
                   variant="outline"
@@ -165,7 +171,7 @@ export function GenerateSupplierInvoiceDialog({
               {adjustments.length ? (
                 <div className="space-y-2">
                   {adjustments.map((adjustment, index) => (
-                    <div className="grid gap-2 sm:grid-cols-[1fr_8rem_auto]" key={index}>
+                    <div className="grid gap-2 sm:grid-cols-[1fr_8rem_auto]" key={adjustment._key}>
                       <Input
                         disabled={isPending}
                         onChange={(event) => updateAdjustment(index, "description", event.target.value)}

@@ -36,7 +36,7 @@ type VendorOption = {
 type EditableShareholder = {
   id?: string;
   person_name: string;
-  split_pct: number;
+  split_pct: string;
   invoices_through_entity: boolean;
   expense_vendor_id: string;
 };
@@ -45,7 +45,7 @@ function rowsFromShareholders(shareholders: TradeShareholder[]): EditableShareho
   return shareholders.map((shareholder) => ({
     id: shareholder.id,
     person_name: shareholder.person_name,
-    split_pct: shareholder.split_pct,
+    split_pct: String(shareholder.split_pct),
     invoices_through_entity: shareholder.invoices_through_entity,
     expense_vendor_id: shareholder.expense_vendor_id ?? "none",
   }));
@@ -91,7 +91,7 @@ export function ShareholderRulesEditor({
       ...currentRows,
       {
         person_name: "",
-        split_pct: 0,
+        split_pct: "0",
         invoices_through_entity: false,
         expense_vendor_id: "none",
       },
@@ -117,7 +117,7 @@ export function ShareholderRulesEditor({
         rows.map((row) => ({
           id: row.id,
           person_name: row.person_name,
-          split_pct: row.split_pct,
+          split_pct: Number(row.split_pct) || 0,
           invoices_through_entity: row.invoices_through_entity,
           expense_vendor_id:
             row.invoices_through_entity && row.expense_vendor_id !== "none" ? row.expense_vendor_id : null,
@@ -178,13 +178,13 @@ export function ShareholderRulesEditor({
                         <Input
                           className="w-28"
                           min="0.01"
-                          onChange={(event) => updateRow(index, { split_pct: Number(event.currentTarget.value) || 0 })}
+                          onChange={(event) => updateRow(index, { split_pct: event.currentTarget.value })}
                           step="0.01"
                           type="number"
                           value={row.split_pct}
                         />
                       ) : (
-                        `${row.split_pct}%`
+                        `${Number(row.split_pct) || 0}%`
                       )}
                     </TableCell>
                     <TableCell>

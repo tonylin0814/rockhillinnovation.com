@@ -28,7 +28,7 @@ import type { Product, ProductComponent } from "@/types";
 type EditableComponent = {
   rowKey: string;
   component_product_id: string;
-  quantity_per_set: number;
+  quantity_per_set: string;
   sort_order: number;
   notes: string;
   component: Product | null;
@@ -39,7 +39,7 @@ function rowsFromComponents(components: ProductComponent[]): EditableComponent[]
     .map((component, index) => ({
       rowKey: component.id ?? component.component_product_id,
       component_product_id: component.component_product_id,
-      quantity_per_set: component.quantity_per_set,
+      quantity_per_set: String(component.quantity_per_set),
       sort_order: component.sort_order || index + 1,
       notes: component.notes ?? "",
       component: component.component ?? null,
@@ -108,7 +108,7 @@ export function SetComponentsEditor({
         {
           rowKey: crypto.randomUUID(),
           component_product_id: "",
-          quantity_per_set: 1,
+          quantity_per_set: "1",
           sort_order: currentRows.length + 1,
           notes: "",
           component: null,
@@ -140,7 +140,7 @@ export function SetComponentsEditor({
         setProductId,
         rows.map((row, index) => ({
           component_product_id: row.component_product_id,
-          quantity_per_set: row.quantity_per_set,
+          quantity_per_set: Number(row.quantity_per_set) || 0,
           sort_order: index + 1,
           notes: row.notes,
         }))
@@ -227,13 +227,13 @@ export function SetComponentsEditor({
                       className="w-24"
                       min={1}
                       onChange={(event) =>
-                        updateRow(index, { quantity_per_set: Number(event.currentTarget.value) || 1 })
+                        updateRow(index, { quantity_per_set: event.currentTarget.value })
                       }
                       type="number"
                       value={row.quantity_per_set}
                     />
                   ) : (
-                    row.quantity_per_set
+                    Number(row.quantity_per_set) || 0
                   )}
                 </TableCell>
                 {isEditing ? (

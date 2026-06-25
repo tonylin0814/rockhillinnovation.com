@@ -20,6 +20,16 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import type { InvoiceAdjustmentLine } from "@/types";
 
+type AdjustmentRow = InvoiceAdjustmentLine & { _key: string };
+
+function createAdjustmentRow(): AdjustmentRow {
+  return {
+    _key: crypto.randomUUID(),
+    amount_usd: 0,
+    description: "",
+  };
+}
+
 export function GenerateInvoiceDialog({
   children,
   tradeId,
@@ -32,10 +42,10 @@ export function GenerateInvoiceDialog({
   const [open, setOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
-  const [adjustments, setAdjustments] = useState<InvoiceAdjustmentLine[]>([]);
+  const [adjustments, setAdjustments] = useState<AdjustmentRow[]>([]);
 
   function addAdjustment() {
-    setAdjustments((previousAdjustments) => [...previousAdjustments, { description: "", amount_usd: 0 }]);
+    setAdjustments((previousAdjustments) => [...previousAdjustments, createAdjustmentRow()]);
   }
 
   function removeAdjustment(index: number) {
@@ -57,7 +67,10 @@ export function GenerateInvoiceDialog({
     setError(null);
 
     const formData = new FormData(event.currentTarget);
-    formData.set("adjustment_lines_json", JSON.stringify(adjustments));
+    formData.set(
+      "adjustment_lines_json",
+      JSON.stringify(adjustments.map(({ _key, ...adjustment }) => adjustment))
+    );
 
     startTransition(async () => {
       const result = await generateCommercialInvoice(tradeId, formData);
@@ -165,7 +178,7 @@ export function GenerateInvoiceDialog({
             {adjustments.length > 0 ? (
               <div className="space-y-2 rounded-md border p-3">
                 {adjustments.map((adjustment, index) => (
-                  <div className="flex items-start gap-2" key={index}>
+                  <div className="flex items-start gap-2" key={adjustment._key}>
                     <div className="flex-1">
                       <Input
                         disabled={isPending}

@@ -25,6 +25,21 @@ const emptyContact: VendorContact = {
   phone: "",
 };
 
+type VendorContactRow = VendorContact & { _key: string };
+
+function createContactRow(contact?: Partial<VendorContact>, index = 0): VendorContactRow {
+  return {
+    ...emptyContact,
+    ...contact,
+    _key: `${Date.now()}-${index}-${Math.random().toString(36).slice(2)}`,
+  };
+}
+
+function stripContactKey(contact: VendorContactRow): VendorContact {
+  const { _key, ...cleanContact } = contact;
+  return cleanContact;
+}
+
 export function VendorContactsEditor({
   initialContacts,
   vendorId,
@@ -34,7 +49,7 @@ export function VendorContactsEditor({
 }) {
   const router = useRouter();
   const [isEditing, setIsEditing] = useState(false);
-  const [contacts, setContacts] = useState<VendorContact[]>(initialContacts);
+  const [contacts, setContacts] = useState<VendorContactRow[]>(() => initialContacts.map(createContactRow));
   const [isPending, startTransition] = useTransition();
 
   function updateContact(index: number, field: keyof VendorContact, value: string) {
@@ -44,7 +59,7 @@ export function VendorContactsEditor({
   }
 
   function addContact() {
-    setContacts((current) => [...current, { ...emptyContact }]);
+    setContacts((current) => [...current, createContactRow(undefined, current.length)]);
   }
 
   function removeContact(index: number) {
@@ -52,13 +67,13 @@ export function VendorContactsEditor({
   }
 
   function cancelEdit() {
-    setContacts(initialContacts);
+    setContacts(initialContacts.map(createContactRow));
     setIsEditing(false);
   }
 
   function saveContacts() {
     const formData = new FormData();
-    formData.set("contacts", JSON.stringify(contacts));
+    formData.set("contacts", JSON.stringify(contacts.map(stripContactKey)));
 
     startTransition(async () => {
       const result = await updateVendor(vendorId, formData);
@@ -111,7 +126,7 @@ export function VendorContactsEditor({
         <TableBody>
           {contacts.length ? (
             contacts.map((contact, index) => (
-              <TableRow key={`${contact.email}-${index}`}>
+              <TableRow key={contact._key}>
                 {(["name", "role", "email", "phone"] as const).map((field) => (
                   <TableCell key={field}>
                     {isEditing ? (
