@@ -186,6 +186,7 @@ export default async function TradeWorkspacePage({ params }: { params: { id: str
       .from("products")
       .select("id, code, supplier_product_code, name_english, product_type")
       .eq("status", "active")
+      .order("name_english", { ascending: true })
       .order("code", { ascending: true }),
     supabase
       .from("trade_shareholders")

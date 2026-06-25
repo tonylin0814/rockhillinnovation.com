@@ -77,6 +77,13 @@ function productLabel(product: ProductOption) {
   return [product.code, product.supplier_product_code, product.name_english].filter(Boolean).join(" - ");
 }
 
+function compareProductsByName(a: ProductOption, b: ProductOption) {
+  return (
+    a.name_english.localeCompare(b.name_english, undefined, { sensitivity: "base", numeric: true }) ||
+    a.code.localeCompare(b.code, undefined, { sensitivity: "base", numeric: true })
+  );
+}
+
 function PreviousQuoteCell({ product }: { product: ProductOption | null | undefined }) {
   if (product?.previous_quote_usd == null) {
     return "-";
@@ -112,9 +119,10 @@ export function QuotationLinesEditor({
   const [isEditing, setIsEditing] = useState(false);
   const [rows, setRows] = useState<EditableQuotationLine[]>(() => rowsFromLines(initialLines));
   const [isPending, startTransition] = useTransition();
+  const sortedProducts = useMemo(() => [...availableProducts].sort(compareProductsByName), [availableProducts]);
   const productById = useMemo(
-    () => new Map(availableProducts.map((product) => [product.id, product])),
-    [availableProducts]
+    () => new Map(sortedProducts.map((product) => [product.id, product])),
+    [sortedProducts]
   );
   const draftKey = useMemo(() => `rockhill:client-quotation-lines:${sessionId}`, [sessionId]);
   const selectedProductIds = useMemo(
@@ -249,7 +257,7 @@ export function QuotationLinesEditor({
           {rows.length ? (
             rows.map((row, index) => {
               const product = row.product_id === "none" ? null : productById.get(row.product_id);
-              const productOptionsForRow = availableProducts.filter(
+              const productOptionsForRow = sortedProducts.filter(
                 (availableProduct) =>
                   availableProduct.id === row.product_id || !selectedProductIds.has(availableProduct.id)
               );

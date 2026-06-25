@@ -91,6 +91,13 @@ function productLabel(product: AvailableProduct) {
   return [product.code, product.supplier_product_code, product.name_english].filter(Boolean).join(" - ");
 }
 
+function compareProductsByName(a: AvailableProduct, b: AvailableProduct) {
+  return (
+    a.name_english.localeCompare(b.name_english, undefined, { sensitivity: "base", numeric: true }) ||
+    a.code.localeCompare(b.code, undefined, { sensitivity: "base", numeric: true })
+  );
+}
+
 export function OrderLinesTab({
   availableProducts,
   canManage,
@@ -109,10 +116,11 @@ export function OrderLinesTab({
   const [isEditing, setIsEditing] = useState(false);
   const [rows, setRows] = useState<EditableLine[]>(() => rowsFromLines(initialLines));
   const [isPending, startTransition] = useTransition();
+  const sortedProducts = useMemo(() => [...availableProducts].sort(compareProductsByName), [availableProducts]);
 
   const productById = useMemo(
-    () => new Map(availableProducts.map((product) => [product.id, product])),
-    [availableProducts]
+    () => new Map(sortedProducts.map((product) => [product.id, product])),
+    [sortedProducts]
   );
 
   function renumber(nextRows: EditableLine[]) {
@@ -242,7 +250,7 @@ export function OrderLinesTab({
                             </SelectTrigger>
                             <SelectContent>
                               <SelectItem value="none">None</SelectItem>
-                              {availableProducts.map((product) => (
+                              {sortedProducts.map((product) => (
                                 <SelectItem key={product.id} value={product.id}>
                                   {productLabel(product)}
                                 </SelectItem>

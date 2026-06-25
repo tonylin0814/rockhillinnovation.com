@@ -2,7 +2,7 @@
 
 import { BarChart2, CheckCircle2, ChevronsUpDown, FileText, RotateCcw, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
+import { useMemo, useState, useTransition } from "react";
 import { toast } from "sonner";
 
 import { deleteQuoteSession, updateQuoteSessionStatus } from "@/app/actions/supplier-quotes";
@@ -99,6 +99,13 @@ function productLabel(product: ProductOption) {
   return [product.code, product.supplier_product_code, product.name_english].filter(Boolean).join(" - ");
 }
 
+function compareProductsByName(a: ProductOption, b: ProductOption) {
+  return (
+    a.name_english.localeCompare(b.name_english, undefined, { sensitivity: "base", numeric: true }) ||
+    a.code.localeCompare(b.code, undefined, { sensitivity: "base", numeric: true })
+  );
+}
+
 export function SupplierQuotesTab({
   availableProducts,
   canManage,
@@ -120,6 +127,7 @@ export function SupplierQuotesTab({
   const [priceLookupOpen, setPriceLookupOpen] = useState(false);
   const [selectedHistoryProduct, setSelectedHistoryProduct] = useState<ProductOption | null>(null);
   const [isPending, startTransition] = useTransition();
+  const sortedProducts = useMemo(() => [...availableProducts].sort(compareProductsByName), [availableProducts]);
 
   function updateStatus(sessionId: string, status: SupplierQuoteSession["status"]) {
     setPendingSessionId(sessionId);
@@ -218,7 +226,7 @@ export function SupplierQuotesTab({
                 <CommandList>
                   <CommandEmpty>No products found.</CommandEmpty>
                   <CommandGroup>
-                    {availableProducts.map((product) => (
+                    {sortedProducts.map((product) => (
                       <CommandItem
                         key={product.id}
                         onSelect={() => {

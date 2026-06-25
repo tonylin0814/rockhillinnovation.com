@@ -37,6 +37,7 @@ export async function GET(request: Request) {
       .from("products")
       .select("id, code, supplier_product_code, name_english")
       .eq("status", "active")
+      .order("name_english", { ascending: true })
       .order("code", { ascending: true }),
   ]);
 
