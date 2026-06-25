@@ -283,6 +283,15 @@ export function QuotationLinesEditor({
     });
   }
 
+  function focusNextQuoteInput(index: number) {
+    const nextInput = document.querySelector<HTMLInputElement>(`[data-quote-input-index="${index + 1}"]`);
+
+    if (nextInput) {
+      nextInput.focus();
+      nextInput.select();
+    }
+  }
+
   function handleSave() {
     startTransition(async () => {
       const result = await saveQuotationLines(
@@ -437,10 +446,17 @@ export function QuotationLinesEditor({
                     {isEditing ? (
                       <Input
                         className="w-28"
+                        data-quote-input-index={index}
                         min={0}
                         onChange={(event) =>
                           updateRow(index, { unit_price_usd: event.currentTarget.value })
                         }
+                        onKeyDown={(event) => {
+                          if (event.key === "Enter") {
+                            event.preventDefault();
+                            focusNextQuoteInput(index);
+                          }
+                        }}
                         step="0.01"
                         type="number"
                         value={row.unit_price_usd}
