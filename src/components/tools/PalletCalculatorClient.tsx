@@ -41,15 +41,9 @@ function normalizeIntegerInput(value: string) {
 }
 
 function formatIntegerInput(value: number | string | null | undefined) {
-  if (value === null || value === undefined || value === "") {
-    return "";
-  }
-
+  if (value === null || value === undefined || value === "") return "";
   const normalized = normalizeIntegerInput(String(value));
-  if (!normalized) {
-    return "";
-  }
-
+  if (!normalized) return "";
   return Number(normalized).toLocaleString("en-US", { maximumFractionDigits: 0 });
 }
 
@@ -67,7 +61,7 @@ export function PalletCalculatorClient({
   products: Product[];
   palletProfiles: PalletProfile[];
 }) {
-  const defaultProfile = palletProfiles.find((profile) => profile.is_default) ?? palletProfiles[0] ?? null;
+  const defaultProfile = palletProfiles.find((p) => p.is_default) ?? palletProfiles[0] ?? null;
   const [selectedProfileId, setSelectedProfileId] = useState(defaultProfile?.id ?? "");
   const [selectedProductId, setSelectedProductId] = useState("manual");
   const [exportProductId, setExportProductId] = useState("");
@@ -84,18 +78,28 @@ export function PalletCalculatorClient({
   const [editMode, setEditMode] = useState(false);
   const [editOverride, setEditOverride] = useState<{
     cartonsPerLayer: number;
-    stdLayerCount: number;
-    hqLayerCount: number;
+    stdLayerCount: number; stdCartonsPerPallet: number; stdItemsPerPallet: number; stdGrossWeight: number;
+    hqLayerCount: number;  hqCartonsPerPallet: number;  hqItemsPerPallet: number;  hqGrossWeight: number;
+    cartonsAlongLength: number; cartonsAlongWidth: number; orientation: string;
   } | null>(null);
   const [editCartons, setEditCartons] = useState<PlacedCarton[]>([]);
   const [placementRotated, setPlacementRotated] = useState(false);
   const [editStdLayers, setEditStdLayers] = useState(0);
+  const [editStdCartonsPallet, setEditStdCartonsPallet] = useState(0);
+  const [editStdItemsPallet, setEditStdItemsPallet] = useState(0);
+  const [editStdGrossWeight, setEditStdGrossWeight] = useState(0);
   const [editHqLayers, setEditHqLayers] = useState(0);
+  const [editHqCartonsPallet, setEditHqCartonsPallet] = useState(0);
+  const [editHqItemsPallet, setEditHqItemsPallet] = useState(0);
+  const [editHqGrossWeight, setEditHqGrossWeight] = useState(0);
+  const [editCartonsAlongLength, setEditCartonsAlongLength] = useState(0);
+  const [editCartonsAlongWidth, setEditCartonsAlongWidth] = useState(0);
+  const [editOrientation, setEditOrientation] = useState("");
   const [isCalculating, startCalculation] = useTransition();
   const [isExporting, startExport] = useTransition();
 
   const selectedProfile = useMemo(
-    () => palletProfiles.find((profile) => profile.id === selectedProfileId) ?? null,
+    () => palletProfiles.find((p) => p.id === selectedProfileId) ?? null,
     [palletProfiles, selectedProfileId]
   );
   const carton: CartonInput = useMemo(
@@ -120,37 +124,44 @@ export function PalletCalculatorClient({
     : null;
   const canCalculate =
     Boolean(selectedProfile) &&
-    carton.lengthCm > 0 &&
-    carton.widthCm > 0 &&
-    carton.heightCm > 0 &&
-    carton.weightKg > 0 &&
-    carton.qtyPerCarton > 0 &&
-    forkliftClearance >= 0;
+    carton.lengthCm > 0 && carton.widthCm > 0 && carton.heightCm > 0 &&
+    carton.weightKg > 0 && carton.qtyPerCarton > 0 && forkliftClearance >= 0;
+
   const standardPlan = judyResult?.standardPlan ?? null;
   const hqPlan = judyResult?.hqPlan ?? null;
-  const liveEditOverride = editMode
-    ? {
-        cartonsPerLayer: editCartons.length,
-        hqLayerCount: editHqLayers,
-        stdLayerCount: editStdLayers,
-      }
-    : editOverride;
-  const displayCartonsPerLayer = liveEditOverride?.cartonsPerLayer ?? judyResult?.layerSetup.cartonsPerLayer ?? null;
   const palletHeightCm = selectedProfile ? Number(selectedProfile.height_cm) : 0;
-  const displayStdLayerCount = liveEditOverride?.stdLayerCount ?? standardPlan?.layerCount ?? 0;
-  const displayHqLayerCount = liveEditOverride?.hqLayerCount ?? hqPlan?.layerCount ?? 0;
-  const displayStd = liveEditOverride ? deriveContainerDisplay(displayStdLayerCount, CONTAINER_HEIGHTS_CM.std) : standardPlan;
-  const displayHq = liveEditOverride ? deriveContainerDisplay(displayHqLayerCount, CONTAINER_HEIGHTS_CM["40hq"]) : hqPlan;
+
+  const displayCartonsPerLayer = editMode
+    ? (editCartons.length > 0 ? editCartons.length : editCartonsAlongLength * editCartonsAlongWidth)
+    : (editOverride?.cartonsPerLayer ?? judyResult?.layerSetup.cartonsPerLayer ?? null);
+  const displayStdLayerCount = editMode ? editStdLayers : (editOverride?.stdLayerCount ?? standardPlan?.layerCount ?? 0);
+  const displayHqLayerCount  = editMode ? editHqLayers  : (editOverride?.hqLayerCount  ?? hqPlan?.layerCount  ?? 0);
+
+  function buildEditDisplay(
+    layerCount: number, cartonsPerPallet: number, itemsPerPallet: number,
+    grossWeight: number, containerMaxH: number
+  ): JudyPalletResult["standardPlan"] {
+    const stackHeightCm = layerCount * (calculationCarton?.heightCm ?? 0);
+    const totalHeightCm = palletHeightCm + stackHeightCm + forkliftClearance;
+    return { cartonsPerPallet, fits: totalHeightCm <= containerMaxH, itemsPerPallet, layerCount, palletGrossWeightKg: grossWeight, stackHeightCm, totalHeightCm };
+  }
+
+  const displayStd = editMode
+    ? buildEditDisplay(editStdLayers, editStdCartonsPallet, editStdItemsPallet, editStdGrossWeight, CONTAINER_HEIGHTS_CM.std)
+    : editOverride
+      ? buildEditDisplay(editOverride.stdLayerCount, editOverride.stdCartonsPerPallet, editOverride.stdItemsPerPallet, editOverride.stdGrossWeight, CONTAINER_HEIGHTS_CM.std)
+      : standardPlan;
+  const displayHq = editMode
+    ? buildEditDisplay(editHqLayers, editHqCartonsPallet, editHqItemsPallet, editHqGrossWeight, CONTAINER_HEIGHTS_CM["40hq"])
+    : editOverride
+      ? buildEditDisplay(editOverride.hqLayerCount, editOverride.hqCartonsPerPallet, editOverride.hqItemsPerPallet, editOverride.hqGrossWeight, CONTAINER_HEIGHTS_CM["40hq"])
+      : hqPlan;
+
   const activePlan = containerType === "40hq" ? displayHq : displayStd;
-  const containerItems = activePlan
-    ? activePlan.itemsPerPallet * CONTAINER_PRESETS[containerType].pallets
-    : null;
-  const drawingCalculation = judyResult && activePlan
-    ? buildDrawingCalculation(judyResult, activePlan)
-    : null;
+  const containerItems = activePlan ? activePlan.itemsPerPallet * CONTAINER_PRESETS[containerType].pallets : null;
+  const drawingCalculation = judyResult && activePlan ? buildDrawingCalculation(judyResult, activePlan) : null;
   const topViewSvg = drawingCalculation && calculationCarton && palletInput
-    ? buildPalletTopViewSvg(calculationCarton, palletInput, drawingCalculation)
-    : "";
+    ? buildPalletTopViewSvg(calculationCarton, palletInput, drawingCalculation) : "";
 
   function buildDrawingCalculation(result: JudyPalletResult, plan: JudyPalletResult["standardPlan"]): PalletCalculation {
     return {
@@ -167,37 +178,12 @@ export function PalletCalculatorClient({
     };
   }
 
-  function deriveContainerDisplay(layerCount: number, containerMaxHeightCm: number): JudyPalletResult["standardPlan"] {
-    const cartonsPerLayer = displayCartonsPerLayer ?? 0;
-    const cartonsPerPallet = cartonsPerLayer * layerCount;
-    const itemsPerPallet = cartonsPerPallet * (calculationCarton?.qtyPerCarton ?? 0);
-    const palletGrossWeightKg = cartonsPerPallet * (calculationCarton?.weightKg ?? 0);
-    const stackHeightCm = layerCount * (calculationCarton?.heightCm ?? 0);
-    const totalHeightCm = palletHeightCm + stackHeightCm + forkliftClearance;
-
-    return {
-      cartonsPerPallet,
-      fits: totalHeightCm <= containerMaxHeightCm,
-      itemsPerPallet,
-      layerCount,
-      palletGrossWeightKg,
-      stackHeightCm,
-      totalHeightCm,
-    };
-  }
-
   function selectProduct(productId: string) {
     setSelectedProductId(productId);
     setExportProductId(productId === "manual" ? "" : productId);
-
-    if (productId === "manual") {
-      setProductName("");
-      return;
-    }
-
+    if (productId === "manual") { setProductName(""); return; }
     const product = products.find((row) => row.id === productId);
     if (!product) return;
-
     setProductName(product.name_english);
     setCartonLengthCm(inputValue(product.carton_length_cm));
     setCartonWidthCm(inputValue(product.carton_width_cm));
@@ -207,22 +193,28 @@ export function PalletCalculatorClient({
   }
 
   function enterEditMode() {
-    if (!judyResult) return;
-
+    if (!judyResult || !standardPlan || !hqPlan) return;
     const initialCartons: PlacedCarton[] = [];
-    const cartonLength = calculationCarton?.lengthCm ?? 0;
-    const cartonWidth = calculationCarton?.widthCm ?? 0;
+    const cL = calculationCarton?.lengthCm ?? 0;
+    const cW = calculationCarton?.widthCm ?? 0;
     const { cartonsAlongLength, cartonsAlongWidth } = judyResult.layerSetup;
-
     for (let i = 0; i < cartonsAlongLength; i++) {
       for (let j = 0; j < cartonsAlongWidth; j++) {
-        initialCartons.push({ rotated: false, x: i * cartonLength, y: j * cartonWidth });
+        initialCartons.push({ rotated: false, x: i * cL, y: j * cW });
       }
     }
-
     setEditCartons(initialCartons);
-    setEditStdLayers(standardPlan?.layerCount ?? 0);
-    setEditHqLayers(hqPlan?.layerCount ?? 0);
+    setEditStdLayers(standardPlan.layerCount);
+    setEditStdCartonsPallet(standardPlan.cartonsPerPallet);
+    setEditStdItemsPallet(standardPlan.itemsPerPallet);
+    setEditStdGrossWeight(standardPlan.palletGrossWeightKg);
+    setEditHqLayers(hqPlan.layerCount);
+    setEditHqCartonsPallet(hqPlan.cartonsPerPallet);
+    setEditHqItemsPallet(hqPlan.itemsPerPallet);
+    setEditHqGrossWeight(hqPlan.palletGrossWeightKg);
+    setEditCartonsAlongLength(cartonsAlongLength);
+    setEditCartonsAlongWidth(cartonsAlongWidth);
+    setEditOrientation(judyResult.layerSetup.orientation);
     setPlacementRotated(false);
     setEditMode(true);
   }
@@ -232,11 +224,21 @@ export function PalletCalculatorClient({
     setEditCartons([]);
   }
 
-  function saveEditMode(stdLayers: number, hqLayers: number) {
+  function saveEditMode() {
+    const cpl = editCartons.length > 0 ? editCartons.length : editCartonsAlongLength * editCartonsAlongWidth;
     setEditOverride({
-      cartonsPerLayer: editCartons.length,
-      hqLayerCount: hqLayers,
-      stdLayerCount: stdLayers,
+      cartonsAlongLength: editCartonsAlongLength,
+      cartonsAlongWidth: editCartonsAlongWidth,
+      cartonsPerLayer: cpl,
+      hqCartonsPerPallet: editHqCartonsPallet,
+      hqGrossWeight: editHqGrossWeight,
+      hqItemsPerPallet: editHqItemsPallet,
+      hqLayerCount: editHqLayers,
+      orientation: editOrientation,
+      stdCartonsPerPallet: editStdCartonsPallet,
+      stdGrossWeight: editStdGrossWeight,
+      stdItemsPerPallet: editStdItemsPallet,
+      stdLayerCount: editStdLayers,
     });
     setEditMode(false);
   }
@@ -246,13 +248,11 @@ export function PalletCalculatorClient({
       toast.error("Select a pallet profile and enter carton details first");
       return;
     }
-
     setCalculationCarton(carton);
     setJudyResult(null);
     setEditOverride(null);
     setEditMode(false);
     setEditCartons([]);
-
     startCalculation(async () => {
       const aiResult = await getJudyPalletExplanation({
         carton,
@@ -266,19 +266,13 @@ export function PalletCalculatorClient({
         },
         productName: productName || "Manual product",
       });
-
-      if (aiResult.error) {
-        toast.error(aiResult.error);
-        return;
-      }
-
+      if (aiResult.error) { toast.error(aiResult.error); return; }
       setJudyResult(aiResult.result ?? null);
     });
   }
 
   function handleExportToProduct() {
     if (!exportProductId || !displayStd || !displayHq) return;
-
     startExport(async () => {
       const result = await exportCalculatorToProduct(exportProductId, {
         carton_height_cm: carton.heightCm,
@@ -289,12 +283,7 @@ export function PalletCalculatorClient({
         cartons_per_pallet_std: displayStd.cartonsPerPallet,
         qty_per_carton: carton.qtyPerCarton,
       });
-
-      if (result.error) {
-        toast.error(result.error);
-        return;
-      }
-
+      if (result.error) { toast.error(result.error); return; }
       toast.success("Product updated");
     });
   }
@@ -308,38 +297,28 @@ export function PalletCalculatorClient({
 
       <div className="grid gap-6 lg:grid-cols-3">
         <Card className="border-slate-200 shadow-sm lg:col-span-1">
-          <CardHeader>
-            <CardTitle>Inputs</CardTitle>
-          </CardHeader>
+          <CardHeader><CardTitle>Inputs</CardTitle></CardHeader>
           <CardContent className="space-y-5">
             <div className="space-y-2">
               <Label>Product</Label>
               <Select onValueChange={selectProduct} value={selectedProductId}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select product" />
-                </SelectTrigger>
+                <SelectTrigger><SelectValue placeholder="Select product" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="manual">Manual entry</SelectItem>
                   {products.map((product) => (
-                    <SelectItem key={product.id} value={product.id}>
-                      {product.name_english}
-                    </SelectItem>
+                    <SelectItem key={product.id} value={product.id}>{product.name_english}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
-
             <div className="space-y-2">
               <Label htmlFor="product_name">Product Name</Label>
-              <Input id="product_name" onChange={(event) => setProductName(event.target.value)} value={productName} />
+              <Input id="product_name" onChange={(e) => setProductName(e.target.value)} value={productName} />
             </div>
-
             <div className="space-y-2">
               <Label>Pallet Profile</Label>
               <Select onValueChange={setSelectedProfileId} value={selectedProfileId}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select a pallet profile" />
-                </SelectTrigger>
+                <SelectTrigger><SelectValue placeholder="Select a pallet profile" /></SelectTrigger>
                 <SelectContent>
                   {palletProfiles.map((profile) => (
                     <SelectItem key={profile.id} value={profile.id}>
@@ -349,52 +328,35 @@ export function PalletCalculatorClient({
                 </SelectContent>
               </Select>
             </div>
-
             <div className="space-y-2">
               <Label htmlFor="forklift_clearance">Forklift Clearance (cm)</Label>
-              <Input
-                id="forklift_clearance"
-                min="0"
-                onChange={(event) => setForkliftClearanceCm(event.target.value)}
-                placeholder="19"
-                step="1"
-                type="number"
-                value={forkliftClearanceCm}
-              />
+              <Input id="forklift_clearance" min="0" onChange={(e) => setForkliftClearanceCm(e.target.value)} placeholder="19" step="1" type="number" value={forkliftClearanceCm} />
             </div>
-
             <div className="grid gap-3 sm:grid-cols-3">
               <div className="space-y-2">
                 <Label>Carton L (cm)</Label>
-                <Input min="0" onChange={(event) => setCartonLengthCm(event.target.value)} step="0.01" type="number" value={cartonLengthCm} />
+                <Input min="0" onChange={(e) => setCartonLengthCm(e.target.value)} step="0.01" type="number" value={cartonLengthCm} />
               </div>
               <div className="space-y-2">
                 <Label>Carton W (cm)</Label>
-                <Input min="0" onChange={(event) => setCartonWidthCm(event.target.value)} step="0.01" type="number" value={cartonWidthCm} />
+                <Input min="0" onChange={(e) => setCartonWidthCm(e.target.value)} step="0.01" type="number" value={cartonWidthCm} />
               </div>
               <div className="space-y-2">
                 <Label>Carton H (cm)</Label>
-                <Input min="0" onChange={(event) => setCartonHeightCm(event.target.value)} step="0.01" type="number" value={cartonHeightCm} />
+                <Input min="0" onChange={(e) => setCartonHeightCm(e.target.value)} step="0.01" type="number" value={cartonHeightCm} />
               </div>
             </div>
-
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label>Carton Weight (kg)</Label>
-                <Input min="0" onChange={(event) => setCartonWeightKg(event.target.value)} step="0.01" type="number" value={cartonWeightKg} />
+                <Input min="0" onChange={(e) => setCartonWeightKg(e.target.value)} step="0.01" type="number" value={cartonWeightKg} />
               </div>
               <div className="space-y-2">
                 <Label>Qty / Carton</Label>
-                <Input inputMode="numeric" onChange={(event) => setQtyPerCarton(formatIntegerInput(event.target.value))} type="text" value={qtyPerCarton} />
+                <Input inputMode="numeric" onChange={(e) => setQtyPerCarton(formatIntegerInput(e.target.value))} type="text" value={qtyPerCarton} />
               </div>
             </div>
-
-            <Button
-              className="w-full bg-[#0d1b34] hover:bg-[#13294d]"
-              disabled={!canCalculate || isCalculating}
-              onClick={handleCalculate}
-              type="button"
-            >
+            <Button className="w-full bg-[#0d1b34] hover:bg-[#13294d]" disabled={!canCalculate || isCalculating} onClick={handleCalculate} type="button">
               {isCalculating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
               Calculate & Ask Judy
             </Button>
@@ -417,49 +379,23 @@ export function PalletCalculatorClient({
               ))}
             </div>
             {judyResult && !editMode ? (
-              <Button onClick={enterEditMode} size="sm" type="button" variant="outline">
-                Edit
-              </Button>
+              <Button onClick={enterEditMode} size="sm" type="button" variant="outline">Edit</Button>
             ) : null}
             {editMode ? (
-              <div className="flex flex-wrap items-center gap-3">
-                <div className="flex items-center gap-1">
-                  <span className="text-xs text-slate-500">20/40GP layers</span>
-                  <Input
-                    className="w-16"
-                    min={1}
-                    onChange={(event) => setEditStdLayers(Number(event.target.value))}
-                    type="number"
-                    value={editStdLayers}
-                  />
-                </div>
-                <div className="flex items-center gap-1">
-                  <span className="text-xs text-slate-500">40HQ layers</span>
-                  <Input
-                    className="w-16"
-                    min={1}
-                    onChange={(event) => setEditHqLayers(Number(event.target.value))}
-                    type="number"
-                    value={editHqLayers}
-                  />
-                </div>
-                <Button className="bg-[#0d1b34] hover:bg-[#13294d]" onClick={() => saveEditMode(editStdLayers, editHqLayers)} size="sm" type="button">
-                  Save
-                </Button>
-                <Button onClick={cancelEditMode} size="sm" type="button" variant="outline">
-                  Cancel
-                </Button>
+              <div className="flex items-center gap-2">
+                <Button className="bg-[#0d1b34] hover:bg-[#13294d]" onClick={saveEditMode} size="sm" type="button">Save</Button>
+                <Button onClick={cancelEditMode} size="sm" type="button" variant="outline">Cancel</Button>
               </div>
             ) : null}
           </div>
 
           <div className="grid gap-4 sm:grid-cols-4">
-            {[
+            {([
               ["Cartons / Layer", displayCartonsPerLayer],
               ["Cartons / Pallet", activePlan?.cartonsPerPallet],
               ["Items / Pallet", activePlan?.itemsPerPallet],
               ["Container Items", containerItems],
-            ].map(([label, value]) => (
+            ] as [string, number | null | undefined][]).map(([label, value]) => (
               <Card className="border-slate-200 shadow-sm" key={label}>
                 <CardContent className="p-4">
                   <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{label}</p>
@@ -475,14 +411,33 @@ export function PalletCalculatorClient({
             <div className="grid gap-4 lg:grid-cols-3">
               <Card className="border-slate-200 shadow-sm">
                 <CardContent className="p-4">
-                  <div className="flex items-center gap-2">
+                  <div className="mb-2 flex items-center gap-2">
                     <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Layer Setup</p>
                     {editMode ? <span className="rounded bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-700">editing</span> : null}
                   </div>
-                  <p className="mt-2 text-2xl font-semibold text-[#0d1b34]">
-                    {judyResult.layerSetup.cartonsAlongLength} x {judyResult.layerSetup.cartonsAlongWidth}
-                  </p>
-                  <p className="mt-1 text-sm text-slate-500">{displayCartonsPerLayer} cartons / layer</p>
+                  {editMode ? (
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-1">
+                        <Input className="w-14" min={1} onChange={(e) => setEditCartonsAlongLength(Number(e.target.value))} type="number" value={editCartonsAlongLength} />
+                        <span className="text-sm text-slate-400">x</span>
+                        <Input className="w-14" min={1} onChange={(e) => setEditCartonsAlongWidth(Number(e.target.value))} type="number" value={editCartonsAlongWidth} />
+                      </div>
+                      <p className="text-xs text-slate-500">
+                        {editCartons.length > 0 ? editCartons.length : editCartonsAlongLength * editCartonsAlongWidth} cartons / layer
+                        {editCartons.length > 0 ? " (canvas)" : ""}
+                      </p>
+                      <Input className="text-xs" onChange={(e) => setEditOrientation(e.target.value)} placeholder="Orientation" value={editOrientation} />
+                    </div>
+                  ) : (
+                    <>
+                      <p className="mt-2 text-2xl font-semibold text-[#0d1b34]">
+                        {editOverride
+                          ? editOverride.cartonsAlongLength + " x " + editOverride.cartonsAlongWidth
+                          : judyResult.layerSetup.cartonsAlongLength + " x " + judyResult.layerSetup.cartonsAlongWidth}
+                      </p>
+                      <p className="mt-1 text-sm text-slate-500">{displayCartonsPerLayer} cartons / layer</p>
+                    </>
+                  )}
                 </CardContent>
               </Card>
               <Card className="border-slate-200 shadow-sm">
@@ -507,9 +462,7 @@ export function PalletCalculatorClient({
           ) : null}
 
           <Card className="border-slate-200 shadow-sm">
-            <CardHeader>
-              <CardTitle>Calculation</CardTitle>
-            </CardHeader>
+            <CardHeader><CardTitle>Calculation</CardTitle></CardHeader>
             <CardContent className="space-y-4">
               {isCalculating ? (
                 <div className="space-y-2">
@@ -523,56 +476,69 @@ export function PalletCalculatorClient({
                   <div>
                     <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">Layer Arrangement</p>
                     <div className="space-y-1 rounded-md border border-slate-200 bg-slate-50 p-3 text-sm">
-                      <p>
-                        <span className="font-medium">Orientation:</span> {judyResult.layerSetup.orientation}
-                      </p>
+                      <p><span className="font-medium">Orientation:</span> {editOverride?.orientation ?? judyResult.layerSetup.orientation}</p>
                       <p>
                         <span className="font-medium">Layout:</span>{" "}
-                        {judyResult.layerSetup.cartonsAlongLength} x {judyResult.layerSetup.cartonsAlongWidth} ={" "}
-                        <span className="font-semibold text-[#0d1b34]">
-                          {displayCartonsPerLayer} cartons per layer
-                        </span>
+                        {editOverride
+                          ? editOverride.cartonsAlongLength + " x " + editOverride.cartonsAlongWidth
+                          : judyResult.layerSetup.cartonsAlongLength + " x " + judyResult.layerSetup.cartonsAlongWidth}
+                        {" = "}
+                        <span className="font-semibold text-[#0d1b34]">{displayCartonsPerLayer} cartons per layer</span>
                       </p>
                     </div>
                   </div>
 
                   <div className="grid gap-3 sm:grid-cols-2">
-                    <div className={`space-y-1 rounded-md border p-3 text-sm ${displayStd.fits ? "border-green-200 bg-green-50" : "border-red-200 bg-red-50"}`}>
-                      <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">{"20' / 40' Container"}</p>
-                      <p><span className="font-medium">Layers:</span> {displayStd.layerCount}</p>
-                      <p><span className="font-medium">Cartons / Pallet:</span> {displayStd.cartonsPerPallet}</p>
-                      <p><span className="font-medium">Items / Pallet:</span> {displayStd.itemsPerPallet.toLocaleString()}</p>
-                      <p><span className="font-medium">Gross Weight:</span> {formatNumber(displayStd.palletGrossWeightKg)} kg</p>
-                      <div className="mt-1 border-t border-slate-200 pt-1">
-                        <p><span className="font-medium">Pallet:</span> {formatNumber(Number(selectedProfile?.height_cm ?? 0))} cm</p>
-                        <p>
-                          <span className="font-medium">Stack:</span> {formatNumber(displayStd.stackHeightCm)} cm
-                          {" "}({displayStd.layerCount} x {formatNumber(displayStd.layerCount > 0 ? displayStd.stackHeightCm / displayStd.layerCount : 0)} cm)
-                        </p>
+                    <div className={"space-y-2 rounded-md border p-3 text-sm " + (displayStd.fits ? "border-green-200 bg-green-50" : "border-red-200 bg-red-50")}>
+                      <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{"20' / 40' Container"}</p>
+                      {editMode ? (
+                        <>
+                          <div className="flex items-center gap-2"><span className="w-32 font-medium">Layers</span><Input className="w-20" min={1} onChange={(e) => setEditStdLayers(Number(e.target.value))} type="number" value={editStdLayers} /></div>
+                          <div className="flex items-center gap-2"><span className="w-32 font-medium">Cartons / Pallet</span><Input className="w-20" min={0} onChange={(e) => setEditStdCartonsPallet(Number(e.target.value))} type="number" value={editStdCartonsPallet} /></div>
+                          <div className="flex items-center gap-2"><span className="w-32 font-medium">Items / Pallet</span><Input className="w-24" min={0} onChange={(e) => setEditStdItemsPallet(Number(e.target.value))} type="number" value={editStdItemsPallet} /></div>
+                          <div className="flex items-center gap-2"><span className="w-32 font-medium">Gross Weight</span><Input className="w-24" min={0} onChange={(e) => setEditStdGrossWeight(Number(e.target.value))} step="0.1" type="number" value={editStdGrossWeight} /><span className="text-xs text-slate-400">kg</span></div>
+                        </>
+                      ) : (
+                        <>
+                          <p><span className="font-medium">Layers:</span> {displayStd.layerCount}</p>
+                          <p><span className="font-medium">Cartons / Pallet:</span> {displayStd.cartonsPerPallet}</p>
+                          <p><span className="font-medium">Items / Pallet:</span> {displayStd.itemsPerPallet.toLocaleString()}</p>
+                          <p><span className="font-medium">Gross Weight:</span> {formatNumber(displayStd.palletGrossWeightKg)} kg</p>
+                        </>
+                      )}
+                      <div className="border-t border-slate-200 pt-1 space-y-0.5">
+                        <p><span className="font-medium">Pallet:</span> {formatNumber(palletHeightCm)} cm</p>
+                        <p><span className="font-medium">Stack:</span> {formatNumber(displayStd.stackHeightCm)} cm ({displayStd.layerCount} x {formatNumber(calculationCarton?.heightCm ?? 0)} cm)</p>
                         <p><span className="font-medium">Forklift:</span> {formatNumber(forkliftClearance)} cm</p>
-                        <p className={`mt-1 font-semibold ${displayStd.fits ? "text-green-700" : "text-red-700"}`}>
-                          Total: {formatNumber(displayStd.totalHeightCm)} cm
-                          {displayStd.fits ? " - Fits" : " - Does not fit"} (239 cm)
+                        <p className={"mt-1 font-semibold " + (displayStd.fits ? "text-green-700" : "text-red-700")}>
+                          {displayStd.fits ? "✓" : "✗"} Total: {formatNumber(displayStd.totalHeightCm)} cm {displayStd.fits ? "- Fits" : "- Does not fit"} (239 cm)
                         </p>
                       </div>
                     </div>
 
-                    <div className={`space-y-1 rounded-md border p-3 text-sm ${displayHq.fits ? "border-green-200 bg-green-50" : "border-red-200 bg-red-50"}`}>
-                      <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">{"40'HQ Container"}</p>
-                      <p><span className="font-medium">Layers:</span> {displayHq.layerCount}</p>
-                      <p><span className="font-medium">Cartons / Pallet:</span> {displayHq.cartonsPerPallet}</p>
-                      <p><span className="font-medium">Items / Pallet:</span> {displayHq.itemsPerPallet.toLocaleString()}</p>
-                      <p><span className="font-medium">Gross Weight:</span> {formatNumber(displayHq.palletGrossWeightKg)} kg</p>
-                      <div className="mt-1 border-t border-slate-200 pt-1">
-                        <p><span className="font-medium">Pallet:</span> {formatNumber(Number(selectedProfile?.height_cm ?? 0))} cm</p>
-                        <p>
-                          <span className="font-medium">Stack:</span> {formatNumber(displayHq.stackHeightCm)} cm
-                          {" "}({displayHq.layerCount} x {formatNumber(displayHq.layerCount > 0 ? displayHq.stackHeightCm / displayHq.layerCount : 0)} cm)
-                        </p>
+                    <div className={"space-y-2 rounded-md border p-3 text-sm " + (displayHq.fits ? "border-green-200 bg-green-50" : "border-red-200 bg-red-50")}>
+                      <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{"40'HQ Container"}</p>
+                      {editMode ? (
+                        <>
+                          <div className="flex items-center gap-2"><span className="w-32 font-medium">Layers</span><Input className="w-20" min={1} onChange={(e) => setEditHqLayers(Number(e.target.value))} type="number" value={editHqLayers} /></div>
+                          <div className="flex items-center gap-2"><span className="w-32 font-medium">Cartons / Pallet</span><Input className="w-20" min={0} onChange={(e) => setEditHqCartonsPallet(Number(e.target.value))} type="number" value={editHqCartonsPallet} /></div>
+                          <div className="flex items-center gap-2"><span className="w-32 font-medium">Items / Pallet</span><Input className="w-24" min={0} onChange={(e) => setEditHqItemsPallet(Number(e.target.value))} type="number" value={editHqItemsPallet} /></div>
+                          <div className="flex items-center gap-2"><span className="w-32 font-medium">Gross Weight</span><Input className="w-24" min={0} onChange={(e) => setEditHqGrossWeight(Number(e.target.value))} step="0.1" type="number" value={editHqGrossWeight} /><span className="text-xs text-slate-400">kg</span></div>
+                        </>
+                      ) : (
+                        <>
+                          <p><span className="font-medium">Layers:</span> {displayHq.layerCount}</p>
+                          <p><span className="font-medium">Cartons / Pallet:</span> {displayHq.cartonsPerPallet}</p>
+                          <p><span className="font-medium">Items / Pallet:</span> {displayHq.itemsPerPallet.toLocaleString()}</p>
+                          <p><span className="font-medium">Gross Weight:</span> {formatNumber(displayHq.palletGrossWeightKg)} kg</p>
+                        </>
+                      )}
+                      <div className="border-t border-slate-200 pt-1 space-y-0.5">
+                        <p><span className="font-medium">Pallet:</span> {formatNumber(palletHeightCm)} cm</p>
+                        <p><span className="font-medium">Stack:</span> {formatNumber(displayHq.stackHeightCm)} cm ({displayHq.layerCount} x {formatNumber(calculationCarton?.heightCm ?? 0)} cm)</p>
                         <p><span className="font-medium">Forklift:</span> {formatNumber(forkliftClearance)} cm</p>
-                        <p className={`mt-1 font-semibold ${displayHq.fits ? "text-green-700" : "text-red-700"}`}>
-                          Total: {formatNumber(displayHq.totalHeightCm)} cm
-                          {displayHq.fits ? " - Fits" : " - Does not fit"} (269.8 cm)
+                        <p className={"mt-1 font-semibold " + (displayHq.fits ? "text-green-700" : "text-red-700")}>
+                          {displayHq.fits ? "✓" : "✗"} Total: {formatNumber(displayHq.totalHeightCm)} cm {displayHq.fits ? "- Fits" : "- Does not fit"} (269.8 cm)
                         </p>
                       </div>
                     </div>
@@ -591,15 +557,13 @@ export function PalletCalculatorClient({
           {judyResult ? (
             <>
               <Card className="border-slate-200 shadow-sm">
-                <CardHeader>
-                  <CardTitle>Top View</CardTitle>
-                </CardHeader>
+                <CardHeader><CardTitle>Top View</CardTitle></CardHeader>
                 <CardContent>
                   {editMode && calculationCarton && selectedProfile ? (
                     <PalletCanvasEditor
                       carton={calculationCarton}
                       editCartons={editCartons}
-                      onToggleRotation={() => setPlacementRotated((rotated) => !rotated)}
+                      onToggleRotation={() => setPlacementRotated((r) => !r)}
                       onUpdate={setEditCartons}
                       palletLengthCm={Number(selectedProfile.length_cm)}
                       palletWidthCm={Number(selectedProfile.width_cm)}
@@ -612,22 +576,14 @@ export function PalletCalculatorClient({
               </Card>
 
               <Card className="border-slate-200 shadow-sm">
-                <CardHeader>
-                  <CardTitle>Export to Product</CardTitle>
-                </CardHeader>
+                <CardHeader><CardTitle>Export to Product</CardTitle></CardHeader>
                 <CardContent className="space-y-3">
-                  <p className="text-sm text-slate-500">
-                    Save carton dimensions and qty/carton to a product in your catalog.
-                  </p>
+                  <p className="text-sm text-slate-500">Save carton dimensions and qty/carton to a product in your catalog.</p>
                   <Select onValueChange={setExportProductId} value={exportProductId}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select product to update" />
-                    </SelectTrigger>
+                    <SelectTrigger><SelectValue placeholder="Select product to update" /></SelectTrigger>
                     <SelectContent>
                       {products.map((product) => (
-                        <SelectItem key={product.id} value={product.id}>
-                          {product.name_english}
-                        </SelectItem>
+                        <SelectItem key={product.id} value={product.id}>{product.name_english}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -665,65 +621,56 @@ function PalletCanvasEditor({
   const scale = 3;
   const svgWidth = palletLengthCm * scale;
   const svgHeight = palletWidthCm * scale;
-  const cartonLength = carton.lengthCm;
-  const cartonWidth = carton.widthCm;
-  const placeWidth = placementRotated ? cartonWidth : cartonLength;
-  const placeHeight = placementRotated ? cartonLength : cartonWidth;
-  const snapStep = Math.min(cartonLength, cartonWidth);
+  const cL = carton.lengthCm;
+  const cW = carton.widthCm;
+  const placeWidth  = placementRotated ? cW : cL;
+  const placeHeight = placementRotated ? cL : cW;
 
   function snapCoord(value: number, step: number) {
-    return Math.round(value / step) * step;
+    return Math.floor(value / step) * step;
   }
 
   function overlaps(a: PlacedCarton, b: PlacedCarton) {
-    const aWidth = a.rotated ? cartonWidth : cartonLength;
-    const aHeight = a.rotated ? cartonLength : cartonWidth;
-    const bWidth = b.rotated ? cartonWidth : cartonLength;
-    const bHeight = b.rotated ? cartonLength : cartonWidth;
-
-    return !(a.x + aWidth <= b.x || b.x + bWidth <= a.x || a.y + aHeight <= b.y || b.y + bHeight <= a.y);
+    const aW = a.rotated ? cW : cL;
+    const aH = a.rotated ? cL : cW;
+    const bW = b.rotated ? cW : cL;
+    const bH = b.rotated ? cL : cW;
+    return !(a.x + aW <= b.x || b.x + bW <= a.x || a.y + aH <= b.y || b.y + bH <= a.y);
   }
 
-  function hitTest(pointerX: number, pointerY: number) {
+  function hitTest(px: number, py: number) {
     for (let i = editCartons.length - 1; i >= 0; i--) {
-      const cartonItem = editCartons[i];
-      const width = cartonItem.rotated ? cartonWidth : cartonLength;
-      const height = cartonItem.rotated ? cartonLength : cartonWidth;
-      if (
-        pointerX >= cartonItem.x &&
-        pointerX < cartonItem.x + width &&
-        pointerY >= cartonItem.y &&
-        pointerY < cartonItem.y + height
-      ) {
-        return i;
-      }
+      const c = editCartons[i];
+      const w = c.rotated ? cW : cL;
+      const h = c.rotated ? cL : cW;
+      if (px >= c.x && px < c.x + w && py >= c.y && py < c.y + h) return i;
     }
-
     return -1;
   }
 
   function handleSvgClick(event: MouseEvent<SVGSVGElement>) {
-    const rect = event.currentTarget.getBoundingClientRect();
-    const pointerX = (event.clientX - rect.left) / scale;
-    const pointerY = (event.clientY - rect.top) / scale;
-    const hit = hitTest(pointerX, pointerY);
+    const svg = event.currentTarget;
+    const pt = svg.createSVGPoint();
+    pt.x = event.clientX;
+    pt.y = event.clientY;
+    const ctm = svg.getScreenCTM();
+    if (!ctm) return;
+    const svgPt = pt.matrixTransform(ctm.inverse());
+    const pointerX = svgPt.x / scale;
+    const pointerY = svgPt.y / scale;
 
+    const hit = hitTest(pointerX, pointerY);
     if (hit >= 0) {
-      onUpdate(editCartons.filter((_, index) => index !== hit));
+      onUpdate(editCartons.filter((_, i) => i !== hit));
       return;
     }
 
-    const x = snapCoord(pointerX, snapStep);
-    const y = snapCoord(pointerY, snapStep);
+    const x = snapCoord(pointerX, placeWidth);
+    const y = snapCoord(pointerY, placeHeight);
     const newCarton: PlacedCarton = { rotated: placementRotated, x, y };
 
-    if (x < 0 || y < 0 || x + placeWidth > palletLengthCm || y + placeHeight > palletWidthCm) {
-      return;
-    }
-
-    if (editCartons.some((existing) => overlaps(newCarton, existing))) {
-      return;
-    }
+    if (x < 0 || y < 0 || x + placeWidth > palletLengthCm || y + placeHeight > palletWidthCm) return;
+    if (editCartons.some((existing) => overlaps(newCarton, existing))) return;
 
     onUpdate([...editCartons, newCarton]);
   }
@@ -732,15 +679,10 @@ function PalletCanvasEditor({
     <div className="space-y-3">
       <div className="flex flex-wrap items-center gap-3">
         <span className="text-xs text-slate-500">
-          {editCartons.length} cartons placed - Click pallet to add - Click carton to remove
+          {editCartons.length} cartons placed · Click pallet to add · Click carton to remove
         </span>
-        <Button
-          onClick={onToggleRotation}
-          size="sm"
-          type="button"
-          variant={placementRotated ? "default" : "outline"}
-        >
-          {placementRotated ? "Rotated (W x L)" : "Normal (L x W)"}
+        <Button onClick={onToggleRotation} size="sm" type="button" variant={placementRotated ? "default" : "outline"}>
+          {placementRotated ? "Rotated (WxL)" : "Normal (LxW)"}
         </Button>
       </div>
       <svg
@@ -748,42 +690,40 @@ function PalletCanvasEditor({
         height={svgHeight}
         onClick={handleSvgClick}
         style={{ display: "block" }}
-        viewBox={`0 0 ${svgWidth} ${svgHeight}`}
+        viewBox={"0 0 " + svgWidth + " " + svgHeight}
         width={svgWidth}
       >
         <rect fill="#f8fafc" height={svgHeight} stroke="#94a3b8" strokeWidth={1.5} width={svgWidth} x={0} y={0} />
-        {editCartons.map((cartonItem, index) => {
-          const width = (cartonItem.rotated ? cartonWidth : cartonLength) * scale;
-          const height = (cartonItem.rotated ? cartonLength : cartonWidth) * scale;
-
+        {editCartons.map((c, i) => {
+          const w = (c.rotated ? cW : cL) * scale;
+          const h = (c.rotated ? cL : cW) * scale;
           return (
-            <g key={`${cartonItem.x}-${cartonItem.y}-${cartonItem.rotated}-${index}`}>
+            <g key={i + "-" + c.x + "-" + c.y + "-" + String(c.rotated)}>
               <rect
-                fill={cartonItem.rotated ? "#bfdbfe" : "#bae6fd"}
-                height={Math.max(0, height - 2)}
-                stroke={cartonItem.rotated ? "#3b82f6" : "#0ea5e9"}
+                fill={c.rotated ? "#bfdbfe" : "#bae6fd"}
+                height={Math.max(0, h - 2)}
+                stroke={c.rotated ? "#3b82f6" : "#0ea5e9"}
                 strokeWidth={1}
-                width={Math.max(0, width - 2)}
-                x={cartonItem.x * scale + 1}
-                y={cartonItem.y * scale + 1}
+                width={Math.max(0, w - 2)}
+                x={c.x * scale + 1}
+                y={c.y * scale + 1}
               />
               <text
                 dominantBaseline="middle"
                 fill="#1e3a5f"
-                fontSize={Math.min(width, height) * 0.35}
+                fontSize={Math.min(w, h) * 0.35}
                 textAnchor="middle"
-                x={cartonItem.x * scale + width / 2}
-                y={cartonItem.y * scale + height / 2}
+                x={c.x * scale + w / 2}
+                y={c.y * scale + h / 2}
               >
-                {index + 1}
+                {i + 1}
               </text>
             </g>
           );
         })}
       </svg>
       <p className="text-xs text-slate-400">
-        Pallet: {palletLengthCm} x {palletWidthCm} cm - Carton: {cartonLength} x {cartonWidth} cm (L x W) -
-        Blue = normal, light blue = rotated
+        Pallet: {palletLengthCm} x {palletWidthCm} cm · Carton: {cL} x {cW} cm (LxW) · Blue = normal, light blue = rotated
       </p>
     </div>
   );
