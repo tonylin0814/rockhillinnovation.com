@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowDown, ArrowUp, Loader2, Plus, X } from "lucide-react";
+import { GripVertical, Loader2, Plus, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { toast } from "sonner";
@@ -38,6 +38,7 @@ type ProductOption = {
 
 type EditableQuoteLine = {
   id?: string;
+  rowKey: string;
   product_id: string;
   item_name_english: string;
   quantity: string;
@@ -51,6 +52,7 @@ function rowsFromLines(lines: SupplierQuoteLine[]): EditableQuoteLine[] {
   return lines
     .map((line, index) => ({
       id: line.id,
+      rowKey: line.id ?? crypto.randomUUID(),
       product_id: line.product_id ?? "none",
       item_name_english: line.item_name_english ?? "",
       quantity: String(line.quantity),
@@ -113,6 +115,7 @@ export function QuoteLinesEditor({
   const router = useRouter();
   const [isEditing, setIsEditing] = useState(false);
   const [rows, setRows] = useState<EditableQuoteLine[]>(() => rowsFromLines(initialLines));
+  const [dragIndex, setDragIndex] = useState<number | null>(null);
   const [isPending, startTransition] = useTransition();
   const sortedProducts = useMemo(() => [...availableProducts].sort(compareProductsByName), [availableProducts]);
   const productById = useMemo(
@@ -139,11 +142,30 @@ export function QuoteLinesEditor({
   );
 
   function renumber(nextRows: EditableQuoteLine[]) {
-    return nextRows.map((row, index) => ({ ...row, sort_order: index + 1 }));
+    return nextRows.map((row, index) => ({ ...row, rowKey: row.rowKey ?? row.id ?? crypto.randomUUID(), sort_order: index + 1 }));
   }
 
   function updateRow(index: number, patch: Partial<EditableQuoteLine>) {
     setRows((currentRows) => currentRows.map((row, rowIndex) => (rowIndex === index ? { ...row, ...patch } : row)));
+  }
+
+  function shouldIgnoreDrag(target: EventTarget | null) {
+    return target instanceof HTMLElement
+      ? Boolean(target.closest("input, button, textarea, select, [role='combobox'], [data-radix-popper-content-wrapper]"))
+      : false;
+  }
+
+  function reorderRow(fromIndex: number, toIndex: number) {
+    if (fromIndex === toIndex || fromIndex < 0 || toIndex < 0 || fromIndex >= rows.length || toIndex >= rows.length) {
+      return;
+    }
+
+    setRows((currentRows) => {
+      const nextRows = [...currentRows];
+      const [movedRow] = nextRows.splice(fromIndex, 1);
+      nextRows.splice(toIndex, 0, movedRow);
+      return renumber(nextRows);
+    });
   }
 
   useEffect(() => {
@@ -168,25 +190,12 @@ export function QuoteLinesEditor({
     window.localStorage.setItem(draftKey, JSON.stringify({ rows }));
   }, [canEdit, draftKey, isEditing, rows]);
 
-  function moveRow(index: number, direction: "up" | "down") {
-    const targetIndex = direction === "up" ? index - 1 : index + 1;
-
-    if (targetIndex < 0 || targetIndex >= rows.length) {
-      return;
-    }
-
-    const nextRows = [...rows];
-    const current = nextRows[index];
-    nextRows[index] = nextRows[targetIndex];
-    nextRows[targetIndex] = current;
-    setRows(renumber(nextRows));
-  }
-
   function addLine() {
     setRows((currentRows) =>
       renumber([
         ...currentRows,
         {
+          rowKey: crypto.randomUUID(),
           product_id: "none",
           item_name_english: "",
           quantity: "1",
@@ -291,8 +300,40 @@ export function QuoteLinesEditor({
                   : ((costChange ?? 0) / previousUnitCostRmb) * 100;
 
               return (
-                <TableRow key={row.id ?? `new-${index}`}>
-                  <TableCell>{index + 1}</TableCell>
+                <TableRow
+                  className={isEditing ? "cursor-move" : undefined}
+                  draggable={isEditing}
+                  key={row.rowKey}
+                  onDragEnd={() => setDragIndex(null)}
+                  onDragOver={(event) => {
+                    if (!isEditing || dragIndex === null) return;
+                    event.preventDefault();
+                  }}
+                  onDragStart={(event) => {
+                    if (shouldIgnoreDrag(event.target)) {
+                      event.preventDefault();
+                      return;
+                    }
+
+                    setDragIndex(index);
+                    event.dataTransfer.effectAllowed = "move";
+                  }}
+                  onDrop={(event) => {
+                    event.preventDefault();
+
+                    if (dragIndex !== null) {
+                      reorderRow(dragIndex, index);
+                    }
+
+                    setDragIndex(null);
+                  }}
+                >
+                  <TableCell>
+                    <span className="inline-flex items-center gap-2">
+                      {isEditing ? <GripVertical className="h-4 w-4 text-slate-400" /> : null}
+                      {index + 1}
+                    </span>
+                  </TableCell>
                   <TableCell className="font-mono text-sm">{product?.code ?? "-"}</TableCell>
                   <TableCell>
                     {isEditing ? (
@@ -351,26 +392,6 @@ export function QuoteLinesEditor({
                   {isEditing ? (
                     <TableCell>
                       <div className="flex justify-end gap-1">
-                        <Button
-                          aria-label="Move up"
-                          disabled={index === 0}
-                          onClick={() => moveRow(index, "up")}
-                          size="icon"
-                          type="button"
-                          variant="ghost"
-                        >
-                          <ArrowUp className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          aria-label="Move down"
-                          disabled={index === rows.length - 1}
-                          onClick={() => moveRow(index, "down")}
-                          size="icon"
-                          type="button"
-                          variant="ghost"
-                        >
-                          <ArrowDown className="h-4 w-4" />
-                        </Button>
                         <Button
                           aria-label="Remove line"
                           onClick={() => removeRow(index)}
