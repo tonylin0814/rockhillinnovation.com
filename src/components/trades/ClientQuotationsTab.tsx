@@ -60,10 +60,12 @@ export function ClientQuotationsTab({
   canManage,
   initialSessions,
   tradeId,
+  workingExchangeRate,
 }: {
   tradeId: string;
   initialSessions: ClientQuotationSession[];
   canManage: boolean;
+  workingExchangeRate: number | null;
 }) {
   const router = useRouter();
   const [expandedSessionId, setExpandedSessionId] = useState<string | null>(null);
@@ -244,6 +246,7 @@ export function ClientQuotationsTab({
                         initialLines={loadedLines[session.id]?.lines ?? []}
                         sessionId={session.id}
                         sessionStatus={session.status}
+                        workingExchangeRate={workingExchangeRate}
                       />
                     )}
                   </CardContent>

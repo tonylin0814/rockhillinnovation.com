@@ -25,6 +25,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import type { ClientQuotationLine, ClientQuotationSession } from "@/types";
+import { PriceHistoryDialog } from "./PriceHistoryDialog";
 
 type ProductOption = {
   id: string;
@@ -64,6 +65,13 @@ function formatUsd(value: number) {
   }).format(value);
 }
 
+function formatRmb(value: number, digits = 2) {
+  return `\u00A5${new Intl.NumberFormat("en-US", {
+    maximumFractionDigits: digits,
+    minimumFractionDigits: digits,
+  }).format(value)}`;
+}
+
 function formatQuantity(value: number) {
   return new Intl.NumberFormat("en-US", {
     maximumFractionDigits: 3,
@@ -80,8 +88,16 @@ function formatDate(value: string) {
   }).format(new Date(value));
 }
 
-function productLabel(product: ProductOption) {
-  return [product.code, product.supplier_product_code, product.name_english].filter(Boolean).join(" - ");
+function formatRmbUnit(value: number) {
+  return formatRmb(value, 3);
+}
+
+function formatRmbTotal(value: number) {
+  return formatRmb(value, 2);
+}
+
+function formatPercent(value: number | null) {
+  return typeof value === "number" && Number.isFinite(value) ? `${(value * 100).toFixed(1)}%` : "-";
 }
 
 function compareProductsByName(a: ProductOption, b: ProductOption) {
@@ -115,12 +131,14 @@ export function QuotationLinesEditor({
   initialLines,
   sessionId,
   sessionStatus,
+  workingExchangeRate,
 }: {
   sessionId: string;
   initialLines: ClientQuotationLine[];
   availableProducts: ProductOption[];
   sessionStatus: ClientQuotationSession["status"];
   canManage: boolean;
+  workingExchangeRate: number | null;
 }) {
   const router = useRouter();
   const [isEditing, setIsEditing] = useState(false);
@@ -137,7 +155,20 @@ export function QuotationLinesEditor({
     [rows]
   );
   const canEdit = canManage && sessionStatus === "draft";
-  const runningTotal = rows.reduce((total, row) => total + row.quantity * row.unit_price_usd, 0);
+  const hasExchangeRate = typeof workingExchangeRate === "number" && workingExchangeRate > 0;
+  const runningCostTotal = rows.reduce((total, row) => {
+    const product = row.product_id === "none" ? null : productById.get(row.product_id);
+    return total + row.quantity * (product?.latest_cost_rmb ?? 0);
+  }, 0);
+  const runningQuoteTotal = rows.reduce((total, row) => total + row.quantity * row.unit_price_usd, 0);
+  const runningProfitTotal = hasExchangeRate
+    ? rows.reduce((total, row) => {
+        const product = row.product_id === "none" ? null : productById.get(row.product_id);
+        const costUsd = (product?.latest_cost_rmb ?? 0) / workingExchangeRate;
+        return total + row.quantity * (row.unit_price_usd - costUsd);
+      }, 0)
+    : 0;
+  const runningMargin = runningQuoteTotal > 0 && hasExchangeRate ? runningProfitTotal / runningQuoteTotal : null;
 
   function updateRow(index: number, patch: Partial<EditableQuotationLine>) {
     setRows((currentRows) => currentRows.map((row, rowIndex) => (rowIndex === index ? { ...row, ...patch } : row)));
@@ -250,13 +281,17 @@ export function QuotationLinesEditor({
         <TableHeader>
           <TableRow>
             <TableHead className="w-14">#</TableHead>
+            <TableHead>Code</TableHead>
             <TableHead>Product</TableHead>
-            <TableHead>Description</TableHead>
             <TableHead className="w-[101px]">Qty</TableHead>
-            <TableHead>Unit Price (USD)</TableHead>
+            <TableHead>Cost (RMB)</TableHead>
+            <TableHead>Quote</TableHead>
             <TableHead>Prv. Quote</TableHead>
-            <TableHead>Total (USD)</TableHead>
-            <TableHead>Notes</TableHead>
+            <TableHead>Profit</TableHead>
+            <TableHead>Quote Total</TableHead>
+            <TableHead>Profit Total</TableHead>
+            <TableHead>Margin</TableHead>
+            {!isEditing ? <TableHead className="text-right">History</TableHead> : null}
             {isEditing ? <TableHead className="text-right">Actions</TableHead> : null}
           </TableRow>
         </TableHeader>
@@ -268,38 +303,34 @@ export function QuotationLinesEditor({
                 (availableProduct) =>
                   availableProduct.id === row.product_id || !selectedProductIds.has(availableProduct.id)
               );
-              const total = row.quantity * row.unit_price_usd;
+              const unitCostRmb = product?.latest_cost_rmb ?? 0;
+              const costUsd = hasExchangeRate ? unitCostRmb / workingExchangeRate : null;
+              const profit = costUsd === null ? null : row.unit_price_usd - costUsd;
+              const quoteTotal = row.quantity * row.unit_price_usd;
+              const profitTotal = profit === null ? null : row.quantity * profit;
+              const margin = row.unit_price_usd > 0 && profit !== null ? profit / row.unit_price_usd : null;
 
               return (
                 <TableRow key={row.id ?? `new-${index}`}>
                   <TableCell>{index + 1}</TableCell>
+                  <TableCell className="font-mono text-sm">{product?.code ?? "-"}</TableCell>
                   <TableCell>
                     {isEditing ? (
                       <Select onValueChange={(value) => handleProductChange(index, value)} value={row.product_id}>
-                        <SelectTrigger className="min-w-52">
+                        <SelectTrigger className="min-w-64">
                           <SelectValue placeholder="Select product" />
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="none">None</SelectItem>
                           {productOptionsForRow.map((availableProduct) => (
                             <SelectItem key={availableProduct.id} value={availableProduct.id}>
-                              {productLabel(availableProduct)}
+                              {availableProduct.name_english}
                             </SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
                     ) : product ? (
-                      productLabel(product)
-                    ) : (
-                      "-"
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    {isEditing ? (
-                      <Input
-                        onChange={(event) => updateRow(index, { item_description: event.currentTarget.value })}
-                        value={row.item_description}
-                      />
+                      row.item_description || product.name_english
                     ) : (
                       row.item_description || "-"
                     )}
@@ -318,6 +349,7 @@ export function QuotationLinesEditor({
                       formatQuantity(row.quantity)
                     )}
                   </TableCell>
+                  <TableCell>{formatRmbUnit(unitCostRmb)}</TableCell>
                   <TableCell>
                     {isEditing ? (
                       <Input
@@ -337,17 +369,23 @@ export function QuotationLinesEditor({
                   <TableCell>
                     <PreviousQuoteCell product={product} />
                   </TableCell>
-                  <TableCell>{formatUsd(total)}</TableCell>
-                  <TableCell>
-                    {isEditing ? (
-                      <Input
-                        onChange={(event) => updateRow(index, { notes: event.currentTarget.value })}
-                        value={row.notes}
-                      />
-                    ) : (
-                      row.notes || "-"
-                    )}
-                  </TableCell>
+                  <TableCell>{profit === null ? "-" : formatUsd(profit)}</TableCell>
+                  <TableCell>{formatUsd(quoteTotal)}</TableCell>
+                  <TableCell>{profitTotal === null ? "-" : formatUsd(profitTotal)}</TableCell>
+                  <TableCell>{formatPercent(margin)}</TableCell>
+                  {!isEditing ? (
+                    <TableCell>
+                      <div className="flex justify-end">
+                        {product ? (
+                          <PriceHistoryDialog
+                            productCode={product.code}
+                            productId={product.id}
+                            productName={product.name_english}
+                          />
+                        ) : null}
+                      </div>
+                    </TableCell>
+                  ) : null}
                   {isEditing ? (
                     <TableCell>
                       <div className="flex justify-end gap-1">
@@ -388,7 +426,7 @@ export function QuotationLinesEditor({
             })
           ) : (
             <TableRow>
-              <TableCell className="text-slate-500" colSpan={isEditing ? 9 : 8}>
+              <TableCell className="text-slate-500" colSpan={12}>
                 No lines yet.
               </TableCell>
             </TableRow>
@@ -396,12 +434,17 @@ export function QuotationLinesEditor({
         </TableBody>
         <TableFooter>
           <TableRow>
-            <TableCell className="font-semibold" colSpan={5}>
+            <TableCell className="font-semibold" colSpan={4}>
               Total
             </TableCell>
+            <TableCell className="font-semibold">{formatRmbTotal(runningCostTotal)}</TableCell>
             <TableCell />
-            <TableCell className="font-semibold">{formatUsd(runningTotal)}</TableCell>
-            <TableCell colSpan={isEditing ? 2 : 1} />
+            <TableCell />
+            <TableCell />
+            <TableCell className="font-semibold">{formatUsd(runningQuoteTotal)}</TableCell>
+            <TableCell className="font-semibold">{hasExchangeRate ? formatUsd(runningProfitTotal) : "-"}</TableCell>
+            <TableCell className="font-semibold">{formatPercent(runningMargin)}</TableCell>
+            <TableCell />
           </TableRow>
         </TableFooter>
       </Table>
