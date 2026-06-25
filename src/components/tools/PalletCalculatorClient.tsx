@@ -103,7 +103,7 @@ export function PalletCalculatorClient({
   const hqPlan = judyResult?.hqPlan ?? null;
   const activePlan = containerType === "40hq" ? hqPlan : standardPlan;
   const containerItems = activePlan
-    ? activePlan.cartonsPerPallet * CONTAINER_PRESETS[containerType].pallets
+    ? activePlan.itemsPerPallet * CONTAINER_PRESETS[containerType].pallets
     : null;
   const drawingCalculation = judyResult && activePlan
     ? buildDrawingCalculation(judyResult, activePlan)
@@ -405,47 +405,81 @@ export function PalletCalculatorClient({
             <CardHeader>
               <CardTitle>Calculation</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-5">
+            <CardContent className="space-y-4">
               {isCalculating ? (
                 <div className="space-y-2">
-                  <p className="text-sm font-medium text-[#0d1b34]">Judy is answering...</p>
+                  <p className="text-sm font-medium text-[#0d1b34]">Judy is calculating...</p>
                   <div className="h-4 w-3/4 animate-pulse rounded bg-slate-200" />
                   <div className="h-4 w-full animate-pulse rounded bg-slate-200" />
                   <div className="h-4 w-2/3 animate-pulse rounded bg-slate-200" />
                 </div>
-              ) : judyResult ? (
-                <p className="whitespace-pre-wrap text-sm leading-6 text-[#0d1b34]">{judyResult.explanation}</p>
+              ) : judyResult && standardPlan && hqPlan ? (
+                <div className="space-y-4">
+                  <div>
+                    <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">Layer Arrangement</p>
+                    <div className="space-y-1 rounded-md border border-slate-200 bg-slate-50 p-3 text-sm">
+                      <p>
+                        <span className="font-medium">Orientation:</span> {judyResult.layerSetup.orientation}
+                      </p>
+                      <p>
+                        <span className="font-medium">Layout:</span>{" "}
+                        {judyResult.layerSetup.cartonsAlongLength} x {judyResult.layerSetup.cartonsAlongWidth} ={" "}
+                        <span className="font-semibold text-[#0d1b34]">
+                          {judyResult.layerSetup.cartonsPerLayer} cartons per layer
+                        </span>
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <div className={`space-y-1 rounded-md border p-3 text-sm ${standardPlan.fits ? "border-green-200 bg-green-50" : "border-red-200 bg-red-50"}`}>
+                      <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">{"20' / 40' Container"}</p>
+                      <p><span className="font-medium">Layers:</span> {standardPlan.layerCount}</p>
+                      <p><span className="font-medium">Cartons / Pallet:</span> {standardPlan.cartonsPerPallet}</p>
+                      <p><span className="font-medium">Items / Pallet:</span> {standardPlan.itemsPerPallet.toLocaleString()}</p>
+                      <p><span className="font-medium">Gross Weight:</span> {formatNumber(standardPlan.palletGrossWeightKg)} kg</p>
+                      <div className="mt-1 border-t border-slate-200 pt-1">
+                        <p><span className="font-medium">Pallet:</span> {formatNumber(Number(selectedProfile?.height_cm ?? 0))} cm</p>
+                        <p>
+                          <span className="font-medium">Stack:</span> {formatNumber(standardPlan.stackHeightCm)} cm
+                          {" "}({standardPlan.layerCount} x {formatNumber(standardPlan.layerCount > 0 ? standardPlan.stackHeightCm / standardPlan.layerCount : 0)} cm)
+                        </p>
+                        <p><span className="font-medium">Forklift:</span> {formatNumber(forkliftClearance)} cm</p>
+                        <p className={`mt-1 font-semibold ${standardPlan.fits ? "text-green-700" : "text-red-700"}`}>
+                          Total: {formatNumber(standardPlan.totalHeightCm)} cm
+                          {standardPlan.fits ? " - Fits" : " - Does not fit"} (239 cm)
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className={`space-y-1 rounded-md border p-3 text-sm ${hqPlan.fits ? "border-green-200 bg-green-50" : "border-red-200 bg-red-50"}`}>
+                      <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">{"40'HQ Container"}</p>
+                      <p><span className="font-medium">Layers:</span> {hqPlan.layerCount}</p>
+                      <p><span className="font-medium">Cartons / Pallet:</span> {hqPlan.cartonsPerPallet}</p>
+                      <p><span className="font-medium">Items / Pallet:</span> {hqPlan.itemsPerPallet.toLocaleString()}</p>
+                      <p><span className="font-medium">Gross Weight:</span> {formatNumber(hqPlan.palletGrossWeightKg)} kg</p>
+                      <div className="mt-1 border-t border-slate-200 pt-1">
+                        <p><span className="font-medium">Pallet:</span> {formatNumber(Number(selectedProfile?.height_cm ?? 0))} cm</p>
+                        <p>
+                          <span className="font-medium">Stack:</span> {formatNumber(hqPlan.stackHeightCm)} cm
+                          {" "}({hqPlan.layerCount} x {formatNumber(hqPlan.layerCount > 0 ? hqPlan.stackHeightCm / hqPlan.layerCount : 0)} cm)
+                        </p>
+                        <p><span className="font-medium">Forklift:</span> {formatNumber(forkliftClearance)} cm</p>
+                        <p className={`mt-1 font-semibold ${hqPlan.fits ? "text-green-700" : "text-red-700"}`}>
+                          Total: {formatNumber(hqPlan.totalHeightCm)} cm
+                          {hqPlan.fits ? " - Fits" : " - Does not fit"} (269.8 cm)
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {judyResult.explanation ? (
+                    <p className="border-t border-slate-100 pt-3 text-xs italic text-slate-500">{judyResult.explanation}</p>
+                  ) : null}
+                </div>
               ) : (
                 <p className="text-sm text-slate-500">Click Calculate & Ask Judy to see stacking instructions.</p>
               )}
-
-              {judyResult && selectedProfile && standardPlan && hqPlan ? (
-                <div className="rounded-lg border border-slate-200 bg-slate-50 p-4 font-mono text-sm">
-                  <div className="grid grid-cols-[9rem_1fr] gap-y-1">
-                    <span>Pallet height:</span>
-                    <span>{formatNumber(Number(selectedProfile.height_cm))} cm</span>
-                    <span>Forklift space:</span>
-                    <span>{formatNumber(forkliftClearance)} cm</span>
-                  </div>
-                  <div className="my-2 border-t border-slate-300" />
-                  <div className="space-y-2 font-semibold">
-                    <div className="flex items-center gap-2 text-sm font-normal">
-                      <span className={standardPlan.fits ? "text-green-600" : "text-red-600"}>
-                        {standardPlan.fits ? "Fits" : "Does not fit"} 20 ft / 40 ft container:
-                        {" "}{formatNumber(standardPlan.totalHeightCm)} cm total
-                        {" "}({standardPlan.layerCount} layers, {formatNumber(standardPlan.stackHeightCm)} cm stack)
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2 text-sm font-normal">
-                      <span className={hqPlan.fits ? "text-green-600" : "text-red-600"}>
-                        {hqPlan.fits ? "Fits" : "Does not fit"} 40 ft HQ container:
-                        {" "}{formatNumber(hqPlan.totalHeightCm)} cm total
-                        {" "}({hqPlan.layerCount} layers, {formatNumber(hqPlan.stackHeightCm)} cm stack)
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              ) : null}
             </CardContent>
           </Card>
 
