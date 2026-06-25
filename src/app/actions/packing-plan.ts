@@ -73,19 +73,32 @@ export async function generatePackingPlan(
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Invalid config" };
 
   const supabase = createServerSupabaseClient();
-  const { data: orderLines, error: orderLinesError } = await supabase
-    .from("order_lines")
+  const { data: confirmedSession, error: sessionError } = await supabase
+    .from("supplier_quote_sessions")
+    .select("id")
+    .eq("trade_id", tradeId)
+    .eq("status", "confirmed")
+    .maybeSingle();
+
+  if (sessionError) return { error: sessionError.message };
+  if (!confirmedSession) {
+    return { error: "No confirmed supplier quote found. Confirm a quote session before generating a packing plan." };
+  }
+
+  const { data: quoteLines, error: quoteLinesError } = await supabase
+    .from("supplier_quote_lines")
     .select(
       "quantity, product:products(id, code, name_english, qty_per_carton, carton_weight_kg, carton_length_cm, carton_width_cm, carton_height_cm)"
     )
-    .eq("trade_id", tradeId);
+    .eq("session_id", confirmedSession.id)
+    .not("product_id", "is", null);
 
-  if (orderLinesError) return { error: orderLinesError.message };
-  if (!orderLines?.length) return { error: "No order lines found. Add products to Order Lines first." };
+  if (quoteLinesError) return { error: quoteLinesError.message };
+  if (!quoteLines?.length) return { error: "No product lines found in the confirmed supplier quote." };
 
-  const lines = orderLines
-    .map((line) => {
-      const product = Array.isArray(line.product) ? line.product[0] : line.product;
+  const lines = quoteLines
+    .map((quoteLine) => {
+      const product = Array.isArray(quoteLine.product) ? quoteLine.product[0] : quoteLine.product;
       if (!product) return null;
       return {
         carton_height_cm: Number(product.carton_height_cm ?? 0),
@@ -96,12 +109,12 @@ export async function generatePackingPlan(
         product_id: product.id,
         product_name: product.name_english ?? product.code,
         qty_per_carton: Number(product.qty_per_carton ?? 0),
-        quantity: Number(line.quantity),
+        quantity: Number(quoteLine.quantity),
       };
     })
     .filter((line): line is NonNullable<typeof line> => Boolean(line));
 
-  if (!lines.length) return { error: "No products found in order lines." };
+  if (!lines.length) return { error: "No products found in the confirmed supplier quote." };
 
   const generated = runGenerator(
     lines,

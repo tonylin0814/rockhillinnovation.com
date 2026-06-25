@@ -131,7 +131,7 @@ export function PackingTab({
         </CardHeader>
         <CardContent className="space-y-5">
           <p className="text-sm text-slate-500">
-            Pulls quantities from Order Lines and assigns cartons to pallets automatically.
+            No confirmed supplier quote found. Go to the Quotes tab and confirm a quote session before generating a packing plan.
           </p>
           <div className="grid grid-cols-2 gap-4">
             <div className="col-span-2 space-y-2">

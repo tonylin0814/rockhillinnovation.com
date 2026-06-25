@@ -12,7 +12,6 @@ import { InvoicesTab } from "@/components/trades/InvoicesTab";
 import { JudyChat } from "@/components/trades/JudyChat";
 import { LedgerTab } from "@/components/trades/LedgerTab";
 import { ManagePartnersDialog } from "@/components/trades/ManagePartnersDialog";
-import { OrderLinesTab } from "@/components/trades/OrderLinesTab";
 import { PackingTab } from "@/components/trades/PackingTab";
 import { ShareholderRulesEditor } from "@/components/trades/ShareholderRulesEditor";
 import { SupplierQuotesTab } from "@/components/trades/SupplierQuotesTab";
@@ -31,11 +30,9 @@ import { createServerSupabaseClient } from "@/lib/supabase/server";
 import type {
   ClientInvoice,
   ClientQuotationSession,
-  ComponentDemand,
   ExchangeRate,
   ExpenseVendorInvoice,
   ExpenseVendor,
-  OrderLine,
   Product,
   ShareholderBook,
   SupplierQuoteSession,
@@ -129,8 +126,6 @@ export default async function TradeWorkspacePage({ params }: { params: { id: str
     { data: participants, error: participantsError },
     { data: clients, error: clientsError },
     { data: partners, error: partnersError },
-    { data: orderLines, error: orderLinesError },
-    { data: componentDemand, error: componentDemandError },
     { data: activeProducts, error: activeProductsError },
     { data: tradeShareholders, error: tradeShareholdersError },
     { data: activeVendors, error: activeVendorsError },
@@ -172,16 +167,6 @@ export default async function TradeWorkspacePage({ params }: { params: { id: str
           .eq("is_active", true)
           .order("name", { ascending: true })
       : Promise.resolve({ data: [], error: null }),
-    supabase
-      .from("order_lines")
-      .select("*, product:products(id, code, supplier_product_code, name_english, product_type)")
-      .eq("trade_id", params.id)
-      .order("sort_order", { ascending: true }),
-    supabase
-      .from("component_demand")
-      .select("*, product:products(id, code, supplier_product_code, name_english, name_chinese, payment_category)")
-      .eq("trade_id", params.id)
-      .order("product_id", { ascending: true }),
     supabase
       .from("products")
       .select("id, code, supplier_product_code, name_english, product_type")
@@ -286,8 +271,6 @@ export default async function TradeWorkspacePage({ params }: { params: { id: str
     participantsError ||
     clientsError ||
     partnersError ||
-    orderLinesError ||
-    componentDemandError ||
     activeProductsError ||
     tradeShareholdersError ||
     activeVendorsError ||
@@ -315,8 +298,6 @@ export default async function TradeWorkspacePage({ params }: { params: { id: str
           participantsError?.message ??
           clientsError?.message ??
           partnersError?.message ??
-          orderLinesError?.message ??
-          componentDemandError?.message ??
           activeProductsError?.message ??
           tradeShareholdersError?.message ??
           activeVendorsError?.message ??
@@ -449,8 +430,6 @@ export default async function TradeWorkspacePage({ params }: { params: { id: str
   const tradeParticipants = (participants ?? []) as TradeParticipant[];
   const clientOptions = (clients ?? []) as TradeClientOption[];
   const partnerOptions = (partners ?? []) as TradePartnerOption[];
-  const orderLineRows = (orderLines ?? []) as OrderLine[];
-  const componentDemandRows = (componentDemand ?? []) as ComponentDemand[];
   const activeProductOptions = activeProductRows.map((product) => ({
     ...product,
     latest_cost_rmb: resolveProductCost(product, latestCostByProductId),
@@ -559,7 +538,6 @@ export default async function TradeWorkspacePage({ params }: { params: { id: str
           <TabsTrigger value="development">Development</TabsTrigger>
           <TabsTrigger value="quotes">Quotes</TabsTrigger>
           <TabsTrigger value="quotations">Quotations</TabsTrigger>
-          <TabsTrigger value="order-lines">Order Lines</TabsTrigger>
           {canManage ? <TabsTrigger value="packing">Packing</TabsTrigger> : null}
           {canViewFinancials ? <TabsTrigger value="financial">Financial</TabsTrigger> : null}
           <TabsTrigger value="invoices">Invoices</TabsTrigger>
@@ -677,16 +655,6 @@ export default async function TradeWorkspacePage({ params }: { params: { id: str
           <ClientQuotationsTab
             canManage={canEdit}
             initialSessions={quotationSessionRows}
-            tradeId={trade.id}
-            workingExchangeRate={trade.working_exchange_rate}
-          />
-        </TabsContent>
-        <TabsContent value="order-lines">
-          <OrderLinesTab
-            availableProducts={activeProductOptions}
-            canManage={canEdit}
-            initialDemand={componentDemandRows}
-            initialLines={orderLineRows}
             tradeId={trade.id}
             workingExchangeRate={trade.working_exchange_rate}
           />

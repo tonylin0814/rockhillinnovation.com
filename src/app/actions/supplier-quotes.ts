@@ -3,7 +3,6 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
-import { expandComponentDemand } from "@/app/actions/order-lines";
 import { requireManager } from "@/lib/auth";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 
@@ -70,6 +69,145 @@ function emptyToNull(value: FormDataEntryValue | null) {
 function normalizeText(value: string | null | undefined) {
   const trimmed = value?.trim() ?? "";
   return trimmed.length ? trimmed : null;
+}
+
+type DemandEntry = {
+  required_quantity: number;
+  source_quote_line_id: string | null;
+};
+
+async function expandComponentDemand(tradeId: string) {
+  const supabase = createServerSupabaseClient();
+  const { data: trade, error: tradeError } = await supabase
+    .from("trades")
+    .select("id, working_exchange_rate")
+    .eq("id", tradeId)
+    .maybeSingle();
+
+  if (tradeError) {
+    return { error: tradeError.message };
+  }
+
+  if (!trade) {
+    return { error: "Trade not found" };
+  }
+
+  const { data: confirmedSession, error: sessionError } = await supabase
+    .from("supplier_quote_sessions")
+    .select("id")
+    .eq("trade_id", tradeId)
+    .eq("status", "confirmed")
+    .maybeSingle();
+
+  if (sessionError) {
+    return { error: sessionError.message };
+  }
+
+  const demandRows = [];
+
+  if (confirmedSession) {
+    const { data: quoteLines, error: quoteLinesError } = await supabase
+      .from("supplier_quote_lines")
+      .select(
+        "id, product_id, quantity, unit_price_rmb, product:products(id, product_type, components:product_components!product_components_set_product_id_fkey(component_product_id, quantity_per_set))"
+      )
+      .eq("session_id", confirmedSession.id)
+      .not("product_id", "is", null)
+      .order("sort_order", { ascending: true });
+
+    if (quoteLinesError) {
+      return { error: quoteLinesError.message };
+    }
+
+    const demandMap = new Map<string, DemandEntry>();
+    const quoteLineByProductId = new Map<string, { id: string; unit_price_rmb: number }>();
+
+    const addDemand = (productId: string, quantity: number, quoteLineId: string | null) => {
+      const existing = demandMap.get(productId);
+
+      if (existing) {
+        existing.required_quantity += quantity;
+        existing.source_quote_line_id = existing.source_quote_line_id ?? quoteLineId;
+        return;
+      }
+
+      demandMap.set(productId, {
+        required_quantity: quantity,
+        source_quote_line_id: quoteLineId,
+      });
+    };
+
+    for (const line of quoteLines ?? []) {
+      if (line.product_id) {
+        quoteLineByProductId.set(line.product_id, {
+          id: line.id,
+          unit_price_rmb: Number(line.unit_price_rmb),
+        });
+      }
+    }
+
+    for (const line of quoteLines ?? []) {
+      const product = Array.isArray(line.product) ? line.product[0] : line.product;
+
+      if (!line.product_id || !product) {
+        continue;
+      }
+
+      if (product.product_type === "part") {
+        addDemand(line.product_id, Number(line.quantity), line.id);
+        continue;
+      }
+
+      for (const component of product.components ?? []) {
+        const componentQuoteLine = quoteLineByProductId.get(component.component_product_id);
+
+        addDemand(
+          component.component_product_id,
+          Number(line.quantity) * Number(component.quantity_per_set),
+          componentQuoteLine?.id ?? null
+        );
+      }
+    }
+
+    for (const [productId, demand] of Array.from(demandMap.entries())) {
+      const quoteLine = quoteLineByProductId.get(productId);
+      const latestUnitCostRmb = quoteLine?.unit_price_rmb ?? null;
+      const estimatedCostRmb = latestUnitCostRmb === null ? null : demand.required_quantity * latestUnitCostRmb;
+      const estimatedCostUsd =
+        estimatedCostRmb !== null && typeof trade.working_exchange_rate === "number" && trade.working_exchange_rate > 0
+          ? estimatedCostRmb / trade.working_exchange_rate
+          : null;
+
+      demandRows.push({
+        trade_id: tradeId,
+        product_id: productId,
+        required_quantity: demand.required_quantity,
+        source_order_line_ids: [],
+        source_quote_line_id: demand.source_quote_line_id,
+        latest_unit_cost_rmb: latestUnitCostRmb,
+        estimated_cost_rmb: estimatedCostRmb,
+        estimated_cost_usd: estimatedCostUsd,
+        actual_cost_usd: null,
+        notes: null,
+      });
+    }
+  }
+
+  const { error: deleteError } = await supabase.from("component_demand").delete().eq("trade_id", tradeId);
+
+  if (deleteError) {
+    return { error: deleteError.message };
+  }
+
+  if (demandRows.length) {
+    const { error: insertError } = await supabase.from("component_demand").insert(demandRows);
+
+    if (insertError) {
+      return { error: insertError.message };
+    }
+  }
+
+  return { success: true };
 }
 
 export async function createQuoteSession(tradeId: string, formData: FormData): Promise<ActionResult> {
