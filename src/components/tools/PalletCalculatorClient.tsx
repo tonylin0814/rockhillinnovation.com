@@ -77,6 +77,7 @@ export function PalletCalculatorClient({
   const [calculationCarton, setCalculationCarton] = useState<CartonInput | null>(null);
   const [editMode, setEditMode] = useState(false);
   const [editOverride, setEditOverride] = useState<{
+    cartons: PlacedCarton[];
     cartonsPerLayer: number;
     stdLayerCount: number; stdCartonsPerPallet: number; stdItemsPerPallet: number; stdGrossWeight: number;
     hqLayerCount: number;  hqCartonsPerPallet: number;  hqItemsPerPallet: number;  hqGrossWeight: number;
@@ -162,6 +163,7 @@ export function PalletCalculatorClient({
   const drawingCalculation = judyResult && activePlan ? buildDrawingCalculation(judyResult, activePlan) : null;
   const topViewSvg = drawingCalculation && calculationCarton && palletInput
     ? buildPalletTopViewSvg(calculationCarton, palletInput, drawingCalculation) : "";
+  const canvasCartons = editMode ? editCartons : editOverride?.cartons ?? [];
 
   function buildDrawingCalculation(result: JudyPalletResult, plan: JudyPalletResult["standardPlan"]): PalletCalculation {
     return {
@@ -195,18 +197,23 @@ export function PalletCalculatorClient({
   function enterEditMode() {
     if (!judyResult || !standardPlan || !hqPlan) return;
     const { cartonsAlongLength, cartonsAlongWidth } = judyResult.layerSetup;
-    setEditCartons(buildCartonGrid(cartonsAlongLength, cartonsAlongWidth, false));
-    setEditStdLayers(standardPlan.layerCount);
-    setEditStdCartonsPallet(standardPlan.cartonsPerPallet);
-    setEditStdItemsPallet(standardPlan.itemsPerPallet);
-    setEditStdGrossWeight(standardPlan.palletGrossWeightKg);
-    setEditHqLayers(hqPlan.layerCount);
-    setEditHqCartonsPallet(hqPlan.cartonsPerPallet);
-    setEditHqItemsPallet(hqPlan.itemsPerPallet);
-    setEditHqGrossWeight(hqPlan.palletGrossWeightKg);
-    setEditCartonsAlongLength(cartonsAlongLength);
-    setEditCartonsAlongWidth(cartonsAlongWidth);
-    setEditOrientation(judyResult.layerSetup.orientation);
+    const savedCartons = editOverride?.cartons ?? [];
+    setEditCartons(
+      savedCartons.length > 0
+        ? savedCartons.map((carton) => ({ ...carton }))
+        : buildCartonGrid(cartonsAlongLength, cartonsAlongWidth, false)
+    );
+    setEditStdLayers(editOverride?.stdLayerCount ?? standardPlan.layerCount);
+    setEditStdCartonsPallet(editOverride?.stdCartonsPerPallet ?? standardPlan.cartonsPerPallet);
+    setEditStdItemsPallet(editOverride?.stdItemsPerPallet ?? standardPlan.itemsPerPallet);
+    setEditStdGrossWeight(editOverride?.stdGrossWeight ?? standardPlan.palletGrossWeightKg);
+    setEditHqLayers(editOverride?.hqLayerCount ?? hqPlan.layerCount);
+    setEditHqCartonsPallet(editOverride?.hqCartonsPerPallet ?? hqPlan.cartonsPerPallet);
+    setEditHqItemsPallet(editOverride?.hqItemsPerPallet ?? hqPlan.itemsPerPallet);
+    setEditHqGrossWeight(editOverride?.hqGrossWeight ?? hqPlan.palletGrossWeightKg);
+    setEditCartonsAlongLength(editOverride?.cartonsAlongLength ?? cartonsAlongLength);
+    setEditCartonsAlongWidth(editOverride?.cartonsAlongWidth ?? cartonsAlongWidth);
+    setEditOrientation(editOverride?.orientation ?? judyResult.layerSetup.orientation);
     setPlacementRotated(false);
     setEditMode(true);
   }
@@ -239,6 +246,7 @@ export function PalletCalculatorClient({
   function saveEditMode() {
     const cpl = editCartons.length > 0 ? editCartons.length : editCartonsAlongLength * editCartonsAlongWidth;
     setEditOverride({
+      cartons: editCartons.map((carton) => ({ ...carton })),
       cartonsAlongLength: editCartonsAlongLength,
       cartonsAlongWidth: editCartonsAlongWidth,
       cartonsPerLayer: cpl,
@@ -583,15 +591,16 @@ export function PalletCalculatorClient({
               <Card className="border-slate-200 shadow-sm">
                 <CardHeader><CardTitle>Top View</CardTitle></CardHeader>
                 <CardContent>
-                  {editMode && calculationCarton && selectedProfile ? (
+                  {(editMode || canvasCartons.length > 0) && calculationCarton && selectedProfile ? (
                     <PalletCanvasEditor
                       carton={calculationCarton}
-                      editCartons={editCartons}
+                      editCartons={canvasCartons}
                       onToggleRotation={() => setPlacementRotated((r) => !r)}
                       onUpdate={setEditCartons}
                       palletLengthCm={Number(selectedProfile.length_cm)}
                       palletWidthCm={Number(selectedProfile.width_cm)}
                       placementRotated={placementRotated}
+                      readOnly={!editMode}
                     />
                   ) : (
                     <div className="overflow-auto" dangerouslySetInnerHTML={{ __html: topViewSvg }} />
@@ -633,6 +642,7 @@ function PalletCanvasEditor({
   palletLengthCm,
   palletWidthCm,
   placementRotated,
+  readOnly = false,
 }: {
   carton: CartonInput;
   editCartons: PlacedCarton[];
@@ -641,6 +651,7 @@ function PalletCanvasEditor({
   palletWidthCm: number;
   placementRotated: boolean;
   onToggleRotation: () => void;
+  readOnly?: boolean;
 }) {
   const scale = 3;
   const svgWidth = palletLengthCm * scale;
@@ -686,6 +697,7 @@ function PalletCanvasEditor({
   }
 
   function handleSvgClick(event: MouseEvent<SVGSVGElement>) {
+    if (readOnly) return;
     const svg = event.currentTarget;
     const pt = svg.createSVGPoint();
     pt.x = event.clientX;
