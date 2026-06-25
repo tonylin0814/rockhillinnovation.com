@@ -123,10 +123,6 @@ export function QuoteLinesEditor({
     [sortedProducts]
   );
   const draftKey = useMemo(() => `rockhill:supplier-quote-lines:${sessionId}`, [sessionId]);
-  const selectedProductIds = useMemo(
-    () => new Set(rows.map((row) => row.product_id).filter((productId) => productId !== "none")),
-    [rows]
-  );
   const canEdit = canManage && sessionStatus === "draft";
   const runningCostTotal = rows.reduce(
     (total, row) => {
@@ -288,10 +284,6 @@ export function QuoteLinesEditor({
             rows.map((row, index) => {
               const product = row.product_id === "none" ? null : productById.get(row.product_id);
               const previousUnitCostRmb = product?.previous_cost_rmb ?? row.previous_unit_cost_rmb;
-              const productOptionsForRow = sortedProducts.filter(
-                (availableProduct) =>
-                  availableProduct.id === row.product_id || !selectedProductIds.has(availableProduct.id)
-              );
               const costChange =
                 previousUnitCostRmb === null ? null : (Number(row.unit_price_rmb) || 0) - previousUnitCostRmb;
               const costChangePct =
@@ -343,7 +335,7 @@ export function QuoteLinesEditor({
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="none">None</SelectItem>
-                          {productOptionsForRow.map((availableProduct) => (
+                          {sortedProducts.map((availableProduct) => (
                             <SelectItem key={availableProduct.id} value={availableProduct.id}>
                               {availableProduct.name_english}
                             </SelectItem>
