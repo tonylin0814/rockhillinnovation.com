@@ -199,12 +199,21 @@ export type Product = {
   carton_weight_kg: number | null;
   cartons_per_pallet_std: number | null;
   cartons_per_pallet_hq: number | null;
+  pallet_diagram: ProductPalletDiagram | null;
   country_of_origin: string;
   product_images: ProductImage[];
   created_at: string;
   updated_at: string;
   supplier?: { id: string; name: string; code: string } | null;
   components?: { id: string }[] | null;
+};
+
+export type ProductPalletDiagram = {
+  cartons: { x: number; y: number; rotated: boolean }[];
+  pallet_length_cm: number;
+  pallet_width_cm: number;
+  carton_length_cm: number;
+  carton_width_cm: number;
 };
 
 export type PalletMaterial = "wood" | "plastic" | "paper_honeycomb";

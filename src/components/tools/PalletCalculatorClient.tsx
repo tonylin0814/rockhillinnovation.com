@@ -292,7 +292,7 @@ export function PalletCalculatorClient({
   }
 
   function handleExportToProduct() {
-    if (!exportProductId || !displayStd || !displayHq) return;
+    if (!exportProductId || !displayStd || !displayHq || !selectedProfile) return;
     startExport(async () => {
       const result = await exportCalculatorToProduct(exportProductId, {
         carton_height_cm: carton.heightCm,
@@ -301,6 +301,15 @@ export function PalletCalculatorClient({
         carton_width_cm: carton.widthCm,
         cartons_per_pallet_hq: displayHq.cartonsPerPallet,
         cartons_per_pallet_std: displayStd.cartonsPerPallet,
+        pallet_diagram: canvasCartons.length > 0
+          ? {
+              carton_length_cm: carton.lengthCm,
+              carton_width_cm: carton.widthCm,
+              cartons: canvasCartons.map((cartonItem) => ({ ...cartonItem })),
+              pallet_length_cm: Number(selectedProfile.length_cm),
+              pallet_width_cm: Number(selectedProfile.width_cm),
+            }
+          : null,
         qty_per_carton: carton.qtyPerCarton,
       });
       if (result.error) { toast.error(result.error); return; }

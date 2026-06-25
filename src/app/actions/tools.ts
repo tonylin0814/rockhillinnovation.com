@@ -174,6 +174,13 @@ export async function exportCalculatorToProduct(
     carton_weight_kg: number;
     cartons_per_pallet_hq: number;
     cartons_per_pallet_std: number;
+    pallet_diagram?: {
+      carton_length_cm: number;
+      carton_width_cm: number;
+      cartons: { rotated: boolean; x: number; y: number }[];
+      pallet_length_cm: number;
+      pallet_width_cm: number;
+    } | null;
     qty_per_carton: number;
   }
 ): Promise<{ success?: true; error?: string }> {
@@ -190,6 +197,22 @@ export async function exportCalculatorToProduct(
         carton_width_cm: z.coerce.number().positive(),
         cartons_per_pallet_hq: z.coerce.number().positive(),
         cartons_per_pallet_std: z.coerce.number().positive(),
+        pallet_diagram: z
+          .object({
+            carton_length_cm: z.coerce.number().positive(),
+            carton_width_cm: z.coerce.number().positive(),
+            cartons: z.array(
+              z.object({
+                rotated: z.boolean(),
+                x: z.coerce.number().nonnegative(),
+                y: z.coerce.number().nonnegative(),
+              })
+            ),
+            pallet_length_cm: z.coerce.number().positive(),
+            pallet_width_cm: z.coerce.number().positive(),
+          })
+          .nullable()
+          .optional(),
         qty_per_carton: z.coerce.number().positive(),
       }),
     })
@@ -208,6 +231,7 @@ export async function exportCalculatorToProduct(
       cartons_per_pallet_hq: parsed.data.data.cartons_per_pallet_hq,
       cartons_per_pallet_std: parsed.data.data.cartons_per_pallet_std,
       packaging_required: true,
+      pallet_diagram: parsed.data.data.pallet_diagram ?? null,
       qty_per_carton: parsed.data.data.qty_per_carton,
     })
     .eq("id", parsed.data.productId);

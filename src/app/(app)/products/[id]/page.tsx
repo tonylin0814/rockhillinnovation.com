@@ -113,6 +113,70 @@ function calculateQtyItemsPerPallet(product: Product, cartonsPerPallet: number |
   return product.qty_per_carton * cartonsPerPallet;
 }
 
+function ProductPalletDiagramView({ diagram }: { diagram: Product["pallet_diagram"] }) {
+  if (!diagram || !diagram.cartons.length) return null;
+
+  const palletLength = Number(diagram.pallet_length_cm);
+  const palletWidth = Number(diagram.pallet_width_cm);
+  const cartonLength = Number(diagram.carton_length_cm);
+  const cartonWidth = Number(diagram.carton_width_cm);
+
+  if (![palletLength, palletWidth, cartonLength, cartonWidth].every((value) => Number.isFinite(value) && value > 0)) {
+    return null;
+  }
+
+  const scale = Math.min(520 / palletLength, 300 / palletWidth);
+  const svgWidth = palletLength * scale;
+  const svgHeight = palletWidth * scale;
+
+  return (
+    <div className="mt-4 rounded-md border border-slate-200 bg-slate-50 p-3">
+      <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Pallet Diagram</p>
+      <div className="mt-3 overflow-auto">
+        <svg
+          className="rounded border border-slate-200 bg-white"
+          height={svgHeight}
+          viewBox={`0 0 ${svgWidth} ${svgHeight}`}
+          width={svgWidth}
+        >
+          <rect fill="#f8fafc" height={svgHeight} stroke="#94a3b8" strokeWidth={1.5} width={svgWidth} x={0} y={0} />
+          {diagram.cartons.map((carton, index) => {
+            const width = (carton.rotated ? cartonWidth : cartonLength) * scale;
+            const height = (carton.rotated ? cartonLength : cartonWidth) * scale;
+            return (
+              <g key={`${index}-${carton.x}-${carton.y}-${String(carton.rotated)}`}>
+                <rect
+                  fill={carton.rotated ? "#bfdbfe" : "#bae6fd"}
+                  height={Math.max(0, height - 2)}
+                  stroke={carton.rotated ? "#3b82f6" : "#0ea5e9"}
+                  strokeWidth={1}
+                  width={Math.max(0, width - 2)}
+                  x={carton.x * scale + 1}
+                  y={carton.y * scale + 1}
+                />
+                <text
+                  dominantBaseline="middle"
+                  fill="#1e3a5f"
+                  fontSize={Math.min(width, height) * 0.35}
+                  textAnchor="middle"
+                  x={carton.x * scale + width / 2}
+                  y={carton.y * scale + height / 2}
+                >
+                  {index + 1}
+                </text>
+              </g>
+            );
+          })}
+        </svg>
+      </div>
+      <p className="mt-2 text-xs text-slate-400">
+        {diagram.cartons.length} cartons per layer / Pallet {formatPackagingValue(palletLength)} x{" "}
+        {formatPackagingValue(palletWidth)} cm
+      </p>
+    </div>
+  );
+}
+
 function formatCartonFlag(value: string | null | undefined) {
   return value ? "Yes" : "No";
 }
@@ -193,7 +257,7 @@ export default async function ProductDetailPage({
     const { data: components, error: componentsError } = await supabase
       .from("product_components")
       .select(
-        "*, component:products!product_components_component_product_id_fkey(id, code, supplier_product_code, name_english, name_chinese, product_type, supplier_id, payment_category, status, notes, packaging_required, has_carton, product_length_cm, product_width_cm, product_height_cm, product_weight_kg, product_art_notes, qty_per_carton, carton_height_cm, carton_width_cm, carton_length_cm, carton_weight_kg, cartons_per_pallet_std, cartons_per_pallet_hq, country_of_origin, product_images, created_at, updated_at, supplier:suppliers(id, name, code))"
+        "*, component:products!product_components_component_product_id_fkey(id, code, supplier_product_code, name_english, name_chinese, product_type, supplier_id, payment_category, status, notes, packaging_required, has_carton, product_length_cm, product_width_cm, product_height_cm, product_weight_kg, product_art_notes, qty_per_carton, carton_height_cm, carton_width_cm, carton_length_cm, carton_weight_kg, cartons_per_pallet_std, cartons_per_pallet_hq, pallet_diagram, country_of_origin, product_images, created_at, updated_at, supplier:suppliers(id, name, code))"
       )
       .eq("set_product_id", params.id)
       .order("sort_order", { ascending: true });
@@ -425,6 +489,7 @@ export default async function ProductDetailPage({
                     </p>
                   </div>
                 </div>
+                <ProductPalletDiagramView diagram={product.pallet_diagram} />
               </CardContent>
             </Card>
           ) : null}
