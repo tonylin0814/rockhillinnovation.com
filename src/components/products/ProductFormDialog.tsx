@@ -79,10 +79,14 @@ export function ProductFormDialog({
   const [hasCarton, setHasCarton] = useState(initialData?.has_carton ?? false);
   const [qtyPerCarton, setQtyPerCarton] = useState(initialData?.qty_per_carton?.toString() ?? "");
   const [cartonsPerPalletStd, setCartonsPerPalletStd] = useState(initialData?.cartons_per_pallet_std?.toString() ?? "");
+  const [cartonsPerPalletHq, setCartonsPerPalletHq] = useState(initialData?.cartons_per_pallet_hq?.toString() ?? "");
   const [setComponentRows, setSetComponentRows] = useState<SetComponentDraft[]>([]);
   const [isPending, startTransition] = useTransition();
-  const qtyItemsPerPallet = Number(qtyPerCarton) > 0 && Number(cartonsPerPalletStd) > 0
+  const qtyItemsPerPalletStd = Number(qtyPerCarton) > 0 && Number(cartonsPerPalletStd) > 0
     ? Number(qtyPerCarton) * Number(cartonsPerPalletStd)
+    : null;
+  const qtyItemsPerPalletHq = Number(qtyPerCarton) > 0 && Number(cartonsPerPalletHq) > 0
+    ? Number(qtyPerCarton) * Number(cartonsPerPalletHq)
     : null;
 
   useEffect(() => {
@@ -95,6 +99,7 @@ export function ProductFormDialog({
       setHasCarton(initialData?.has_carton ?? false);
       setQtyPerCarton(initialData?.qty_per_carton?.toString() ?? "");
       setCartonsPerPalletStd(initialData?.cartons_per_pallet_std?.toString() ?? "");
+      setCartonsPerPalletHq(initialData?.cartons_per_pallet_hq?.toString() ?? "");
       setSetComponentRows([]);
     }
   }, [defaultProductType, initialData, open]);
@@ -629,11 +634,10 @@ export function ProductFormDialog({
                     </div>
                   </div>
                 </div>
-                <div className="grid gap-4 sm:grid-cols-3">
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                   <div className="space-y-2">
                     <Label htmlFor="cartons_per_pallet_std">Cartons / Pallet (20 ft & 40 ft)</Label>
                     <Input
-                      defaultValue={initialData?.cartons_per_pallet_std ?? ""}
                       disabled={isPending}
                       id="cartons_per_pallet_std"
                       min="0"
@@ -641,24 +645,32 @@ export function ProductFormDialog({
                       onChange={(event) => setCartonsPerPalletStd(event.target.value)}
                       step="1"
                       type="number"
+                      value={cartonsPerPalletStd}
                     />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="cartons_per_pallet_hq">Cartons / Pallet (40 ft HQ)</Label>
                     <Input
-                      defaultValue={initialData?.cartons_per_pallet_hq ?? ""}
                       disabled={isPending}
                       id="cartons_per_pallet_hq"
                       min="0"
                       name="cartons_per_pallet_hq"
+                      onChange={(event) => setCartonsPerPalletHq(event.target.value)}
                       step="1"
                       type="number"
+                      value={cartonsPerPalletHq}
                     />
                   </div>
                   <div className="rounded-md border border-slate-200 bg-slate-50 p-3">
-                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Qty Items per Pallet</p>
+                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">QTY Items / Pallet (20 ft & 40 ft)</p>
                     <p className="mt-1 text-sm font-semibold text-[#0d1b34]">
-                      {qtyItemsPerPallet ? qtyItemsPerPallet.toLocaleString() : "-"}
+                      {qtyItemsPerPalletStd ? qtyItemsPerPalletStd.toLocaleString() : "-"}
+                    </p>
+                  </div>
+                  <div className="rounded-md border border-slate-200 bg-slate-50 p-3">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">QTY Items / Pallet (40 ft HQ)</p>
+                    <p className="mt-1 text-sm font-semibold text-[#0d1b34]">
+                      {qtyItemsPerPalletHq ? qtyItemsPerPalletHq.toLocaleString() : "-"}
                     </p>
                   </div>
                 </div>

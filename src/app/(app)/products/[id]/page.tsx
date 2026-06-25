@@ -92,12 +92,12 @@ function hasNumberValue(value: number | null | undefined) {
   return typeof value === "number";
 }
 
-function calculateQtyItemsPerPallet(product: Product) {
-  if (typeof product.qty_per_carton !== "number" || typeof product.cartons_per_pallet_std !== "number") {
+function calculateQtyItemsPerPallet(product: Product, cartonsPerPallet: number | null | undefined) {
+  if (typeof product.qty_per_carton !== "number" || typeof cartonsPerPallet !== "number") {
     return null;
   }
 
-  return product.qty_per_carton * product.cartons_per_pallet_std;
+  return product.qty_per_carton * cartonsPerPallet;
 }
 
 function formatCartonFlag(value: string | null | undefined) {
@@ -387,10 +387,24 @@ export default async function ProductDetailPage({
                     label="Cartons / Pallet (40'HQ)"
                     value={formatPackagingValue(product.cartons_per_pallet_hq)}
                   />
-                  <DetailRow
-                    label="Qty Items per Pallet"
-                    value={formatPackagingValue(calculateQtyItemsPerPallet(product))}
-                  />
+                </div>
+                <div className="mt-4 grid gap-4 sm:grid-cols-2">
+                  <div className="rounded-md border border-slate-200 bg-slate-50 p-3">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                      QTY Items / Pallet (20 ft & 40 ft)
+                    </p>
+                    <p className="mt-1 text-sm font-semibold text-[#0d1b34]">
+                      {formatPackagingValue(calculateQtyItemsPerPallet(product, product.cartons_per_pallet_std))}
+                    </p>
+                  </div>
+                  <div className="rounded-md border border-slate-200 bg-slate-50 p-3">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                      QTY Items / Pallet (40 ft HQ)
+                    </p>
+                    <p className="mt-1 text-sm font-semibold text-[#0d1b34]">
+                      {formatPackagingValue(calculateQtyItemsPerPallet(product, product.cartons_per_pallet_hq))}
+                    </p>
+                  </div>
                 </div>
               </CardContent>
             </Card>

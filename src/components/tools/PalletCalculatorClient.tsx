@@ -24,8 +24,7 @@ import type { PalletProfile, Product } from "@/types";
 type ContainerType = keyof typeof CONTAINER_PRESETS;
 
 const CONTAINER_HEIGHTS_CM: Record<ContainerType, number> = {
-  "20ft": 239,
-  "40ft": 239,
+  std: 239,
   "40hq": 269.8,
 };
 
@@ -105,7 +104,7 @@ export function PalletCalculatorClient({
     forkliftClearance >= 0 &&
     Boolean(palletInput && palletInput.maxHeightCm > 0);
   const containerItems = calculation
-    ? calculation.cartonsPerPallet * CONTAINER_PRESETS[containerType].pallets * carton.qtyPerCarton
+    ? calculation.cartonsPerPallet * CONTAINER_PRESETS[containerType].pallets
     : null;
   const topViewSvg = calculation && calculationCarton && calculationPallet
     ? buildPalletTopViewSvg(calculationCarton, calculationPallet, calculation)
