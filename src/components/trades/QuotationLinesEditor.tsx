@@ -65,6 +65,10 @@ function formatUsd(value: number) {
   }).format(value);
 }
 
+function formatNumberInput(value: number, digits = 2) {
+  return Number.isFinite(value) ? value.toFixed(digits) : (0).toFixed(digits);
+}
+
 function formatRmb(value: number, digits = 2) {
   return `\u00A5${new Intl.NumberFormat("en-US", {
     maximumFractionDigits: digits,
@@ -383,9 +387,10 @@ export function QuotationLinesEditor({
                         onChange={(event) =>
                           updateRow(index, { unit_price_usd: Number(event.currentTarget.value) || 0 })
                         }
+                        onBlur={() => updateRow(index, { unit_price_usd: Number(row.unit_price_usd.toFixed(2)) })}
                         step="0.01"
                         type="number"
-                        value={row.unit_price_usd}
+                        value={formatNumberInput(row.unit_price_usd)}
                       />
                     ) : (
                       formatUsd(row.unit_price_usd)
