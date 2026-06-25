@@ -57,6 +57,23 @@ type SetComponentDraft = {
   component: Product | null;
 };
 
+function normalizeIntegerInput(value: string) {
+  return value.replace(/[^\d]/g, "");
+}
+
+function formatIntegerInput(value: number | string | null | undefined) {
+  if (value === null || value === undefined || value === "") {
+    return "";
+  }
+
+  const normalized = normalizeIntegerInput(String(value));
+  if (!normalized) {
+    return "";
+  }
+
+  return Number(normalized).toLocaleString("en-US", { maximumFractionDigits: 0 });
+}
+
 export function ProductFormDialog({
   availableProducts = [],
   mode,
@@ -77,16 +94,17 @@ export function ProductFormDialog({
   );
   const [packagingRequired, setPackagingRequired] = useState(initialData?.packaging_required ?? false);
   const [hasCarton, setHasCarton] = useState(initialData?.has_carton ?? false);
-  const [qtyPerCarton, setQtyPerCarton] = useState(initialData?.qty_per_carton?.toString() ?? "");
+  const [qtyPerCarton, setQtyPerCarton] = useState(formatIntegerInput(initialData?.qty_per_carton));
   const [cartonsPerPalletStd, setCartonsPerPalletStd] = useState(initialData?.cartons_per_pallet_std?.toString() ?? "");
   const [cartonsPerPalletHq, setCartonsPerPalletHq] = useState(initialData?.cartons_per_pallet_hq?.toString() ?? "");
   const [setComponentRows, setSetComponentRows] = useState<SetComponentDraft[]>([]);
   const [isPending, startTransition] = useTransition();
-  const qtyItemsPerPalletStd = Number(qtyPerCarton) > 0 && Number(cartonsPerPalletStd) > 0
-    ? Number(qtyPerCarton) * Number(cartonsPerPalletStd)
+  const qtyPerCartonNumber = Number(normalizeIntegerInput(qtyPerCarton));
+  const qtyItemsPerPalletStd = qtyPerCartonNumber > 0 && Number(cartonsPerPalletStd) > 0
+    ? qtyPerCartonNumber * Number(cartonsPerPalletStd)
     : null;
-  const qtyItemsPerPalletHq = Number(qtyPerCarton) > 0 && Number(cartonsPerPalletHq) > 0
-    ? Number(qtyPerCarton) * Number(cartonsPerPalletHq)
+  const qtyItemsPerPalletHq = qtyPerCartonNumber > 0 && Number(cartonsPerPalletHq) > 0
+    ? qtyPerCartonNumber * Number(cartonsPerPalletHq)
     : null;
 
   useEffect(() => {
@@ -97,7 +115,7 @@ export function ProductFormDialog({
       setPaymentCategory(initialData?.payment_category ?? "outsourced");
       setPackagingRequired(initialData?.packaging_required ?? false);
       setHasCarton(initialData?.has_carton ?? false);
-      setQtyPerCarton(initialData?.qty_per_carton?.toString() ?? "");
+      setQtyPerCarton(formatIntegerInput(initialData?.qty_per_carton));
       setCartonsPerPalletStd(initialData?.cartons_per_pallet_std?.toString() ?? "");
       setCartonsPerPalletHq(initialData?.cartons_per_pallet_hq?.toString() ?? "");
       setSetComponentRows([]);
@@ -173,6 +191,7 @@ export function ProductFormDialog({
     formData.set("payment_category", productType === "part" ? paymentCategory ?? "" : "");
     formData.set("packaging_required", packagingRequired ? "true" : "false");
     formData.set("has_carton", productType === "set" && hasCarton ? "true" : "false");
+    formData.set("qty_per_carton", normalizeIntegerInput(qtyPerCarton));
 
     startTransition(async () => {
       const componentError = validateSetComponents();
@@ -571,14 +590,13 @@ export function ProductFormDialog({
                     <Label htmlFor="qty_per_carton">Qty per Carton</Label>
                     <Input
                       className="w-32"
-                      defaultValue={initialData?.qty_per_carton ?? ""}
                       disabled={isPending}
                       id="qty_per_carton"
-                      min="0"
+                      inputMode="numeric"
                       name="qty_per_carton"
-                      onChange={(event) => setQtyPerCarton(event.target.value)}
-                      step="1"
-                      type="number"
+                      onChange={(event) => setQtyPerCarton(formatIntegerInput(event.target.value))}
+                      type="text"
+                      value={qtyPerCarton}
                     />
                   </div>
                   <div className="space-y-2">
