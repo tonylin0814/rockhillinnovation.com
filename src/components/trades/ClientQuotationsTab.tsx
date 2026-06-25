@@ -125,7 +125,14 @@ export function ClientQuotationsTab({
 
   return (
     <div className="space-y-4">
-      <div className="flex justify-end">{canManage ? <NewQuotationSessionDialog tradeId={tradeId} /> : null}</div>
+      <div className="flex flex-col gap-3 rounded-lg border border-slate-200 bg-white p-4 shadow-sm lg:flex-row lg:items-end lg:justify-between">
+        <div className="space-y-1">
+          <p className="text-sm font-medium text-[#0d1b34]">Client quotation rounds</p>
+          <p className="text-xs text-slate-500">Create, review, and manage quotation sessions for this trade.</p>
+        </div>
+
+        <div className="flex justify-end">{canManage ? <NewQuotationSessionDialog tradeId={tradeId} /> : null}</div>
+      </div>
 
       {initialSessions.length ? (
         <div className="grid gap-4">
