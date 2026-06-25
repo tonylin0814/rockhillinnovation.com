@@ -194,16 +194,8 @@ export function PalletCalculatorClient({
 
   function enterEditMode() {
     if (!judyResult || !standardPlan || !hqPlan) return;
-    const initialCartons: PlacedCarton[] = [];
-    const cL = calculationCarton?.lengthCm ?? 0;
-    const cW = calculationCarton?.widthCm ?? 0;
     const { cartonsAlongLength, cartonsAlongWidth } = judyResult.layerSetup;
-    for (let i = 0; i < cartonsAlongLength; i++) {
-      for (let j = 0; j < cartonsAlongWidth; j++) {
-        initialCartons.push({ rotated: false, x: i * cL, y: j * cW });
-      }
-    }
-    setEditCartons(initialCartons);
+    setEditCartons(buildCartonGrid(cartonsAlongLength, cartonsAlongWidth, false));
     setEditStdLayers(standardPlan.layerCount);
     setEditStdCartonsPallet(standardPlan.cartonsPerPallet);
     setEditStdItemsPallet(standardPlan.itemsPerPallet);
@@ -217,6 +209,26 @@ export function PalletCalculatorClient({
     setEditOrientation(judyResult.layerSetup.orientation);
     setPlacementRotated(false);
     setEditMode(true);
+  }
+
+  function buildCartonGrid(alongLength: number, alongWidth: number, rotated: boolean) {
+    const cartons: PlacedCarton[] = [];
+    const stepX = rotated ? calculationCarton?.widthCm ?? 0 : calculationCarton?.lengthCm ?? 0;
+    const stepY = rotated ? calculationCarton?.lengthCm ?? 0 : calculationCarton?.widthCm ?? 0;
+
+    for (let i = 0; i < alongLength; i++) {
+      for (let j = 0; j < alongWidth; j++) {
+        cartons.push({ rotated, x: i * stepX, y: j * stepY });
+      }
+    }
+
+    return cartons;
+  }
+
+  function updateLayerGrid(nextLength: number, nextWidth: number) {
+    setEditCartonsAlongLength(nextLength);
+    setEditCartonsAlongWidth(nextWidth);
+    setEditCartons(buildCartonGrid(nextLength, nextWidth, placementRotated));
   }
 
   function cancelEditMode() {
@@ -418,9 +430,21 @@ export function PalletCalculatorClient({
                   {editMode ? (
                     <div className="space-y-2">
                       <div className="flex items-center gap-1">
-                        <Input className="w-14" min={1} onChange={(e) => setEditCartonsAlongLength(Number(e.target.value))} type="number" value={editCartonsAlongLength} />
+                        <Input
+                          className="w-14"
+                          min={1}
+                          onChange={(e) => updateLayerGrid(Math.max(1, Number(e.target.value) || 1), editCartonsAlongWidth)}
+                          type="number"
+                          value={editCartonsAlongLength}
+                        />
                         <span className="text-sm text-slate-400">x</span>
-                        <Input className="w-14" min={1} onChange={(e) => setEditCartonsAlongWidth(Number(e.target.value))} type="number" value={editCartonsAlongWidth} />
+                        <Input
+                          className="w-14"
+                          min={1}
+                          onChange={(e) => updateLayerGrid(editCartonsAlongLength, Math.max(1, Number(e.target.value) || 1))}
+                          type="number"
+                          value={editCartonsAlongWidth}
+                        />
                       </div>
                       <p className="text-xs text-slate-500">
                         {editCartons.length > 0 ? editCartons.length : editCartonsAlongLength * editCartonsAlongWidth} cartons / layer
@@ -630,6 +654,19 @@ function PalletCanvasEditor({
     return Math.floor(value / step) * step;
   }
 
+  function isValidPlacement(cartonItem: PlacedCarton) {
+    const width = cartonItem.rotated ? cW : cL;
+    const height = cartonItem.rotated ? cL : cW;
+
+    return (
+      cartonItem.x >= 0 &&
+      cartonItem.y >= 0 &&
+      cartonItem.x + width <= palletLengthCm &&
+      cartonItem.y + height <= palletWidthCm &&
+      !editCartons.some((existing) => overlaps(cartonItem, existing))
+    );
+  }
+
   function overlaps(a: PlacedCarton, b: PlacedCarton) {
     const aW = a.rotated ? cW : cL;
     const aH = a.rotated ? cL : cW;
@@ -665,12 +702,22 @@ function PalletCanvasEditor({
       return;
     }
 
-    const x = snapCoord(pointerX, placeWidth);
-    const y = snapCoord(pointerY, placeHeight);
-    const newCarton: PlacedCarton = { rotated: placementRotated, x, y };
+    const preferredX = snapCoord(pointerX, placeWidth);
+    const preferredY = snapCoord(pointerY, placeHeight);
+    const candidates: PlacedCarton[] = [
+      { rotated: placementRotated, x: preferredX, y: preferredY },
+      { rotated: placementRotated, x: Math.max(0, palletLengthCm - placeWidth), y: preferredY },
+      { rotated: placementRotated, x: preferredX, y: Math.max(0, palletWidthCm - placeHeight) },
+    ];
 
-    if (x < 0 || y < 0 || x + placeWidth > palletLengthCm || y + placeHeight > palletWidthCm) return;
-    if (editCartons.some((existing) => overlaps(newCarton, existing))) return;
+    for (let x = 0; x <= palletLengthCm - placeWidth; x += placeWidth) {
+      for (let y = 0; y <= palletWidthCm - placeHeight; y += placeHeight) {
+        candidates.push({ rotated: placementRotated, x, y });
+      }
+    }
+
+    const newCarton = candidates.find(isValidPlacement);
+    if (!newCarton) return;
 
     onUpdate([...editCartons, newCarton]);
   }
