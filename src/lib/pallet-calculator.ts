@@ -14,6 +14,8 @@ export type PalletInput = {
 };
 
 export type PalletCalculation = {
+  cartonsAlongLength: number;
+  cartonsAlongWidth: number;
   orientation: string;
   cartonsPerLayer: number;
   layers: number;
@@ -64,6 +66,8 @@ function evaluateOrientation(
   return {
     boxLength,
     boxWidth,
+    cartonsAlongLength: acrossLength,
+    cartonsAlongWidth: acrossWidth,
     cartonsPerLayer,
     cartonsPerPallet,
     footprintUsedPct: round2(footprintUsedPct),

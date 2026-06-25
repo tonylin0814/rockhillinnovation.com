@@ -4,6 +4,8 @@ type JudyPalletPayload = {
   pallet: { name: string; lengthCm: number; widthCm: number; heightCm: number; maxWeightKg: number };
   forkliftClearanceCm: number;
   calculation: {
+    cartonsAlongLength: number;
+    cartonsAlongWidth: number;
     orientation: string;
     cartonsPerLayer: number;
     footprintUsedPct: number;
@@ -35,18 +37,16 @@ type JudyPalletPayload = {
 export function buildJudyPalletPrompt(payload: JudyPalletPayload) {
   const system = `You are a logistics and warehousing expert assistant for Rock Hill Innovation, an import/export trading company. Your job is to explain pallet stacking calculations in clear, practical language that warehouse staff can follow without any technical background.
 
-When given carton dimensions, pallet specifications, and a calculation result, produce TWO complete pallet configurations - one for standard containers (20 ft / 40 ft, 239 cm internal height) and one for high-cube containers (40 ft HQ, 269.8 cm internal height). The layer count may differ between the two since HQ containers allow more stacking height.
+When given carton dimensions, pallet specifications, and calculation results, answer only the practical warehouse questions. Do not recalculate. Use only the numbers supplied.
 
-Always structure your response with exactly these six sections in this order:
+Always structure your response with exactly these four sections in this order:
 
-**Layer Arrangement**
-**Standard Container (20 ft / 40 ft) - Stacking Plan**
-**Standard Container (20 ft / 40 ft) - Final Height**
-**40 ft HQ Container - Stacking Plan**
-**40 ft HQ Container - Final Height**
+**Layer Setup**
+**20 / 40GP**
+**40HQ**
 **Summary**
 
-Be precise with numbers. Use bullet points only inside sections, not between sections. Keep the entire response under 300 words.`;
+Keep the entire response under 120 words. If total height is greater than container height, say it does not fit.`;
 
   const user = `Here is a pallet stacking calculation. Please explain the stacking instructions.
 
@@ -62,6 +62,7 @@ Forklift clearance required: ${payload.forkliftClearanceCm} cm
 
 Calculation result:
 - Best orientation: ${payload.calculation.orientation}
+- Layer setup: ${payload.calculation.cartonsAlongLength} x ${payload.calculation.cartonsAlongWidth}
 - Cartons per layer: ${payload.calculation.cartonsPerLayer}
 - Pallet footprint used: ${payload.calculation.footprintUsedPct}%
 
@@ -86,11 +87,10 @@ Standard container result (20 ft / 40 ft, ${payload.standardPlan.containerHeight
 - Fit result: ${payload.hqPlan.fits ? "PASS" : "FAIL"}
 
 Please explain:
-1. How to arrange cartons in each layer. Do not invent row or column counts if they are not explicit.
-2. Use ONLY the standard container numbers above for the standard plan. Do not recalculate them.
-3. Use ONLY the 40 ft HQ numbers above for the HQ plan. Do not recalculate them.
-4. Never say PASS when total height is greater than the container height.
-5. A one-line summary comparing both configurations (for example: "Standard: X cartons/pallet; HQ: Y cartons/pallet")`;
+1. Layer Setup: show only the setup like "${payload.calculation.cartonsAlongLength} x ${payload.calculation.cartonsAlongWidth}" and cartons per layer.
+2. 20 / 40GP: show layers and total height including pallet and forklift clearance.
+3. 40HQ: show layers and total height including pallet and forklift clearance.
+4. Summary: one short sentence comparing both configurations.`;
 
   return { system, user };
 }

@@ -103,21 +103,43 @@ export function PalletCalculatorClient({
     carton.qtyPerCarton > 0 &&
     forkliftClearance >= 0 &&
     Boolean(palletInput && palletInput.maxHeightCm > 0);
-  const containerItems = calculation
-    ? calculation.cartonsPerPallet * CONTAINER_PRESETS[containerType].pallets
-    : null;
-  const topViewSvg = calculation && calculationCarton && calculationPallet
-    ? buildPalletTopViewSvg(calculationCarton, calculationPallet, calculation)
-    : "";
-  const sideViewSvg = calculation && calculationCarton && calculationPallet
-    ? buildPalletSideViewSvg(calculationCarton, calculationPallet, calculation)
-    : "";
   const standardPlan = calculation && selectedProfile
     ? buildContainerPlan("std")
     : null;
   const hqPlan = calculation && selectedProfile
     ? buildContainerPlan("40hq")
     : null;
+  const activePlan = containerType === "40hq" ? hqPlan : standardPlan;
+  const containerItems = activePlan
+    ? activePlan.cartonsPerPallet * CONTAINER_PRESETS[containerType].pallets
+    : null;
+  const topViewSvg = calculation && calculationCarton && calculationPallet
+    ? buildPalletTopViewSvg(calculationCarton, calculationPallet, calculation)
+    : "";
+  const standardSideViewSvg = calculationCarton && selectedProfile && standardPlan?.calculation
+    ? buildPalletSideViewSvg(
+        calculationCarton,
+        {
+          lengthCm: Number(selectedProfile.length_cm),
+          maxHeightCm: standardPlan.availableStackHeightCm,
+          maxWeightKg: Number(selectedProfile.max_weight_kg),
+          widthCm: Number(selectedProfile.width_cm),
+        },
+        standardPlan.calculation
+      )
+    : "";
+  const hqSideViewSvg = calculationCarton && selectedProfile && hqPlan?.calculation
+    ? buildPalletSideViewSvg(
+        calculationCarton,
+        {
+          lengthCm: Number(selectedProfile.length_cm),
+          maxHeightCm: hqPlan.availableStackHeightCm,
+          maxWeightKg: Number(selectedProfile.max_weight_kg),
+          widthCm: Number(selectedProfile.width_cm),
+        },
+        hqPlan.calculation
+      )
+    : "";
 
   function buildContainerPlan(type: ContainerType) {
     if (!selectedProfile) {
@@ -138,6 +160,7 @@ export function PalletCalculatorClient({
     return {
       availableStackHeightCm,
       cartonsPerPallet: result.cartonsPerPallet,
+      calculation: result,
       containerHeightCm,
       fits: totalHeightCm <= containerHeightCm,
       itemsPerPallet: result.itemsPerPallet,
@@ -183,6 +206,8 @@ export function PalletCalculatorClient({
     startCalculation(async () => {
       const aiResult = await getJudyPalletExplanation({
         calculation: {
+          cartonsAlongLength: result.cartonsAlongLength,
+          cartonsAlongWidth: result.cartonsAlongWidth,
           cartonsPerLayer: result.cartonsPerLayer,
           footprintUsedPct: result.footprintUsedPct,
           orientation: result.orientation,
@@ -366,6 +391,38 @@ export function PalletCalculatorClient({
             ))}
           </div>
 
+          {calculation && standardPlan && hqPlan ? (
+            <div className="grid gap-4 lg:grid-cols-3">
+              <Card className="border-slate-200 shadow-sm">
+                <CardContent className="p-4">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Layer Setup</p>
+                  <p className="mt-2 text-2xl font-semibold text-[#0d1b34]">
+                    {calculation.cartonsAlongLength} x {calculation.cartonsAlongWidth}
+                  </p>
+                  <p className="mt-1 text-sm text-slate-500">{calculation.cartonsPerLayer} cartons / layer</p>
+                </CardContent>
+              </Card>
+              <Card className="border-slate-200 shadow-sm">
+                <CardContent className="p-4">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">20 / 40GP</p>
+                  <p className="mt-2 text-2xl font-semibold text-[#0d1b34]">{standardPlan.layerCount} layers</p>
+                  <p className={standardPlan.fits ? "mt-1 text-sm text-green-600" : "mt-1 text-sm text-red-600"}>
+                    Total height {formatNumber(standardPlan.totalHeightCm)} cm
+                  </p>
+                </CardContent>
+              </Card>
+              <Card className="border-slate-200 shadow-sm">
+                <CardContent className="p-4">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">40HQ</p>
+                  <p className="mt-2 text-2xl font-semibold text-[#0d1b34]">{hqPlan.layerCount} layers</p>
+                  <p className={hqPlan.fits ? "mt-1 text-sm text-green-600" : "mt-1 text-sm text-red-600"}>
+                    Total height {formatNumber(hqPlan.totalHeightCm)} cm
+                  </p>
+                </CardContent>
+              </Card>
+            </div>
+          ) : null}
+
           <Card className="border-slate-200 shadow-sm">
             <CardHeader>
               <CardTitle>Calculation</CardTitle>
@@ -415,7 +472,7 @@ export function PalletCalculatorClient({
 
           {calculation ? (
             <>
-              <div className="grid gap-6 xl:grid-cols-2">
+              <div className="grid gap-6 xl:grid-cols-3">
                 <Card className="border-slate-200 shadow-sm">
                   <CardHeader>
                     <CardTitle>Top View</CardTitle>
@@ -426,10 +483,18 @@ export function PalletCalculatorClient({
                 </Card>
                 <Card className="border-slate-200 shadow-sm">
                   <CardHeader>
-                    <CardTitle>Side View</CardTitle>
+                    <CardTitle>20 / 40GP Side View</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="overflow-auto" dangerouslySetInnerHTML={{ __html: sideViewSvg }} />
+                    <div className="overflow-auto" dangerouslySetInnerHTML={{ __html: standardSideViewSvg }} />
+                  </CardContent>
+                </Card>
+                <Card className="border-slate-200 shadow-sm">
+                  <CardHeader>
+                    <CardTitle>40HQ Side View</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="overflow-auto" dangerouslySetInnerHTML={{ __html: hqSideViewSvg }} />
                   </CardContent>
                 </Card>
               </div>

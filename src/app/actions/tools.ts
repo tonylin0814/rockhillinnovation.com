@@ -108,6 +108,8 @@ export async function getJudyPalletExplanation(payload: {
   pallet: { name: string; lengthCm: number; widthCm: number; heightCm: number; maxWeightKg: number };
   forkliftClearanceCm: number;
   calculation: {
+    cartonsAlongLength: number;
+    cartonsAlongWidth: number;
     orientation: string;
     cartonsPerLayer: number;
     footprintUsedPct: number;
