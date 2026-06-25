@@ -35,23 +35,18 @@ type ImportedQuotationLine = {
   notes: string;
 };
 
+type ProductForQuoteImport = {
+  id: string;
+  name_english: string;
+  product_type: "part" | "set";
+};
+
 type QuoteLineForImport = {
   product_id: string | null;
   item_name_english: string | null;
   quantity: number | string;
   sort_order: number | null;
-  product:
-    | {
-        id: string;
-        name_english: string;
-        product_type: "part" | "set";
-      }
-    | {
-        id: string;
-        name_english: string;
-        product_type: "part" | "set";
-      }[]
-    | null;
+  product: ProductForQuoteImport | ProductForQuoteImport[] | null;
 };
 
 const quotationSessionSchema = z.object({
@@ -591,40 +586,88 @@ export async function importQuotationLinesFromConfirmedQuote(
     }
   }
 
-  const lines = quoteLineRows.flatMap((line) => {
+  const nonSetLinesByProductId = new Map<
+    string,
+    {
+      firstLine: QuoteLineForImport;
+      product: ProductForQuoteImport;
+      quantity: number;
+      sortOrder: number;
+    }
+  >();
+  const setAndManualLines: ImportedQuotationLine[] = [];
+
+  for (const line of quoteLineRows) {
     const product = Array.isArray(line.product) ? line.product[0] : line.product;
-    const originalQuantity = Number(line.quantity);
-    let importQuantity = originalQuantity;
+    const quantity = Number(line.quantity);
 
-    if (line.product_id && product?.product_type !== "set") {
-      const includedDemand = includedComponentDemandByProductId.get(line.product_id) ?? 0;
-      const quantityToSubtract = Math.min(includedDemand, originalQuantity);
-
-      importQuantity = originalQuantity - quantityToSubtract;
-
-      if (quantityToSubtract > 0) {
-        const remainingDemand = includedDemand - quantityToSubtract;
-
-        if (remainingDemand > 0) {
-          includedComponentDemandByProductId.set(line.product_id, remainingDemand);
-        } else {
-          includedComponentDemandByProductId.delete(line.product_id);
-        }
+    if (!line.product_id || !product) {
+      if (quantity > 0) {
+        setAndManualLines.push({
+          item_description: line.item_name_english ?? "",
+          notes: "",
+          product_id: line.product_id ?? null,
+          quantity,
+          unit_price_usd: 0,
+        });
       }
+
+      continue;
     }
 
-    if (importQuantity <= 0) {
-      return [];
+    if (product.product_type === "set") {
+      if (quantity > 0) {
+        setAndManualLines.push({
+          item_description: line.item_name_english ?? product.name_english ?? "",
+          notes: "",
+          product_id: line.product_id,
+          quantity,
+          unit_price_usd: 0,
+        });
+      }
+
+      continue;
     }
 
-    return [{
-      item_description: line.item_name_english ?? product?.name_english ?? "",
-      notes: "",
-      product_id: line.product_id ?? null,
-      quantity: importQuantity,
-      unit_price_usd: 0,
-    }];
-  });
+    const existing = nonSetLinesByProductId.get(line.product_id);
+
+    if (existing) {
+      existing.quantity += quantity;
+    } else {
+      nonSetLinesByProductId.set(line.product_id, {
+        firstLine: line,
+        product,
+        quantity,
+        sortOrder: line.sort_order ?? 0,
+      });
+    }
+  }
+
+  const extraComponentLines = Array.from(nonSetLinesByProductId.entries())
+    .flatMap(([productId, groupedLine]) => {
+      const includedDemand = includedComponentDemandByProductId.get(productId) ?? 0;
+      const remainingQuantity = groupedLine.quantity - includedDemand;
+
+      if (remainingQuantity <= 0) {
+        return [];
+      }
+
+      return [{
+        item_description: groupedLine.firstLine.item_name_english ?? groupedLine.product.name_english ?? "",
+        notes: "",
+        product_id: productId,
+        quantity: remainingQuantity,
+        sortOrder: groupedLine.sortOrder,
+        unit_price_usd: 0,
+      }];
+    })
+    .sort((a, b) => a.sortOrder - b.sortOrder)
+    .map(({ sortOrder, ...line }) => line);
+
+  const lines = [
+    ...setAndManualLines,
+    ...extraComponentLines,
+  ];
 
   return { success: true, lines };
 }
