@@ -28,12 +28,29 @@ const CONTAINER_HEIGHTS_CM: Record<ContainerType, number> = {
 };
 
 function numberValue(value: string) {
-  const parsed = Number(value);
+  const parsed = Number(value.replace(/,/g, ""));
   return Number.isFinite(parsed) ? parsed : 0;
 }
 
 function inputValue(value: number | null | undefined, fallback = "") {
   return typeof value === "number" ? String(value) : fallback;
+}
+
+function normalizeIntegerInput(value: string) {
+  return value.replace(/[^\d]/g, "");
+}
+
+function formatIntegerInput(value: number | string | null | undefined) {
+  if (value === null || value === undefined || value === "") {
+    return "";
+  }
+
+  const normalized = normalizeIntegerInput(String(value));
+  if (!normalized) {
+    return "";
+  }
+
+  return Number(normalized).toLocaleString("en-US", { maximumFractionDigits: 0 });
 }
 
 function formatNumber(value: number, digits = 2) {
@@ -176,7 +193,7 @@ export function PalletCalculatorClient({
     setCartonWidthCm(inputValue(product.carton_width_cm));
     setCartonHeightCm(inputValue(product.carton_height_cm));
     setCartonWeightKg(inputValue(product.carton_weight_kg));
-    setQtyPerCarton(inputValue(product.qty_per_carton));
+    setQtyPerCarton(formatIntegerInput(inputValue(product.qty_per_carton)));
   }
 
   function handleCalculate() {
@@ -320,7 +337,7 @@ export function PalletCalculatorClient({
               </div>
               <div className="space-y-2">
                 <Label>Qty / Carton</Label>
-                <Input min="0" onChange={(event) => setQtyPerCarton(event.target.value)} step="1" type="number" value={qtyPerCarton} />
+                <Input inputMode="numeric" onChange={(event) => setQtyPerCarton(formatIntegerInput(event.target.value))} type="text" value={qtyPerCarton} />
               </div>
             </div>
 
