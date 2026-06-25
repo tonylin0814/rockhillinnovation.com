@@ -171,6 +171,8 @@ export async function exportCalculatorToProduct(
     carton_width_cm: number;
     carton_height_cm: number;
     carton_weight_kg: number;
+    cartons_per_pallet_hq: number;
+    cartons_per_pallet_std: number;
     qty_per_carton: number;
   }
 ): Promise<{ success?: true; error?: string }> {
@@ -185,6 +187,8 @@ export async function exportCalculatorToProduct(
         carton_length_cm: z.coerce.number().positive(),
         carton_weight_kg: z.coerce.number().positive(),
         carton_width_cm: z.coerce.number().positive(),
+        cartons_per_pallet_hq: z.coerce.number().positive(),
+        cartons_per_pallet_std: z.coerce.number().positive(),
         qty_per_carton: z.coerce.number().positive(),
       }),
     })
@@ -200,6 +204,8 @@ export async function exportCalculatorToProduct(
       carton_length_cm: parsed.data.data.carton_length_cm,
       carton_weight_kg: parsed.data.data.carton_weight_kg,
       carton_width_cm: parsed.data.data.carton_width_cm,
+      cartons_per_pallet_hq: parsed.data.data.cartons_per_pallet_hq,
+      cartons_per_pallet_std: parsed.data.data.cartons_per_pallet_std,
       packaging_required: true,
       qty_per_carton: parsed.data.data.qty_per_carton,
     })

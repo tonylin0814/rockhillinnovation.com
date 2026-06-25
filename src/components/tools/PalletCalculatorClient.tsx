@@ -236,7 +236,7 @@ export function PalletCalculatorClient({
   }
 
   function handleExportToProduct() {
-    if (!exportProductId) return;
+    if (!exportProductId || !standardPlan || !hqPlan) return;
 
     startExport(async () => {
       const result = await exportCalculatorToProduct(exportProductId, {
@@ -244,6 +244,8 @@ export function PalletCalculatorClient({
         carton_length_cm: carton.lengthCm,
         carton_weight_kg: carton.weightKg,
         carton_width_cm: carton.widthCm,
+        cartons_per_pallet_hq: hqPlan.cartonsPerPallet,
+        cartons_per_pallet_std: standardPlan.cartonsPerPallet,
         qty_per_carton: carton.qtyPerCarton,
       });
 
@@ -519,7 +521,7 @@ export function PalletCalculatorClient({
                       ))}
                     </SelectContent>
                   </Select>
-                  <Button disabled={!exportProductId || isExporting} onClick={handleExportToProduct} variant="outline">
+                  <Button disabled={!exportProductId || !standardPlan || !hqPlan || isExporting} onClick={handleExportToProduct} variant="outline">
                     {isExporting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                     Export Carton Data to Product
                   </Button>
