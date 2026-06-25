@@ -148,7 +148,7 @@ export async function getJudyPalletExplanation(payload: {
         { content: prompt.system, role: "system" },
         { content: prompt.user, role: "user" },
       ],
-      model: "gpt-4o-mini",
+      model: "gpt-5.4-mini",
       response_format: { type: "json_object" },
       temperature: 0.2,
     });
