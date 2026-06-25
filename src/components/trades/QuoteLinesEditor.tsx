@@ -2,7 +2,7 @@
 
 import { ArrowDown, ArrowUp, Loader2, Plus, X } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import { toast } from "sonner";
 
 import { saveQuoteLines } from "@/app/actions/supplier-quotes";
@@ -129,6 +129,11 @@ export function QuoteLinesEditor({
     () => new Map(availableProducts.map((product) => [product.id, product])),
     [availableProducts]
   );
+  const draftKey = useMemo(() => `rockhill:supplier-quote-lines:${sessionId}`, [sessionId]);
+  const selectedProductIds = useMemo(
+    () => new Set(rows.map((row) => row.product_id).filter((productId) => productId !== "none")),
+    [rows]
+  );
   const canEdit = canManage && sessionStatus === "draft";
   const hasExchangeRate = typeof workingExchangeRate === "number" && workingExchangeRate > 0;
   const runningCostTotal = rows.reduce((total, row) => total + row.quantity * row.unit_price_rmb, 0);
@@ -145,6 +150,28 @@ export function QuoteLinesEditor({
   function updateRow(index: number, patch: Partial<EditableQuoteLine>) {
     setRows((currentRows) => currentRows.map((row, rowIndex) => (rowIndex === index ? { ...row, ...patch } : row)));
   }
+
+  useEffect(() => {
+    if (!canEdit) return;
+
+    try {
+      const rawDraft = window.localStorage.getItem(draftKey);
+      if (!rawDraft) return;
+
+      const parsed = JSON.parse(rawDraft) as { rows?: EditableQuoteLine[] };
+      if (Array.isArray(parsed.rows)) {
+        setRows(renumber(parsed.rows));
+        setIsEditing(true);
+      }
+    } catch {
+      window.localStorage.removeItem(draftKey);
+    }
+  }, [canEdit, draftKey]);
+
+  useEffect(() => {
+    if (!canEdit || !isEditing) return;
+    window.localStorage.setItem(draftKey, JSON.stringify({ rows }));
+  }, [canEdit, draftKey, isEditing, rows]);
 
   function moveRow(index: number, direction: "up" | "down") {
     const targetIndex = direction === "up" ? index - 1 : index + 1;
@@ -219,6 +246,7 @@ export function QuoteLinesEditor({
       }
 
       toast.success("Quote lines saved");
+      window.localStorage.removeItem(draftKey);
       setIsEditing(false);
       router.refresh();
     });
@@ -240,7 +268,7 @@ export function QuoteLinesEditor({
             <TableHead className="w-14">#</TableHead>
             <TableHead>Code</TableHead>
             <TableHead>Product</TableHead>
-            <TableHead>Qty</TableHead>
+            <TableHead className="w-[99px]">Qty</TableHead>
             <TableHead>Cost (RMB)</TableHead>
             <TableHead>Quote</TableHead>
             <TableHead>Prv. Quote</TableHead>
@@ -256,6 +284,10 @@ export function QuoteLinesEditor({
           {rows.length ? (
             rows.map((row, index) => {
               const product = row.product_id === "none" ? null : productById.get(row.product_id);
+              const productOptionsForRow = availableProducts.filter(
+                (availableProduct) =>
+                  availableProduct.id === row.product_id || !selectedProductIds.has(availableProduct.id)
+              );
               const costUsd = hasExchangeRate ? row.unit_price_rmb / workingExchangeRate : null;
               const profit = costUsd === null ? null : row.unit_quote_usd - costUsd;
               const quoteTotal = row.quantity * row.unit_quote_usd;
@@ -274,7 +306,7 @@ export function QuoteLinesEditor({
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="none">None</SelectItem>
-                          {availableProducts.map((availableProduct) => (
+                          {productOptionsForRow.map((availableProduct) => (
                             <SelectItem key={availableProduct.id} value={availableProduct.id}>
                               {availableProduct.name_english}
                             </SelectItem>
@@ -290,7 +322,7 @@ export function QuoteLinesEditor({
                   <TableCell>
                     {isEditing ? (
                       <Input
-                        className="w-24"
+                        className="w-[99px]"
                         min="0.001"
                         onChange={(event) => updateRow(index, { quantity: Number(event.currentTarget.value) || 1 })}
                         step="0.001"
@@ -424,6 +456,7 @@ export function QuoteLinesEditor({
             <Button
               disabled={isPending}
               onClick={() => {
+                window.localStorage.removeItem(draftKey);
                 resetRows();
                 setIsEditing(false);
               }}

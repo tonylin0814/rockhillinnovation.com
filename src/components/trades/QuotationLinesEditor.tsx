@@ -2,7 +2,7 @@
 
 import { ArrowDown, ArrowUp, Loader2, Plus, X } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import { toast } from "sonner";
 
 import { saveQuotationLines } from "@/app/actions/client-quotations";
@@ -116,12 +116,39 @@ export function QuotationLinesEditor({
     () => new Map(availableProducts.map((product) => [product.id, product])),
     [availableProducts]
   );
+  const draftKey = useMemo(() => `rockhill:client-quotation-lines:${sessionId}`, [sessionId]);
+  const selectedProductIds = useMemo(
+    () => new Set(rows.map((row) => row.product_id).filter((productId) => productId !== "none")),
+    [rows]
+  );
   const canEdit = canManage && sessionStatus === "draft";
   const runningTotal = rows.reduce((total, row) => total + row.quantity * row.unit_price_usd, 0);
 
   function updateRow(index: number, patch: Partial<EditableQuotationLine>) {
     setRows((currentRows) => currentRows.map((row, rowIndex) => (rowIndex === index ? { ...row, ...patch } : row)));
   }
+
+  useEffect(() => {
+    if (!canEdit) return;
+
+    try {
+      const rawDraft = window.localStorage.getItem(draftKey);
+      if (!rawDraft) return;
+
+      const parsed = JSON.parse(rawDraft) as { rows?: EditableQuotationLine[] };
+      if (Array.isArray(parsed.rows)) {
+        setRows(parsed.rows);
+        setIsEditing(true);
+      }
+    } catch {
+      window.localStorage.removeItem(draftKey);
+    }
+  }, [canEdit, draftKey]);
+
+  useEffect(() => {
+    if (!canEdit || !isEditing) return;
+    window.localStorage.setItem(draftKey, JSON.stringify({ rows }));
+  }, [canEdit, draftKey, isEditing, rows]);
 
   function moveRow(index: number, direction: "up" | "down") {
     const targetIndex = direction === "up" ? index - 1 : index + 1;
@@ -188,6 +215,7 @@ export function QuotationLinesEditor({
       }
 
       toast.success("Quotation lines saved");
+      window.localStorage.removeItem(draftKey);
       setIsEditing(false);
       router.refresh();
     });
@@ -209,7 +237,7 @@ export function QuotationLinesEditor({
             <TableHead className="w-14">#</TableHead>
             <TableHead>Product</TableHead>
             <TableHead>Description</TableHead>
-            <TableHead>Qty</TableHead>
+            <TableHead className="w-[99px]">Qty</TableHead>
             <TableHead>Unit Price (USD)</TableHead>
             <TableHead>Prv. Quote</TableHead>
             <TableHead>Total (USD)</TableHead>
@@ -221,6 +249,10 @@ export function QuotationLinesEditor({
           {rows.length ? (
             rows.map((row, index) => {
               const product = row.product_id === "none" ? null : productById.get(row.product_id);
+              const productOptionsForRow = availableProducts.filter(
+                (availableProduct) =>
+                  availableProduct.id === row.product_id || !selectedProductIds.has(availableProduct.id)
+              );
               const total = row.quantity * row.unit_price_usd;
 
               return (
@@ -234,7 +266,7 @@ export function QuotationLinesEditor({
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="none">None</SelectItem>
-                          {availableProducts.map((availableProduct) => (
+                          {productOptionsForRow.map((availableProduct) => (
                             <SelectItem key={availableProduct.id} value={availableProduct.id}>
                               {productLabel(availableProduct)}
                             </SelectItem>
@@ -260,7 +292,7 @@ export function QuotationLinesEditor({
                   <TableCell>
                     {isEditing ? (
                       <Input
-                        className="w-24"
+                        className="w-[99px]"
                         min="0.001"
                         onChange={(event) => updateRow(index, { quantity: Number(event.currentTarget.value) || 1 })}
                         step="0.001"
@@ -369,6 +401,7 @@ export function QuotationLinesEditor({
             <Button
               disabled={isPending}
               onClick={() => {
+                window.localStorage.removeItem(draftKey);
                 resetRows();
                 setIsEditing(false);
               }}
