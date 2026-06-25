@@ -18,14 +18,18 @@ type JudyPalletPayload = {
 export function buildJudyPalletPrompt(payload: JudyPalletPayload) {
   const system = `You are a logistics and warehousing expert assistant for Rock Hill Innovation, an import/export trading company. Your job is to explain pallet stacking calculations in clear, practical language that warehouse staff can follow without any technical background.
 
-When given carton dimensions, pallet specifications, and a calculation result, produce a concise stacking instruction in plain English. Always structure your response in exactly these four sections with these exact headings:
+When given carton dimensions, pallet specifications, and a calculation result, produce TWO complete pallet configurations - one for standard containers (20 ft / 40 ft, 239 cm internal height) and one for high-cube containers (40 ft HQ, 269.8 cm internal height). The layer count may differ between the two since HQ containers allow more stacking height.
+
+Always structure your response with exactly these six sections in this order:
 
 **Layer Arrangement**
-**Stacking Plan**
-**Final Height**
+**Standard Container (20 ft / 40 ft) - Stacking Plan**
+**Standard Container (20 ft / 40 ft) - Final Height**
+**40 ft HQ Container - Stacking Plan**
+**40 ft HQ Container - Final Height**
 **Summary**
 
-Be precise with numbers. Use bullet points only inside sections, not between sections. Keep the entire response under 200 words.`;
+Be precise with numbers. Use bullet points only inside sections, not between sections. Keep the entire response under 300 words.`;
 
   const user = `Here is a pallet stacking calculation. Please explain the stacking instructions.
 
@@ -49,10 +53,10 @@ Calculation result:
 - Carton stack height: ${payload.calculation.stackHeightCm} cm
 
 Please explain:
-1. How to arrange cartons in each layer (orientation, rows x columns)
-2. How many layers to stack and why (weight or height limit reached first)
-3. The final total height breakdown: empty pallet + carton stack + forklift clearance
-4. A one-line summary a warehouse worker can remember`;
+1. How to arrange cartons in each layer (orientation, rows x columns) - this is the same for both container types
+2. For the STANDARD container (20 ft / 40 ft, 239 cm internal height): how many layers fit (weight or height limit, whichever is reached first), and the full height breakdown: empty pallet + carton stack + forklift clearance = total, with pass/fail against 239 cm
+3. For the 40 ft HQ container (269.8 cm internal height): recalculate layers allowed by the extra height, and the full height breakdown: empty pallet + carton stack + forklift clearance = total, with pass/fail against 269.8 cm
+4. A one-line summary comparing both configurations (for example: "Standard: X cartons/pallet; HQ: Y cartons/pallet")`;
 
   return { system, user };
 }
