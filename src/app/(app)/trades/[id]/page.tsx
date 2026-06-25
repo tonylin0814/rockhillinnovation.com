@@ -349,12 +349,43 @@ export default async function TradeWorkspacePage({ params }: { params: { id: str
   const activeProductIds = activeProductRows.map((product) => product.id);
   const latestCostByProductId = new Map<string, number>();
   const previousCostByProductId = new Map<string, number>();
+  const setComponentsByProductId = new Map<string, { component_product_id: string; quantity_per_set: number }[]>();
 
   if (canManage && activeProductIds.length) {
+    const { data: setComponents, error: setComponentsError } = await supabase
+      .from("product_components")
+      .select("set_product_id, component_product_id, quantity_per_set")
+      .in("set_product_id", activeProductIds);
+
+    if (setComponentsError) {
+      return (
+        <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm font-medium text-red-700">
+          {setComponentsError.message}
+        </div>
+      );
+    }
+
+    const costProductIds = new Set(activeProductIds);
+
+    for (const component of (setComponents ?? []) as {
+      component_product_id: string;
+      quantity_per_set: number | string;
+      set_product_id: string;
+    }[]) {
+      const componentList = setComponentsByProductId.get(component.set_product_id) ?? [];
+
+      componentList.push({
+        component_product_id: component.component_product_id,
+        quantity_per_set: Number(component.quantity_per_set),
+      });
+      setComponentsByProductId.set(component.set_product_id, componentList);
+      costProductIds.add(component.component_product_id);
+    }
+
     const { data: latestCosts, error: latestCostsError } = await supabase
       .from("product_cost_history")
       .select("product_id, unit_cost_rmb")
-      .in("product_id", activeProductIds)
+      .in("product_id", Array.from(costProductIds))
       .order("quoted_date", { ascending: false })
       .order("created_at", { ascending: false });
 
@@ -373,6 +404,32 @@ export default async function TradeWorkspacePage({ params }: { params: { id: str
         previousCostByProductId.set(row.product_id, Number(row.unit_cost_rmb));
       }
     }
+  }
+
+  function resolveProductCost(product: Product, costs: Map<string, number>) {
+    if (product.product_type !== "set") {
+      return costs.get(product.id) ?? null;
+    }
+
+    const components = setComponentsByProductId.get(product.id) ?? [];
+
+    if (!components.length) {
+      return costs.get(product.id) ?? null;
+    }
+
+    let totalCost = 0;
+
+    for (const component of components) {
+      const componentCost = costs.get(component.component_product_id);
+
+      if (componentCost === undefined) {
+        return null;
+      }
+
+      totalCost += componentCost * component.quantity_per_set;
+    }
+
+    return totalCost;
   }
 
   const trade = data as Trade;
@@ -396,8 +453,8 @@ export default async function TradeWorkspacePage({ params }: { params: { id: str
   const componentDemandRows = (componentDemand ?? []) as ComponentDemand[];
   const activeProductOptions = activeProductRows.map((product) => ({
     ...product,
-    latest_cost_rmb: latestCostByProductId.get(product.id) ?? null,
-    previous_cost_rmb: previousCostByProductId.get(product.id) ?? null,
+    latest_cost_rmb: resolveProductCost(product, latestCostByProductId),
+    previous_cost_rmb: resolveProductCost(product, previousCostByProductId),
   }));
   const tradeShareholderRows = (tradeShareholders ?? []) as TradeShareholder[];
   const activeVendorOptions = (activeVendors ?? []) as ExpenseVendor[];
