@@ -49,6 +49,7 @@ export async function GET(request: Request) {
   const productIds = productRows.map((product) => product.id);
   const productCodes = productRows.map((product) => product.code);
   const latestCostByProductId = new Map<string, number>();
+  const previousCostByProductId = new Map<string, number>();
   const previousQuoteByProductId = new Map<string, number>();
   const previousQuoteMetaByProductId = new Map<string, { quote_date: string; trade_id: string | null }>();
 
@@ -78,6 +79,8 @@ export async function GET(request: Request) {
     for (const row of (costRows ?? []) as { product_id: string; unit_cost_rmb: number | string }[]) {
       if (!latestCostByProductId.has(row.product_id)) {
         latestCostByProductId.set(row.product_id, Number(row.unit_cost_rmb));
+      } else if (!previousCostByProductId.has(row.product_id)) {
+        previousCostByProductId.set(row.product_id, Number(row.unit_cost_rmb));
       }
     }
 
@@ -102,7 +105,7 @@ export async function GET(request: Request) {
   const productsWithCosts = productRows.map((product) => ({
     ...product,
     latest_cost_rmb: latestCostByProductId.get(product.id) ?? null,
-    previous_cost_rmb: latestCostByProductId.get(product.id) ?? null,
+    previous_cost_rmb: previousCostByProductId.get(product.id) ?? null,
     previous_quote_usd: previousQuoteByProductId.get(product.id) ?? null,
     previous_quote_date: previousQuoteMetaByProductId.get(product.id)?.quote_date ?? null,
     previous_quote_trade_id: previousQuoteMetaByProductId.get(product.id)?.trade_id ?? null,

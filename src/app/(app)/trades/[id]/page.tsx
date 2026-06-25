@@ -348,6 +348,7 @@ export default async function TradeWorkspacePage({ params }: { params: { id: str
   const activeProductRows = (activeProducts ?? []) as Product[];
   const activeProductIds = activeProductRows.map((product) => product.id);
   const latestCostByProductId = new Map<string, number>();
+  const previousCostByProductId = new Map<string, number>();
 
   if (canManage && activeProductIds.length) {
     const { data: latestCosts, error: latestCostsError } = await supabase
@@ -368,6 +369,8 @@ export default async function TradeWorkspacePage({ params }: { params: { id: str
     for (const row of (latestCosts ?? []) as { product_id: string; unit_cost_rmb: number | string }[]) {
       if (!latestCostByProductId.has(row.product_id)) {
         latestCostByProductId.set(row.product_id, Number(row.unit_cost_rmb));
+      } else if (!previousCostByProductId.has(row.product_id)) {
+        previousCostByProductId.set(row.product_id, Number(row.unit_cost_rmb));
       }
     }
   }
@@ -394,7 +397,7 @@ export default async function TradeWorkspacePage({ params }: { params: { id: str
   const activeProductOptions = activeProductRows.map((product) => ({
     ...product,
     latest_cost_rmb: latestCostByProductId.get(product.id) ?? null,
-    previous_cost_rmb: latestCostByProductId.get(product.id) ?? null,
+    previous_cost_rmb: previousCostByProductId.get(product.id) ?? null,
   }));
   const tradeShareholderRows = (tradeShareholders ?? []) as TradeShareholder[];
   const activeVendorOptions = (activeVendors ?? []) as ExpenseVendor[];

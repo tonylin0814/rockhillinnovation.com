@@ -202,7 +202,7 @@ export function QuoteLinesEditor({
       product_id: productId,
       item_name_english: product ? product.name_english : rows[index].item_name_english,
       unit_price_rmb: product?.latest_cost_rmb ?? 0,
-      previous_unit_cost_rmb: product?.previous_cost_rmb ?? product?.latest_cost_rmb ?? null,
+      previous_unit_cost_rmb: product?.previous_cost_rmb ?? null,
     });
   }
 
@@ -217,7 +217,8 @@ export function QuoteLinesEditor({
           item_name_english: row.item_name_english || null,
           quantity: row.quantity,
           unit_price_rmb: row.unit_price_rmb,
-          previous_unit_cost_rmb: row.previous_unit_cost_rmb,
+          previous_unit_cost_rmb:
+            row.product_id === "none" ? null : productById.get(row.product_id)?.previous_cost_rmb ?? row.previous_unit_cost_rmb,
           unit_quote_usd: row.unit_quote_usd,
           payment_category: null,
           notes: null,
@@ -265,16 +266,17 @@ export function QuoteLinesEditor({
           {rows.length ? (
             rows.map((row, index) => {
               const product = row.product_id === "none" ? null : productById.get(row.product_id);
+              const previousUnitCostRmb = product?.previous_cost_rmb ?? row.previous_unit_cost_rmb;
               const productOptionsForRow = sortedProducts.filter(
                 (availableProduct) =>
                   availableProduct.id === row.product_id || !selectedProductIds.has(availableProduct.id)
               );
               const costChange =
-                row.previous_unit_cost_rmb === null ? null : row.unit_price_rmb - row.previous_unit_cost_rmb;
+                previousUnitCostRmb === null ? null : row.unit_price_rmb - previousUnitCostRmb;
               const costChangePct =
-                row.previous_unit_cost_rmb === null || row.previous_unit_cost_rmb === 0
+                previousUnitCostRmb === null || previousUnitCostRmb === 0
                   ? null
-                  : (costChange ?? 0) / row.previous_unit_cost_rmb * 100;
+                  : ((costChange ?? 0) / previousUnitCostRmb) * 100;
 
               return (
                 <TableRow key={row.id ?? `new-${index}`}>
@@ -331,7 +333,7 @@ export function QuoteLinesEditor({
                       formatRmbUnit(row.unit_price_rmb)
                     )}
                   </TableCell>
-                  <TableCell>{row.previous_unit_cost_rmb === null ? "-" : formatRmbUnit(row.previous_unit_cost_rmb)}</TableCell>
+                  <TableCell>{previousUnitCostRmb === null ? "-" : formatRmbUnit(previousUnitCostRmb)}</TableCell>
                   <TableCell>{costChange === null ? "-" : formatRmbUnit(costChange)}</TableCell>
                   <TableCell>{formatPercent(costChangePct)}</TableCell>
                   {isEditing ? (
