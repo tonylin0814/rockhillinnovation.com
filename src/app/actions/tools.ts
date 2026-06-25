@@ -143,7 +143,7 @@ export async function getJudyPalletExplanation(payload: {
   try {
     const openai = new OpenAI({ apiKey });
     const completion = await openai.chat.completions.create({
-      max_tokens: 900,
+      max_completion_tokens: 900,
       messages: [
         { content: prompt.system, role: "system" },
         { content: prompt.user, role: "user" },
