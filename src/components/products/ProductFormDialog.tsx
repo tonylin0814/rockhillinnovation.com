@@ -190,7 +190,7 @@ export function ProductFormDialog({
     formData.set("supplier_id", supplierId);
     formData.set("payment_category", productType === "part" ? paymentCategory ?? "" : "");
     formData.set("packaging_required", packagingRequired ? "true" : "false");
-    formData.set("has_carton", productType === "set" && hasCarton ? "true" : "false");
+    formData.set("has_carton", hasCarton ? "true" : "false");
     formData.set("qty_per_carton", normalizeIntegerInput(qtyPerCarton));
 
     startTransition(async () => {
@@ -352,21 +352,19 @@ export function ProductFormDialog({
                 </Select>
               </div>
             ) : null}
-            {productType === "set" ? (
-              <div className="space-y-2 rounded-md border border-slate-200 bg-slate-50 p-3">
-                <label className="flex items-center gap-2 text-sm font-medium text-[#0d1b34]">
-                  <input
-                    checked={hasCarton}
-                    className="h-4 w-4 rounded border-slate-300"
-                    disabled={isPending}
-                    onChange={(event) => setHasCarton(event.target.checked)}
-                    type="checkbox"
-                  />
-                  Carton
-                </label>
-                <p className="text-xs text-slate-500">Check this if the set includes a carton box.</p>
-              </div>
-            ) : null}
+            <div className="space-y-2 rounded-md border border-slate-200 bg-slate-50 p-3">
+              <label className="flex items-center gap-2 text-sm font-medium text-[#0d1b34]">
+                <input
+                  checked={hasCarton}
+                  className="h-4 w-4 rounded border-slate-300"
+                  disabled={isPending}
+                  onChange={(event) => setHasCarton(event.target.checked)}
+                  type="checkbox"
+                />
+                Carton
+              </label>
+              <p className="text-xs text-slate-500">Check this if the product includes a carton box.</p>
+            </div>
             </div>
 
             <div className="space-y-2">

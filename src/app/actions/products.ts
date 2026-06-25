@@ -73,7 +73,7 @@ const productSchema = z
     ...value,
     supplier_product_code: value.product_type === "part" ? value.supplier_product_code ?? null : null,
     payment_category: value.product_type === "part" ? value.payment_category : null,
-    has_carton: value.product_type === "set" ? value.has_carton : false,
+    has_carton: value.has_carton,
     qty_per_carton: value.packaging_required ? value.qty_per_carton : null,
     carton_height_cm: value.packaging_required ? value.carton_height_cm : null,
     carton_width_cm: value.packaging_required ? value.carton_width_cm : null,
