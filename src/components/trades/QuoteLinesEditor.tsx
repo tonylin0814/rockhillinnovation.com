@@ -63,7 +63,22 @@ function rowsFromLines(lines: SupplierQuoteLine[]): EditableQuoteLine[] {
     .map((line, index) => ({ ...line, sort_order: index + 1 }));
 }
 
-function formatRmb(value: number) {
+function formatRmb(value: number, digits = 2) {
+  return `\u00A5${value.toFixed(digits)}`;
+}
+
+function formatQuantity(value: number) {
+  return new Intl.NumberFormat("en-US", {
+    maximumFractionDigits: 3,
+    minimumFractionDigits: 0,
+  }).format(value);
+}
+
+function formatRmbUnit(value: number) {
+  return formatRmb(value, 3);
+}
+
+function formatRmbTotal(value: number) {
   return `\u00A5${value.toFixed(2)}`;
 }
 
@@ -338,7 +353,7 @@ export function QuoteLinesEditor({
                         value={row.quantity}
                       />
                     ) : (
-                      row.quantity
+                      formatQuantity(row.quantity)
                     )}
                   </TableCell>
                   <TableCell>
@@ -349,12 +364,12 @@ export function QuoteLinesEditor({
                         onChange={(event) =>
                           updateRow(index, { unit_price_rmb: Number(event.currentTarget.value) || 0 })
                         }
-                        step="0.01"
+                        step="0.001"
                         type="number"
                         value={row.unit_price_rmb}
                       />
                     ) : (
-                      formatRmb(row.unit_price_rmb)
+                      formatRmbUnit(row.unit_price_rmb)
                     )}
                   </TableCell>
                   <TableCell>
@@ -442,7 +457,7 @@ export function QuoteLinesEditor({
             <TableCell className="font-semibold" colSpan={4}>
               Total
             </TableCell>
-            <TableCell className="font-semibold">{formatRmb(runningCostTotal)}</TableCell>
+            <TableCell className="font-semibold">{formatRmbTotal(runningCostTotal)}</TableCell>
             <TableCell />
             <TableCell />
             <TableCell />

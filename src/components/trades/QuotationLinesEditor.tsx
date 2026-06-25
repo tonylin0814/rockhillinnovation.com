@@ -64,6 +64,13 @@ function formatUsd(value: number) {
   }).format(value);
 }
 
+function formatQuantity(value: number) {
+  return new Intl.NumberFormat("en-US", {
+    maximumFractionDigits: 3,
+    minimumFractionDigits: 0,
+  }).format(value);
+}
+
 function formatDate(value: string) {
   return new Intl.DateTimeFormat("en-US", {
     month: "short",
@@ -308,7 +315,7 @@ export function QuotationLinesEditor({
                         value={row.quantity}
                       />
                     ) : (
-                      row.quantity
+                      formatQuantity(row.quantity)
                     )}
                   </TableCell>
                   <TableCell>
