@@ -4,7 +4,7 @@ import { Loader2 } from "lucide-react";
 import { useMemo, useState, useTransition } from "react";
 import { toast } from "sonner";
 
-import { exportCalculatorToProduct, getJudyPalletExplanation } from "@/app/actions/tools";
+import { exportCalculatorToProduct, getJudyPalletExplanation, type JudyPalletResult } from "@/app/actions/tools";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -13,7 +13,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import {
   buildPalletSideViewSvg,
   buildPalletTopViewSvg,
-  calculatePallet,
   CONTAINER_PRESETS,
   type CartonInput,
   type PalletCalculation,
@@ -63,10 +62,8 @@ export function PalletCalculatorClient({
   const [qtyPerCarton, setQtyPerCarton] = useState("");
   const [forkliftClearanceCm, setForkliftClearanceCm] = useState("19");
   const [containerType, setContainerType] = useState<ContainerType>("40hq");
-  const [calculation, setCalculation] = useState<PalletCalculation | null>(null);
+  const [judyResult, setJudyResult] = useState<JudyPalletResult | null>(null);
   const [calculationCarton, setCalculationCarton] = useState<CartonInput | null>(null);
-  const [calculationPallet, setCalculationPallet] = useState<PalletInput | null>(null);
-  const [judyExplanation, setJudyExplanation] = useState<string | null>(null);
   const [isCalculating, startCalculation] = useTransition();
   const [isExporting, startExport] = useTransition();
 
@@ -101,74 +98,65 @@ export function PalletCalculatorClient({
     carton.heightCm > 0 &&
     carton.weightKg > 0 &&
     carton.qtyPerCarton > 0 &&
-    forkliftClearance >= 0 &&
-    Boolean(palletInput && palletInput.maxHeightCm > 0);
-  const standardPlan = calculation && selectedProfile
-    ? buildContainerPlan("std")
-    : null;
-  const hqPlan = calculation && selectedProfile
-    ? buildContainerPlan("40hq")
-    : null;
+    forkliftClearance >= 0;
+  const standardPlan = judyResult?.standardPlan ?? null;
+  const hqPlan = judyResult?.hqPlan ?? null;
   const activePlan = containerType === "40hq" ? hqPlan : standardPlan;
   const containerItems = activePlan
     ? activePlan.cartonsPerPallet * CONTAINER_PRESETS[containerType].pallets
     : null;
-  const topViewSvg = calculation && calculationCarton && calculationPallet
-    ? buildPalletTopViewSvg(calculationCarton, calculationPallet, calculation)
+  const drawingCalculation = judyResult && activePlan
+    ? buildDrawingCalculation(judyResult, activePlan)
+    : null;
+  const topViewSvg = drawingCalculation && calculationCarton && palletInput
+    ? buildPalletTopViewSvg(calculationCarton, palletInput, drawingCalculation)
     : "";
-  const standardSideViewSvg = calculationCarton && selectedProfile && standardPlan?.calculation
+  const standardSideViewSvg = calculationCarton && selectedProfile && judyResult && standardPlan
     ? buildPalletSideViewSvg(
         calculationCarton,
         {
           lengthCm: Number(selectedProfile.length_cm),
-          maxHeightCm: standardPlan.availableStackHeightCm,
+          maxHeightCm: getAvailableStackHeight("std"),
           maxWeightKg: Number(selectedProfile.max_weight_kg),
           widthCm: Number(selectedProfile.width_cm),
         },
-        standardPlan.calculation
+        buildDrawingCalculation(judyResult, standardPlan)
       )
     : "";
-  const hqSideViewSvg = calculationCarton && selectedProfile && hqPlan?.calculation
+  const hqSideViewSvg = calculationCarton && selectedProfile && judyResult && hqPlan
     ? buildPalletSideViewSvg(
         calculationCarton,
         {
           lengthCm: Number(selectedProfile.length_cm),
-          maxHeightCm: hqPlan.availableStackHeightCm,
+          maxHeightCm: getAvailableStackHeight("40hq"),
           maxWeightKg: Number(selectedProfile.max_weight_kg),
           widthCm: Number(selectedProfile.width_cm),
         },
-        hqPlan.calculation
+        buildDrawingCalculation(judyResult, hqPlan)
       )
     : "";
 
-  function buildContainerPlan(type: ContainerType) {
+  function buildDrawingCalculation(result: JudyPalletResult, plan: JudyPalletResult["standardPlan"]): PalletCalculation {
+    return {
+      cartonsAlongLength: result.layerSetup.cartonsAlongLength,
+      cartonsAlongWidth: result.layerSetup.cartonsAlongWidth,
+      cartonsPerLayer: result.layerSetup.cartonsPerLayer,
+      cartonsPerPallet: plan.cartonsPerPallet,
+      footprintUsedPct: 0,
+      itemsPerPallet: plan.itemsPerPallet,
+      layers: plan.layerCount,
+      orientation: result.layerSetup.orientation,
+      palletGrossWeightKg: plan.palletGrossWeightKg,
+      palletHeightCm: plan.stackHeightCm,
+    };
+  }
+
+  function getAvailableStackHeight(type: ContainerType) {
     if (!selectedProfile) {
-      return null;
+      return 0;
     }
 
-    const containerHeightCm = CONTAINER_HEIGHTS_CM[type];
-    const palletHeightCm = Number(selectedProfile.height_cm);
-    const availableStackHeightCm = Math.max(0, containerHeightCm - palletHeightCm - forkliftClearance);
-    const result = calculatePallet(carton, {
-      lengthCm: Number(selectedProfile.length_cm),
-      maxHeightCm: availableStackHeightCm,
-      maxWeightKg: Number(selectedProfile.max_weight_kg),
-      widthCm: Number(selectedProfile.width_cm),
-    });
-    const totalHeightCm = palletHeightCm + result.palletHeightCm + forkliftClearance;
-
-    return {
-      availableStackHeightCm,
-      cartonsPerPallet: result.cartonsPerPallet,
-      calculation: result,
-      containerHeightCm,
-      fits: totalHeightCm <= containerHeightCm,
-      itemsPerPallet: result.itemsPerPallet,
-      layerCount: result.layers,
-      palletGrossWeightKg: result.palletGrossWeightKg,
-      stackHeightCm: result.palletHeightCm,
-      totalHeightCm,
-    };
+    return Math.max(0, CONTAINER_HEIGHTS_CM[type] - Number(selectedProfile.height_cm) - forkliftClearance);
   }
 
   function selectProduct(productId: string) {
@@ -192,29 +180,18 @@ export function PalletCalculatorClient({
   }
 
   function handleCalculate() {
-    if (!canCalculate || !selectedProfile || !palletInput) {
+    if (!canCalculate || !selectedProfile) {
       toast.error("Select a pallet profile and enter carton details first");
       return;
     }
 
-    const result = calculatePallet(carton, palletInput);
-    setCalculation(result);
     setCalculationCarton(carton);
-    setCalculationPallet(palletInput);
-    setJudyExplanation(null);
+    setJudyResult(null);
 
     startCalculation(async () => {
       const aiResult = await getJudyPalletExplanation({
-        calculation: {
-          cartonsAlongLength: result.cartonsAlongLength,
-          cartonsAlongWidth: result.cartonsAlongWidth,
-          cartonsPerLayer: result.cartonsPerLayer,
-          footprintUsedPct: result.footprintUsedPct,
-          orientation: result.orientation,
-        },
         carton,
         forkliftClearanceCm: forkliftClearance,
-        hqPlan: buildContainerPlan("40hq")!,
         pallet: {
           heightCm: Number(selectedProfile.height_cm),
           lengthCm: Number(selectedProfile.length_cm),
@@ -223,15 +200,14 @@ export function PalletCalculatorClient({
           widthCm: Number(selectedProfile.width_cm),
         },
         productName: productName || "Manual product",
-        standardPlan: buildContainerPlan("std")!,
       });
 
       if (aiResult.error) {
-        setJudyExplanation(aiResult.error);
+        toast.error(aiResult.error);
         return;
       }
 
-      setJudyExplanation(aiResult.explanation ?? "");
+      setJudyResult(aiResult.result ?? null);
     });
   }
 
@@ -377,7 +353,7 @@ export function PalletCalculatorClient({
 
           <div className="grid gap-4 sm:grid-cols-4">
             {[
-              ["Cartons / Layer", activePlan?.calculation.cartonsPerLayer],
+              ["Cartons / Layer", judyResult?.layerSetup.cartonsPerLayer],
               ["Cartons / Pallet", activePlan?.cartonsPerPallet],
               ["Items / Pallet", activePlan?.itemsPerPallet],
               ["Container Items", containerItems],
@@ -393,15 +369,15 @@ export function PalletCalculatorClient({
             ))}
           </div>
 
-          {calculation && standardPlan && hqPlan ? (
+          {judyResult && standardPlan && hqPlan ? (
             <div className="grid gap-4 lg:grid-cols-3">
               <Card className="border-slate-200 shadow-sm">
                 <CardContent className="p-4">
                   <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Layer Setup</p>
                   <p className="mt-2 text-2xl font-semibold text-[#0d1b34]">
-                    {calculation.cartonsAlongLength} x {calculation.cartonsAlongWidth}
+                    {judyResult.layerSetup.cartonsAlongLength} x {judyResult.layerSetup.cartonsAlongWidth}
                   </p>
-                  <p className="mt-1 text-sm text-slate-500">{calculation.cartonsPerLayer} cartons / layer</p>
+                  <p className="mt-1 text-sm text-slate-500">{judyResult.layerSetup.cartonsPerLayer} cartons / layer</p>
                 </CardContent>
               </Card>
               <Card className="border-slate-200 shadow-sm">
@@ -437,13 +413,13 @@ export function PalletCalculatorClient({
                   <div className="h-4 w-full animate-pulse rounded bg-slate-200" />
                   <div className="h-4 w-2/3 animate-pulse rounded bg-slate-200" />
                 </div>
-              ) : judyExplanation ? (
-                <p className="whitespace-pre-wrap text-sm leading-6 text-[#0d1b34]">{judyExplanation}</p>
+              ) : judyResult ? (
+                <p className="whitespace-pre-wrap text-sm leading-6 text-[#0d1b34]">{judyResult.explanation}</p>
               ) : (
                 <p className="text-sm text-slate-500">Click Calculate & Ask Judy to see stacking instructions.</p>
               )}
 
-              {calculation && selectedProfile && standardPlan && hqPlan ? (
+              {judyResult && selectedProfile && standardPlan && hqPlan ? (
                 <div className="rounded-lg border border-slate-200 bg-slate-50 p-4 font-mono text-sm">
                   <div className="grid grid-cols-[9rem_1fr] gap-y-1">
                     <span>Pallet height:</span>
@@ -473,7 +449,7 @@ export function PalletCalculatorClient({
             </CardContent>
           </Card>
 
-          {calculation ? (
+          {judyResult ? (
             <>
               <div className="grid gap-6 xl:grid-cols-3">
                 <Card className="border-slate-200 shadow-sm">

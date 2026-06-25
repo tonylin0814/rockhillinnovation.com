@@ -102,41 +102,36 @@ export async function generatePalletCalculationPdf(formData: FormData): Promise<
   return { success: true, url: `data:application/pdf;base64,${pdf.toString("base64")}` };
 }
 
+const judyPalletPlanSchema = z.object({
+  cartonsPerPallet: z.coerce.number().int().nonnegative(),
+  fits: z.boolean(),
+  itemsPerPallet: z.coerce.number().int().nonnegative(),
+  layerCount: z.coerce.number().int().nonnegative(),
+  palletGrossWeightKg: z.coerce.number().nonnegative(),
+  stackHeightCm: z.coerce.number().nonnegative(),
+  totalHeightCm: z.coerce.number().nonnegative(),
+});
+
+const judyPalletResultSchema = z.object({
+  explanation: z.string().trim().min(1),
+  layerSetup: z.object({
+    cartonsAlongLength: z.coerce.number().int().positive(),
+    cartonsAlongWidth: z.coerce.number().int().positive(),
+    cartonsPerLayer: z.coerce.number().int().positive(),
+    orientation: z.enum(["L x W base", "W x L base"]),
+  }),
+  standardPlan: judyPalletPlanSchema,
+  hqPlan: judyPalletPlanSchema,
+});
+
+export type JudyPalletResult = z.infer<typeof judyPalletResultSchema>;
+
 export async function getJudyPalletExplanation(payload: {
   productName: string;
   carton: { lengthCm: number; widthCm: number; heightCm: number; weightKg: number; qtyPerCarton: number };
   pallet: { name: string; lengthCm: number; widthCm: number; heightCm: number; maxWeightKg: number };
   forkliftClearanceCm: number;
-  calculation: {
-    cartonsAlongLength: number;
-    cartonsAlongWidth: number;
-    orientation: string;
-    cartonsPerLayer: number;
-    footprintUsedPct: number;
-  };
-  standardPlan: {
-    containerHeightCm: number;
-    availableStackHeightCm: number;
-    layerCount: number;
-    cartonsPerPallet: number;
-    itemsPerPallet: number;
-    palletGrossWeightKg: number;
-    stackHeightCm: number;
-    totalHeightCm: number;
-    fits: boolean;
-  };
-  hqPlan: {
-    containerHeightCm: number;
-    availableStackHeightCm: number;
-    layerCount: number;
-    cartonsPerPallet: number;
-    itemsPerPallet: number;
-    palletGrossWeightKg: number;
-    stackHeightCm: number;
-    totalHeightCm: number;
-    fits: boolean;
-  };
-}): Promise<{ explanation?: string; error?: string }> {
+}): Promise<{ result?: JudyPalletResult; error?: string }> {
   const user = await getCurrentUser();
   if (!user) return { error: "Unauthorized" };
   const apiKey = process.env.OPENAI_API_KEY;
@@ -148,17 +143,23 @@ export async function getJudyPalletExplanation(payload: {
   try {
     const openai = new OpenAI({ apiKey });
     const completion = await openai.chat.completions.create({
-      max_tokens: 1024,
+      max_tokens: 900,
       messages: [
         { content: prompt.system, role: "system" },
         { content: prompt.user, role: "user" },
       ],
       model: "gpt-4o-mini",
+      response_format: { type: "json_object" },
       temperature: 0.2,
     });
 
     const text = completion.choices[0]?.message.content ?? "";
-    return { explanation: text };
+    const parsed = judyPalletResultSchema.safeParse(JSON.parse(text));
+    if (!parsed.success) {
+      return { error: "Judy returned an invalid pallet result" };
+    }
+
+    return { result: parsed.data };
   } catch {
     return { error: "Failed to reach AI service" };
   }
