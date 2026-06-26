@@ -144,6 +144,7 @@ function PreviousQuoteCell({ product }: { product: ProductOption | null | undefi
 export function QuotationLinesEditor({
   availableProducts,
   canManage,
+  editRequestKey = 0,
   initialLines,
   sessionId,
   sessionStatus,
@@ -152,6 +153,7 @@ export function QuotationLinesEditor({
   sessionId: string;
   initialLines: ClientQuotationLine[];
   availableProducts: ProductOption[];
+  editRequestKey?: number;
   sessionStatus: ClientQuotationSession["status"];
   canManage: boolean;
   workingExchangeRate: number | null;
@@ -234,6 +236,11 @@ export function QuotationLinesEditor({
       window.localStorage.removeItem(draftKey);
     }
   }, [canEdit, draftKey]);
+
+  useEffect(() => {
+    if (!canEdit || editRequestKey <= 0) return;
+    setIsEditing(true);
+  }, [canEdit, editRequestKey]);
 
   useEffect(() => {
     if (!canEdit || !isEditing) return;
@@ -346,7 +353,7 @@ export function QuotationLinesEditor({
       <div className="flex justify-end">
         {canEdit && !isEditing ? (
           <Button onClick={() => setIsEditing(true)} size="sm" variant="outline">
-            Edit Lines
+            Edit
           </Button>
         ) : null}
       </div>

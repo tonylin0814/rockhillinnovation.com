@@ -1,6 +1,6 @@
 "use client";
 
-import { CheckCircle2, Download, FileText, RotateCcw, Send, XCircle } from "lucide-react";
+import { CheckCircle2, Download, FileText, PencilLine, RotateCcw, Send, XCircle } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
@@ -70,6 +70,7 @@ export function ClientQuotationsTab({
 }) {
   const router = useRouter();
   const [expandedSessionId, setExpandedSessionId] = useState<string | null>(null);
+  const [editRequestBySession, setEditRequestBySession] = useState<Record<string, number>>({});
   const [pendingSessionId, setPendingSessionId] = useState<string | null>(null);
   const [loadedLines, setLoadedLines] = useState<Record<string, LoadedQuotationLines>>({});
   const [loadingSessionId, setLoadingSessionId] = useState<string | null>(null);
@@ -93,11 +94,8 @@ export function ClientQuotationsTab({
     });
   }
 
-  async function toggleLines(sessionId: string) {
-    const nextExpandedSessionId = expandedSessionId === sessionId ? null : sessionId;
-    setExpandedSessionId(nextExpandedSessionId);
-
-    if (!nextExpandedSessionId || loadedLines[sessionId]) {
+  async function loadLines(sessionId: string) {
+    if (loadedLines[sessionId]) {
       return;
     }
 
@@ -124,6 +122,26 @@ export function ClientQuotationsTab({
     } finally {
       setLoadingSessionId(null);
     }
+  }
+
+  async function toggleLines(sessionId: string) {
+    const nextExpandedSessionId = expandedSessionId === sessionId ? null : sessionId;
+    setExpandedSessionId(nextExpandedSessionId);
+
+    if (!nextExpandedSessionId) {
+      return;
+    }
+
+    await loadLines(sessionId);
+  }
+
+  async function editLines(sessionId: string) {
+    setExpandedSessionId(sessionId);
+    setEditRequestBySession((currentRequests) => ({
+      ...currentRequests,
+      [sessionId]: (currentRequests[sessionId] ?? 0) + 1,
+    }));
+    await loadLines(sessionId);
   }
 
   return (
@@ -227,8 +245,14 @@ export function ClientQuotationsTab({
                           Download PDF
                         </a>
                       ) : null}
+                      {canManage && session.status === "draft" ? (
+                        <Button disabled={loadingSessionId === session.id} onClick={() => editLines(session.id)} size="sm">
+                          <PencilLine className="mr-1.5 h-3.5 w-3.5" />
+                          Edit
+                        </Button>
+                      ) : null}
                       <Button onClick={() => toggleLines(session.id)} size="sm" variant="outline">
-                        View Lines
+                        {isExpanded ? "Hide Lines" : "View Lines"}
                       </Button>
                     </div>
                   </div>
@@ -245,6 +269,7 @@ export function ClientQuotationsTab({
                         availableProducts={loadedLines[session.id]?.products ?? []}
                         canManage={canManage}
                         initialLines={loadedLines[session.id]?.lines ?? []}
+                        editRequestKey={editRequestBySession[session.id] ?? 0}
                         sessionId={session.id}
                         sessionStatus={session.status}
                         workingExchangeRate={workingExchangeRate}
