@@ -109,6 +109,25 @@ function formatRmb(value: number) {
   }).format(value)}`;
 }
 
+function formatQuantityInput(value: string) {
+  if (!value.trim()) {
+    return "";
+  }
+
+  const numericValue = Number(value.replace(/,/g, ""));
+  if (!Number.isFinite(numericValue)) {
+    return value;
+  }
+
+  return new Intl.NumberFormat("en-US", {
+    maximumFractionDigits: 3,
+  }).format(numericValue);
+}
+
+function parseFormattedNumber(value: string) {
+  return value.replace(/,/g, "");
+}
+
 const clientTypeLabels: Record<ClientInvoice["invoice_type"], string> = {
   commercial: "Commercial Invoice",
   deposit: "Deposit Invoice",
@@ -410,11 +429,14 @@ function EditClientInvoiceDialog({ invoice }: { invoice: ClientInvoice }) {
                         <TableCell>
                           <Input
                             disabled={isPending}
+                            inputMode="decimal"
                             min="0"
-                            onChange={(event) => updateLine(index, "quantity", event.currentTarget.value)}
+                            onChange={(event) =>
+                              updateLine(index, "quantity", parseFormattedNumber(event.currentTarget.value))
+                            }
                             step="0.001"
-                            type="number"
-                            value={line.quantity}
+                            type="text"
+                            value={formatQuantityInput(line.quantity)}
                           />
                         </TableCell>
                         <TableCell>
@@ -647,11 +669,101 @@ function EditSupplierInvoiceDialog({ invoice }: { invoice: SupplierInvoiceOutgoi
   const [open, setOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+  const [lines, setLines] = useState(() =>
+    (invoice.lines ?? [])
+      .slice()
+      .sort((a, b) => a.sort_order - b.sort_order)
+      .map((line, index) => ({
+        _key: line.id ?? `${invoice.id}-${index}`,
+        description_chinese: line.description_chinese ?? "",
+        description_english: line.description_english ?? "",
+        payment_category: line.payment_category ?? "produced",
+        product_id: line.product_id,
+        quantity: String(line.quantity ?? 0),
+        sort_order: index,
+        source_quote_line_id: line.source_quote_line_id,
+        unit_price_rmb: String(line.unit_price_rmb ?? 0),
+      }))
+  );
+
+  function handleOpenChange(value: boolean) {
+    setOpen(value);
+
+    if (value) {
+      setLines(
+        (invoice.lines ?? [])
+          .slice()
+          .sort((a, b) => a.sort_order - b.sort_order)
+          .map((line, index) => ({
+            _key: line.id ?? `${invoice.id}-${index}`,
+            description_chinese: line.description_chinese ?? "",
+            description_english: line.description_english ?? "",
+            payment_category: line.payment_category ?? "produced",
+            product_id: line.product_id,
+            quantity: String(line.quantity ?? 0),
+            sort_order: index,
+            source_quote_line_id: line.source_quote_line_id,
+            unit_price_rmb: String(line.unit_price_rmb ?? 0),
+          }))
+      );
+    }
+  }
+
+  function updateLine(index: number, field: "description_english" | "quantity" | "unit_price_rmb", value: string) {
+    setLines((currentLines) =>
+      currentLines.map((line, lineIndex) => (lineIndex === index ? { ...line, [field]: value } : line))
+    );
+  }
+
+  function addLine() {
+    setLines((currentLines) => [
+      ...currentLines,
+      {
+        _key: crypto.randomUUID(),
+        description_chinese: "",
+        description_english: "",
+        payment_category: "produced" as const,
+        product_id: null,
+        quantity: "1",
+        sort_order: currentLines.length,
+        source_quote_line_id: null,
+        unit_price_rmb: "0",
+      },
+    ]);
+  }
+
+  function removeLine(index: number) {
+    setLines((currentLines) =>
+      currentLines
+        .filter((_, lineIndex) => lineIndex !== index)
+        .map((line, lineIndex) => ({ ...line, sort_order: lineIndex }))
+    );
+  }
+
+  const lineSubtotal = lines.reduce(
+    (sum, line) => sum + (Number(line.quantity) || 0) * (Number(line.unit_price_rmb) || 0),
+    0
+  );
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError(null);
     const formData = new FormData(event.currentTarget);
+    formData.set(
+      "supplier_invoice_lines_json",
+      JSON.stringify(
+        lines.map((line, index) => ({
+          description_chinese: line.description_chinese,
+          description_english: line.description_english,
+          payment_category: line.payment_category,
+          product_id: line.product_id,
+          quantity: Number(line.quantity) || 0,
+          sort_order: index,
+          source_quote_line_id: line.source_quote_line_id,
+          unit_price_rmb: Number(line.unit_price_rmb) || 0,
+        }))
+      )
+    );
 
     startTransition(async () => {
       const result = await updateSupplierInvoice(invoice.id, formData);
@@ -668,14 +780,14 @@ function EditSupplierInvoiceDialog({ invoice }: { invoice: SupplierInvoiceOutgoi
   }
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
         <Button size="icon" title="Edit supplier invoice" type="button" variant="ghost">
           <Pencil className="h-4 w-4" />
           <span className="sr-only">Edit supplier invoice</span>
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-xl">
+      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-4xl">
         <DialogHeader>
           <DialogTitle>Edit Supplier Invoice</DialogTitle>
           <DialogDescription>Update supplier invoice details. This does not regenerate the PDF file.</DialogDescription>
@@ -746,6 +858,90 @@ function EditSupplierInvoiceDialog({ invoice }: { invoice: SupplierInvoiceOutgoi
               id={`supplier_notes_${invoice.id}`}
               name="notes"
             />
+          </div>
+          <div className="space-y-3 rounded-lg border border-slate-200 p-4">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <p className="text-sm font-semibold text-[#0d1b34]">Supplier Invoice Detail Lines</p>
+                <p className="text-xs text-slate-500">These line edits update the invoice totals, but do not regenerate the PDF.</p>
+              </div>
+              <Button disabled={isPending} onClick={addLine} size="sm" type="button" variant="outline">
+                <Plus className="mr-2 h-4 w-4" />
+                Add Line
+              </Button>
+            </div>
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="min-w-[260px]">Description</TableHead>
+                    <TableHead className="w-28">Qty</TableHead>
+                    <TableHead className="w-36">Unit (RMB)</TableHead>
+                    <TableHead className="w-36 text-right">Total</TableHead>
+                    <TableHead className="w-12" />
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {lines.map((line, index) => {
+                    const total = (Number(line.quantity) || 0) * (Number(line.unit_price_rmb) || 0);
+
+                    return (
+                      <TableRow key={line._key}>
+                        <TableCell>
+                          <Input
+                            disabled={isPending}
+                            onChange={(event) => updateLine(index, "description_english", event.currentTarget.value)}
+                            value={line.description_english}
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <Input
+                            disabled={isPending}
+                            inputMode="decimal"
+                            min="0"
+                            onChange={(event) =>
+                              updateLine(index, "quantity", parseFormattedNumber(event.currentTarget.value))
+                            }
+                            step="0.001"
+                            type="text"
+                            value={formatQuantityInput(line.quantity)}
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <Input
+                            disabled={isPending}
+                            min="0"
+                            onChange={(event) => updateLine(index, "unit_price_rmb", event.currentTarget.value)}
+                            step="0.0001"
+                            type="number"
+                            value={line.unit_price_rmb}
+                          />
+                        </TableCell>
+                        <TableCell className="text-right font-medium">{formatRmb(total)}</TableCell>
+                        <TableCell>
+                          <Button
+                            disabled={isPending || lines.length === 1}
+                            onClick={() => removeLine(index)}
+                            size="icon"
+                            type="button"
+                            variant="ghost"
+                          >
+                            <Trash2 className="h-4 w-4 text-red-500" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                  <TableRow>
+                    <TableCell className="font-semibold" colSpan={3}>
+                      Subtotal
+                    </TableCell>
+                    <TableCell className="text-right font-semibold">{formatRmb(lineSubtotal)}</TableCell>
+                    <TableCell />
+                  </TableRow>
+                </TableBody>
+              </Table>
+            </div>
           </div>
           {error ? <p className="text-sm font-medium text-red-600">{error}</p> : null}
           <div className="flex justify-end gap-2">

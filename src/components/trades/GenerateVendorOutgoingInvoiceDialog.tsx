@@ -92,7 +92,7 @@ export function GenerateVendorOutgoingInvoiceDialog({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button size="sm" variant="outline">
+        <Button className="bg-[#0d1b34] text-white hover:bg-[#13294d]" size="sm">
           <FileText className="mr-2 h-4 w-4" />
           Generate Vendor Invoice
         </Button>

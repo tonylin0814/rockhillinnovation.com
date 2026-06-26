@@ -491,6 +491,21 @@ export type SupplierInvoiceOutgoing = {
   supplier_invoice_ref: string | null;
   supplier_stated_amount_rmb: number | null;
   adjustments?: SupplierInvoiceAdjustment[];
+  lines?: SupplierInvoiceOutgoingLine[];
+};
+
+export type SupplierInvoiceOutgoingLine = {
+  id: string;
+  invoice_id: string;
+  product_id: string | null;
+  description_chinese: string | null;
+  description_english: string | null;
+  quantity: number;
+  unit_price_rmb: number;
+  total_rmb: number;
+  payment_category: "outsourced" | "produced" | "misc_expense";
+  source_quote_line_id: string | null;
+  sort_order: number;
 };
 
 export type SupplierInvoiceAdjustment = {

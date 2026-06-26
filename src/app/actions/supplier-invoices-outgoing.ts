@@ -43,6 +43,21 @@ const adjustmentSchema = z.object({
   description: z.string().trim().min(1, "Adjustment description is required"),
 });
 
+const editableSupplierInvoiceLineSchema = z.object({
+  description_chinese: z
+    .string()
+    .trim()
+    .transform((value) => (value.length ? value : null))
+    .nullable(),
+  description_english: z.string().trim().min(1, "Line description is required"),
+  payment_category: z.enum(["outsourced", "produced", "misc_expense"]).default("produced"),
+  product_id: z.string().uuid().nullable(),
+  quantity: z.coerce.number().min(0, "Quantity cannot be negative"),
+  sort_order: z.coerce.number().int().min(0).default(0),
+  source_quote_line_id: z.string().uuid().nullable(),
+  unit_price_rmb: z.coerce.number().min(0, "Unit price cannot be negative"),
+});
+
 const matchSchema = z.object({
   supplier_invoice_ref: z.string().trim().min(1, "Invoice reference is required").max(100),
   supplier_stated_amount_rmb: z.coerce
@@ -87,6 +102,30 @@ function parseAdjustments(formData: FormData, invoiceType: InvoiceKind) {
     };
   } catch {
     return { error: "Invalid adjustment lines" };
+  }
+}
+
+function parseEditableSupplierInvoiceLines(formData: FormData) {
+  const raw = formData.get("supplier_invoice_lines_json");
+
+  if (typeof raw !== "string" || !raw.trim()) {
+    return null;
+  }
+
+  try {
+    const parsed = JSON.parse(raw);
+    const result = z
+      .array(editableSupplierInvoiceLineSchema)
+      .min(1, "At least one supplier invoice line is required")
+      .safeParse(parsed);
+
+    if (!result.success) {
+      return { error: result.error.issues[0]?.message ?? "Invalid supplier invoice lines" };
+    }
+
+    return { lines: result.data };
+  } catch {
+    return { error: "Supplier invoice lines must be valid JSON" };
   }
 }
 
@@ -559,7 +598,7 @@ export async function updateSupplierInvoice(invoiceId: string, formData: FormDat
   const supabase = createServerSupabaseClient();
   const { data: invoice, error: invoiceError } = await supabase
     .from("supplier_invoices_outgoing")
-    .select("id, trade_id")
+    .select("id, trade_id, exchange_rate_id")
     .eq("id", invoiceId)
     .maybeSingle();
 
@@ -571,16 +610,79 @@ export async function updateSupplierInvoice(invoiceId: string, formData: FormDat
     return { error: "Invoice not found" };
   }
 
+  const parsedLines = parseEditableSupplierInvoiceLines(formData);
+
+  if (parsedLines?.error) {
+    return { error: parsedLines.error };
+  }
+
+  const invoiceLines = parsedLines?.lines ?? null;
+  const updatePayload: Record<string, unknown> = {
+    invoice_date: parsed.data.invoice_date,
+    invoice_number: parsed.data.invoice_number,
+    notes: parsed.data.notes,
+    status: parsed.data.status,
+    supplier_invoice_ref: parsed.data.supplier_invoice_ref,
+    supplier_stated_amount_rmb: parsed.data.supplier_stated_amount_rmb,
+  };
+
+  if (invoiceLines) {
+    const lineTotalRmb = roundMoney(
+      invoiceLines.reduce((sum, line) => sum + Number(line.quantity) * Number(line.unit_price_rmb), 0)
+    );
+    const { data: adjustments, error: adjustmentsError } = await supabase
+      .from("supplier_invoice_adjustments")
+      .select("amount_rmb")
+      .eq("invoice_id", invoiceId);
+
+    if (adjustmentsError) {
+      return { error: adjustmentsError.message };
+    }
+
+    const adjustmentTotalRmb = roundMoney(
+      (adjustments ?? []).reduce((sum, adjustment) => sum + Number(adjustment.amount_rmb), 0)
+    );
+    const totalRmb = roundMoney(lineTotalRmb + adjustmentTotalRmb);
+    updatePayload.total_rmb = totalRmb;
+
+    let exchangeRate: number | null = null;
+
+    if (invoice.exchange_rate_id) {
+      const { data: rateRow, error: rateError } = await supabase
+        .from("exchange_rates")
+        .select("rate_rmb_per_usd")
+        .eq("id", invoice.exchange_rate_id)
+        .maybeSingle();
+
+      if (rateError) {
+        return { error: rateError.message };
+      }
+
+      exchangeRate = rateRow?.rate_rmb_per_usd ?? null;
+    }
+
+    if (!exchangeRate) {
+      const { data: trade, error: tradeError } = await supabase
+        .from("trades")
+        .select("working_exchange_rate")
+        .eq("id", invoice.trade_id)
+        .maybeSingle();
+
+      if (tradeError) {
+        return { error: tradeError.message };
+      }
+
+      exchangeRate = trade?.working_exchange_rate ?? null;
+    }
+
+    if (exchangeRate) {
+      updatePayload.total_usd = roundMoney(totalRmb / exchangeRate);
+    }
+  }
+
   const { error } = await supabase
     .from("supplier_invoices_outgoing")
-    .update({
-      invoice_date: parsed.data.invoice_date,
-      invoice_number: parsed.data.invoice_number,
-      notes: parsed.data.notes,
-      status: parsed.data.status,
-      supplier_invoice_ref: parsed.data.supplier_invoice_ref,
-      supplier_stated_amount_rmb: parsed.data.supplier_stated_amount_rmb,
-    })
+    .update(updatePayload)
     .eq("id", invoiceId);
 
   if (error) {
@@ -589,6 +691,35 @@ export async function updateSupplierInvoice(invoiceId: string, formData: FormDat
     }
 
     return { error: error.message };
+  }
+
+  if (invoiceLines) {
+    const { error: deleteLinesError } = await supabase
+      .from("supplier_invoice_outgoing_lines")
+      .delete()
+      .eq("invoice_id", invoiceId);
+
+    if (deleteLinesError) {
+      return { error: deleteLinesError.message };
+    }
+
+    const { error: insertLinesError } = await supabase.from("supplier_invoice_outgoing_lines").insert(
+      invoiceLines.map((line) => ({
+        description_chinese: line.description_chinese,
+        description_english: line.description_english,
+        invoice_id: invoiceId,
+        payment_category: line.payment_category,
+        product_id: line.product_id,
+        quantity: line.quantity,
+        sort_order: line.sort_order,
+        source_quote_line_id: line.source_quote_line_id,
+        unit_price_rmb: line.unit_price_rmb,
+      }))
+    );
+
+    if (insertLinesError) {
+      return { error: insertLinesError.message };
+    }
   }
 
   revalidatePath(`/trades/${invoice.trade_id}`);
