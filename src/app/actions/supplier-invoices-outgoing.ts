@@ -283,11 +283,12 @@ export async function generateSupplierInvoiceOutgoing(
     const pct = pctForLine(line);
     const quantity = Number(line.quantity);
     const sourceTotalRmb = Number(line.total_price_rmb);
-    const unitPriceFull = quantity > 0 && Number.isFinite(sourceTotalRmb)
+    const hasSourceTotal = Number.isFinite(sourceTotalRmb) && sourceTotalRmb > 0;
+    const unitPriceFull = quantity > 0 && hasSourceTotal
       ? sourceTotalRmb / quantity
       : Number(line.unit_price_rmb);
-    const unitPriceInvoice = roundMoney(unitPriceFull * pct);
-    const totalRmb = roundMoney(sourceTotalRmb * pct);
+    const unitPriceInvoice = unitPriceFull * pct;
+    const totalRmb = roundMoney((hasSourceTotal ? sourceTotalRmb : quantity * unitPriceFull) * pct);
     const paymentPct = Math.round(pct * 100);
     const descriptionChinese = line.item_name_chinese ?? product?.name_chinese ?? null;
     const descriptionEnglish = line.item_name_english ?? product?.name_english ?? "Item";
@@ -310,7 +311,7 @@ export async function generateSupplierInvoiceOutgoing(
         paymentPct,
         quantity,
         totalRmb,
-        unitPriceRmb: unitPriceFull,
+        unitPriceRmb: unitPriceInvoice,
       },
     };
   });
@@ -335,6 +336,22 @@ export async function generateSupplierInvoiceOutgoing(
   const adjustmentTotalRmb = roundMoney(adjustmentLines.reduce((sum, line) => sum + line.pdf.totalRmb, 0));
   const totalRmb = roundMoney(baseTotalRmb + adjustmentTotalRmb);
   const totalUsd = exchangeRate ? roundMoney(totalRmb / exchangeRate) : null;
+  const { data: existingInvoice, error: existingInvoiceError } = await supabase
+    .from("supplier_invoices_outgoing")
+    .select("id")
+    .eq("invoice_number", parsed.data.invoice.invoice_number)
+    .maybeSingle();
+
+  if (existingInvoiceError) {
+    return { error: existingInvoiceError.message };
+  }
+
+  if (existingInvoice) {
+    return {
+      error: `Supplier invoice ${parsed.data.invoice.invoice_number} already exists. Delete the old invoice from the Supplier Invoices list before generating a new one, or use a different invoice number.`,
+    };
+  }
+
   const html = buildSupplierInvoiceOutgoingHtml({
     exchangeRate,
     invoiceDate: parsed.data.invoice.invoice_date,
@@ -378,6 +395,12 @@ export async function generateSupplierInvoiceOutgoing(
     .single();
 
   if (invoiceError) {
+    if (invoiceError.code === "23505") {
+      return {
+        error: `Supplier invoice ${parsed.data.invoice.invoice_number} already exists. Delete the old invoice from the Supplier Invoices list before generating a new one, or use a different invoice number.`,
+      };
+    }
+
     return { error: invoiceError.message };
   }
 
