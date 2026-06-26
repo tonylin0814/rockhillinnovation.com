@@ -40,7 +40,6 @@ export async function askJudy(tradeId: string, messages: JudyMessage[]): Promise
 
   const [
     { data: trade },
-    { data: orderLines },
     { data: componentDemand },
     { data: quoteSessions },
     { data: quotationSessions },
@@ -56,22 +55,25 @@ export async function askJudy(tradeId: string, messages: JudyMessage[]): Promise
       .eq("id", tradeId)
       .maybeSingle(),
     supabase
-      .from("order_lines")
-      .select("*, product:products(code, name_english)")
-      .eq("trade_id", tradeId)
-      .order("sort_order"),
-    supabase
       .from("component_demand")
       .select("*, product:products(code, name_english, payment_category)")
       .eq("trade_id", tradeId),
     supabase
       .from("supplier_quote_sessions")
-      .select("id, session_number, quote_date, status, recorded_by, notes")
+      .select(
+        `id, session_number, quote_date, status, recorded_by, notes,
+         supplier_quote_lines(id, item_name_english, item_name_chinese, quantity, unit_price_rmb, unit_quote_usd, payment_category, notes, sort_order,
+                              product:products(code, name_english))`
+      )
       .eq("trade_id", tradeId)
       .order("session_number", { ascending: false }),
     supabase
       .from("client_quotation_sessions")
-      .select("id, session_number, quote_date, status, notes")
+      .select(
+        `id, session_number, quote_date, status, notes,
+         client_quotation_lines(id, item_description, quantity, unit_price_usd, total_price_usd, notes,
+                                product:products(code, name_english))`
+      )
       .eq("trade_id", tradeId)
       .order("session_number", { ascending: false }),
     supabase.from("client_invoices").select("invoice_number, invoice_type, status, total_usd").eq("trade_id", tradeId),
@@ -109,7 +111,6 @@ export async function askJudy(tradeId: string, messages: JudyMessage[]): Promise
       client_invoices: clientInvoices ?? [],
       client_quotation_sessions: quotationSessions ?? [],
       component_demand: componentDemand ?? [],
-      order_lines: orderLines ?? [],
       recent_ledger_entries: ledgerEntries ?? [],
       shareholder_book: shareholderBook ?? null,
       shareholders: shareholders ?? [],
@@ -134,7 +135,16 @@ export async function askJudy(tradeId: string, messages: JudyMessage[]): Promise
 
 You have complete access to the data for a specific trade. Your job is to answer questions about this trade clearly and concisely: financials, invoice status, payment progress, shareholder distributions, cost breakdowns, etc.
 
-Speak professionally but conversationally. When quoting numbers, be precise and include units (USD or RMB). If something is unclear or missing from the data, say so directly rather than guessing.
+Speak like a helpful coworker in a natural business conversation, not like a textbook or calculator worksheet.
+
+Default answer style:
+- Start with the direct answer in one short sentence.
+- Keep the response brief unless the user asks for details.
+- For profit/margin questions, give the final profit and margin first, then one compact support line showing revenue, cost, and exchange rate.
+- Do not write long numbered walkthroughs, LaTeX formulas, or step-by-step math unless the user explicitly asks "show me the calculation" or "break it down".
+- Use plain language like "Tasting Set looks like about $39.3k profit, around 61.8% margin."
+- When quoting numbers, be precise and include units (USD or RMB).
+- If something is unclear or missing from the data, say so directly rather than guessing.
 
 TRADE DATA:
 ${context}`;
