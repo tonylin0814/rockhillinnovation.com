@@ -62,8 +62,15 @@ export function buildJicaiInvoiceHtml({
   totalRmb,
   totalUsd,
 }: SupplierInvoiceParams): string {
-  const invoiceTypeLabel = invoiceType === "deposit" ? "定金付款通知" : "尾款付款通知";
-  const invoiceTypeSub = invoiceType === "deposit" ? "Supplier Deposit Invoice" : "Supplier Final Invoice";
+  const invoiceTypeLabel =
+    invoiceType === "commercial" ? "商业发票" : invoiceType === "deposit" ? "定金付款通知" : "尾款付款通知";
+  const invoiceTypeSub =
+    invoiceType === "commercial"
+      ? "Supplier Commercial Invoice"
+      : invoiceType === "deposit"
+        ? "Supplier Deposit Invoice"
+        : "Supplier Final Invoice";
+  const showPct = invoiceType !== "commercial";
   const supplierNameDisplay = escapeHtml(supplierNameChinese ?? supplierName ?? "供应商");
   const supplierBankingNameDisplay = escapeHtml(supplierName ?? supplierNameChinese ?? "供应商");
   const tableRows = lines
@@ -73,7 +80,11 @@ export function buildJicaiInvoiceHtml({
           <td class="si-td si-td-chinese">${escapeHtml(line.descriptionChinese ?? line.descriptionEnglish ?? "-")}</td>
           <td class="si-td si-td-cat">${categoryLabels[line.paymentCategory] ?? line.paymentCategory}</td>
           <td class="si-td si-td-center">
-            <span class="si-pct-badge ${line.paymentPct < 100 ? "si-pct-deposit" : "si-pct-full"}">${line.paymentPct}%</span>
+            ${
+              showPct
+                ? `<span class="si-pct-badge ${line.paymentPct < 100 ? "si-pct-deposit" : "si-pct-full"}">${line.paymentPct}%</span>`
+                : ""
+            }
           </td>
           <td class="si-td si-td-right">${formatQuantity(line.quantity)}</td>
           <td class="si-td si-td-right">${formatUnitRmb(line.unitPriceRmb)}</td>

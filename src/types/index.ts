@@ -479,7 +479,7 @@ export type SupplierInvoiceOutgoing = {
   id: string;
   trade_id: string;
   invoice_number: string;
-  invoice_type: "deposit" | "final";
+  invoice_type: "deposit" | "final" | "commercial";
   invoice_date: string;
   status: "draft" | "sent" | "paid";
   total_rmb: number;

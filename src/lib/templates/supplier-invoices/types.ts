@@ -23,7 +23,7 @@ export type SupplierInvoiceLine = {
 export type SupplierInvoiceParams = {
   invoiceNumber: string;
   invoiceDate: string;
-  invoiceType: "deposit" | "final";
+  invoiceType: "deposit" | "final" | "commercial";
   supplierCode: string | null;
   supplierName: string | null;
   supplierNameChinese: string | null;

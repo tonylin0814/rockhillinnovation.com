@@ -63,8 +63,14 @@ export function buildDefaultSupplierInvoiceHtml({
   totalRmb,
   totalUsd,
 }: SupplierInvoiceParams): string {
-  const invoiceTypeLabel = invoiceType === "deposit" ? "Supplier Deposit Invoice" : "Supplier Final Invoice";
+  const invoiceTypeLabel =
+    invoiceType === "commercial"
+      ? "Supplier Commercial Invoice"
+      : invoiceType === "deposit"
+        ? "Supplier Deposit Invoice"
+        : "Supplier Final Invoice";
   const supplierNameDisplay = escapeHtml(supplierName ?? "-");
+  const showPct = invoiceType !== "commercial";
   const bankingPage = supplierBanking
     ? `
     <div class="page-break"></div>
@@ -103,7 +109,11 @@ export function buildDefaultSupplierInvoiceHtml({
           <td class="def-td">${escapeHtml(line.descriptionChinese ?? line.descriptionEnglish ?? "-")}</td>
           <td class="def-td def-td-cat">${categoryLabels[line.paymentCategory] ?? line.paymentCategory}</td>
           <td class="def-td def-td-center">
-            <span class="def-pct ${line.paymentPct < 100 ? "def-pct-dep" : "def-pct-full"}">${line.paymentPct}%</span>
+            ${
+              showPct
+                ? `<span class="def-pct ${line.paymentPct < 100 ? "def-pct-dep" : "def-pct-full"}">${line.paymentPct}%</span>`
+                : ""
+            }
           </td>
           <td class="def-td def-td-right">${formatQuantity(line.quantity)}</td>
           <td class="def-td def-td-right">${formatUnitRmb(line.unitPriceRmb)}</td>

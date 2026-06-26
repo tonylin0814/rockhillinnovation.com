@@ -65,6 +65,7 @@ import { EditVendorOutgoingInvoiceDialog } from "./EditVendorOutgoingInvoiceDial
 import { GenerateAdditionalInvoiceDialog } from "./GenerateAdditionalInvoiceDialog";
 import { GenerateDepositInvoiceDialog } from "./GenerateDepositInvoiceDialog";
 import { GenerateInvoiceDialog } from "./GenerateProFormaDialog";
+import { GenerateSupplierCommercialInvoiceDialog } from "./GenerateSupplierCommercialInvoiceDialog";
 import { GenerateSupplierInvoiceDialog } from "./GenerateSupplierInvoiceDialog";
 import { GenerateVendorOutgoingInvoiceDialog } from "./GenerateVendorOutgoingInvoiceDialog";
 import { SupplierInvoiceMatchDialog } from "./SupplierInvoiceMatchDialog";
@@ -616,14 +617,17 @@ function GenerateClientInvoiceMenu({ orderNumber, tradeId }: { orderNumber?: str
 }
 
 const supplierTypeClasses: Record<SupplierInvoiceOutgoing["invoice_type"], string> = {
+  commercial: "border-[#0d1b34] bg-[#0d1b34]/10 text-[#0d1b34]",
   deposit: "border-blue-200 bg-blue-50 text-blue-700",
   final: "border-green-200 bg-green-50 text-green-700",
 };
 
 function SupplierTypeBadge({ type }: { type: SupplierInvoiceOutgoing["invoice_type"] }) {
+  const label = { commercial: "Commercial", deposit: "Deposit", final: "Final" }[type];
+
   return (
     <Badge className={supplierTypeClasses[type]} variant="outline">
-      {type === "deposit" ? "Deposit" : "Final"}
+      {label}
     </Badge>
   );
 }
@@ -1012,12 +1016,12 @@ function GenerateSupplierInvoiceMenu({
 }) {
   return (
     <div className="flex justify-end">
-      <GenerateSupplierInvoiceDialog orderNumber={orderNumber} suppliers={suppliers} tradeId={tradeId} type="deposit">
+      <GenerateSupplierCommercialInvoiceDialog orderNumber={orderNumber} suppliers={suppliers} tradeId={tradeId}>
         <Button className="rounded-r-none bg-[#0d1b34] hover:bg-[#13294d]">
           <FileText className="mr-2 h-4 w-4" />
           Generate Supplier Invoice
         </Button>
-      </GenerateSupplierInvoiceDialog>
+      </GenerateSupplierCommercialInvoiceDialog>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button
@@ -1029,6 +1033,9 @@ function GenerateSupplierInvoiceMenu({
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
+          <GenerateSupplierCommercialInvoiceDialog orderNumber={orderNumber} suppliers={suppliers} tradeId={tradeId}>
+            <DropdownMenuItem onSelect={(event) => event.preventDefault()}>Commercial Invoice</DropdownMenuItem>
+          </GenerateSupplierCommercialInvoiceDialog>
           <GenerateSupplierInvoiceDialog orderNumber={orderNumber} suppliers={suppliers} tradeId={tradeId} type="deposit">
             <DropdownMenuItem onSelect={(event) => event.preventDefault()}>Deposit Invoice</DropdownMenuItem>
           </GenerateSupplierInvoiceDialog>
