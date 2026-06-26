@@ -62,6 +62,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { buildDownloadUrl } from "@/lib/download";
 import type { ClientInvoice, ExpenseVendorInvoice, SupplierInvoiceOutgoing } from "@/types";
 import { EditVendorOutgoingInvoiceDialog } from "./EditVendorOutgoingInvoiceDialog";
+import { GenerateAdditionalInvoiceDialog } from "./GenerateAdditionalInvoiceDialog";
+import { GenerateDepositInvoiceDialog } from "./GenerateDepositInvoiceDialog";
 import { GenerateInvoiceDialog } from "./GenerateProFormaDialog";
 import { GenerateSupplierInvoiceDialog } from "./GenerateSupplierInvoiceDialog";
 import { GenerateVendorOutgoingInvoiceDialog } from "./GenerateVendorOutgoingInvoiceDialog";
@@ -127,6 +129,18 @@ function ClientTypeBadge({ type }: { type: ClientInvoice["invoice_type"] }) {
       {clientTypeLabels[type]}
     </Badge>
   );
+}
+
+function ClientInvoiceTypeDisplay({ invoice }: { invoice: ClientInvoice }) {
+  if (invoice.display_label) {
+    return (
+      <Badge className="border-green-200 bg-green-50 text-green-700" variant="outline">
+        {invoice.display_label}
+      </Badge>
+    );
+  }
+
+  return <ClientTypeBadge type={invoice.invoice_type} />;
 }
 
 function ClientInvoiceStatusDropdown({ invoice }: { invoice: ClientInvoice }) {
@@ -391,11 +405,33 @@ function GenerateClientInvoiceMenu({ orderNumber, tradeId }: { orderNumber?: str
   return (
     <div className="flex justify-end">
       <GenerateInvoiceDialog orderNumber={orderNumber} tradeId={tradeId}>
-        <Button className="bg-[#0d1b34] hover:bg-[#13294d]">
+        <Button className="rounded-r-none bg-[#0d1b34] hover:bg-[#13294d]">
           <FileText className="mr-2 h-4 w-4" />
-          Generate Invoice
+          Generate Commercial Invoice
         </Button>
       </GenerateInvoiceDialog>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button
+            aria-label="Choose client invoice type"
+            className="rounded-l-none border-l border-white/20 bg-[#0d1b34] px-3 hover:bg-[#13294d]"
+            type="button"
+          >
+            <ChevronDown className="h-4 w-4" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
+          <GenerateInvoiceDialog orderNumber={orderNumber} tradeId={tradeId}>
+            <DropdownMenuItem onSelect={(event) => event.preventDefault()}>Commercial Invoice</DropdownMenuItem>
+          </GenerateInvoiceDialog>
+          <GenerateDepositInvoiceDialog orderNumber={orderNumber} tradeId={tradeId}>
+            <DropdownMenuItem onSelect={(event) => event.preventDefault()}>Deposit Invoice</DropdownMenuItem>
+          </GenerateDepositInvoiceDialog>
+          <GenerateAdditionalInvoiceDialog orderNumber={orderNumber} tradeId={tradeId}>
+            <DropdownMenuItem onSelect={(event) => event.preventDefault()}>Final / Additional Invoice</DropdownMenuItem>
+          </GenerateAdditionalInvoiceDialog>
+        </DropdownMenuContent>
+      </DropdownMenu>
     </div>
   );
 }
@@ -742,7 +778,7 @@ export function InvoicesTab({
                     <TableRow key={invoice.id}>
                       <TableCell className="font-mono text-xs">{invoice.invoice_number}</TableCell>
                       <TableCell>
-                        <ClientTypeBadge type={invoice.invoice_type} />
+                        <ClientInvoiceTypeDisplay invoice={invoice} />
                       </TableCell>
                       <TableCell>{formatDate(invoice.invoice_date)}</TableCell>
                       <TableCell>

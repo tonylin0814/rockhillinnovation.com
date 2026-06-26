@@ -436,6 +436,7 @@ export type ClientInvoice = {
   trade_id: string;
   invoice_number: string;
   invoice_type: "pro_forma" | "deposit" | "final" | "commercial";
+  display_label: string | null;
   invoice_date: string;
   due_date: string | null;
   status: "draft" | "sent" | "paid";

@@ -21,6 +21,8 @@ type ActionResult = {
   error?: string;
 };
 
+type ServerSupabaseClient = ReturnType<typeof createServerSupabaseClient>;
+
 type InvoicePdfProduct = {
   code: string | null;
   components?:
@@ -41,6 +43,34 @@ type InvoicePdfProduct = {
   id: string;
   name_english: string | null;
   product_type: "part" | "set";
+};
+
+type InvoiceSourceData = {
+  bankingAccount: any;
+  client: {
+    address: string | null;
+    currency: string | null;
+    deposit_pct: number | null;
+    id: string;
+    name: string;
+    shipping_address: string | null;
+  };
+  companySettings: any;
+  invoiceLines: Array<{
+    components: { code: string | null; name: string; quantityPerSet: number }[];
+    dbQuantity: number;
+    description: string;
+    itemCode: string | null;
+    quantity: number;
+    sortOrder: number;
+    total: number;
+    unitPrice: number;
+  }>;
+  subtotal: number;
+  trade: {
+    id: string;
+    trade_id: string;
+  };
 };
 
 const invoiceStatusSchema = z.enum(["draft", "sent", "paid"]);
@@ -118,11 +148,156 @@ function getBaseCode(code: string | null): string | null {
   return code.replace(/-\d+$/, "");
 }
 
+async function ensureInvoiceNumberAvailable(
+  supabase: ServerSupabaseClient,
+  invoiceNumber: string,
+  excludeInvoiceId?: string
+) {
+  let query = supabase.from("client_invoices").select("id").eq("invoice_number", invoiceNumber);
+
+  if (excludeInvoiceId) {
+    query = query.neq("id", excludeInvoiceId);
+  }
+
+  const { data, error } = await query.maybeSingle();
+
+  if (error) {
+    return { error: error.message };
+  }
+
+  if (data) {
+    return {
+      error: `Invoice ${invoiceNumber} already exists. Use the existing invoice in the Invoices list, or delete it before regenerating.`,
+    };
+  }
+
+  return { success: true as const };
+}
+
+async function getInvoiceSourceData(
+  supabase: ServerSupabaseClient,
+  tradeId: string
+): Promise<InvoiceSourceData | { error: string }> {
+  const { data: trade, error: tradeError } = await supabase
+    .from("trades")
+    .select(
+      `id, trade_id,
+       client:clients(id, name, address, currency, shipping_address, deposit_pct)`
+    )
+    .eq("id", tradeId)
+    .maybeSingle();
+
+  if (tradeError) {
+    return { error: tradeError.message };
+  }
+
+  if (!trade) {
+    return { error: "Trade not found" };
+  }
+
+  const client = Array.isArray(trade.client) ? trade.client[0] : trade.client;
+
+  if (!client) {
+    return { error: "No client linked to this trade" };
+  }
+
+  const [{ data: companySettings }, { data: bankingAccounts }, { data: quotationSession, error: quotationError }] =
+    await Promise.all([
+      supabase.from("company_settings").select("*").limit(1).maybeSingle(),
+      supabase.from("company_banking_accounts").select("*").eq("is_active", true).order("sort_order").limit(1),
+      supabase
+        .from("client_quotation_sessions")
+        .select(
+          `id, session_number,
+           client_quotation_lines(id, item_description, quantity, unit_price_usd,
+                                  product:products(
+                                    id, code, name_english, product_type,
+                                    components:product_components!product_components_set_product_id_fkey(
+                                      quantity_per_set,
+                                      component:products!product_components_component_product_id_fkey(code, name_english)
+                                    )
+                                  ))`
+        )
+        .eq("trade_id", tradeId)
+        .in("status", ["accepted", "sent"])
+        .order("session_number", { ascending: false })
+        .limit(1)
+        .maybeSingle(),
+    ]);
+
+  if (quotationError) {
+    return { error: quotationError.message };
+  }
+
+  const rawLines = Array.isArray(quotationSession?.client_quotation_lines)
+    ? quotationSession.client_quotation_lines
+    : [];
+
+  const invoiceLines = rawLines.map((line, index) => {
+    const product = (Array.isArray(line.product) ? line.product[0] : line.product) as InvoicePdfProduct | null;
+    const components =
+      product?.product_type === "set"
+        ? (product.components ?? [])
+            .map((componentRow) => {
+              const component = Array.isArray(componentRow.component)
+                ? componentRow.component[0]
+                : componentRow.component;
+
+              if (!component?.name_english) {
+                return null;
+              }
+
+              return {
+                code: component.code ?? null,
+                name: component.name_english,
+                quantityPerSet: Number(componentRow.quantity_per_set),
+              };
+            })
+            .filter((component): component is { code: string | null; name: string; quantityPerSet: number } => Boolean(component))
+            .reduce<{ code: string | null; name: string; quantityPerSet: number }[]>((acc, comp) => {
+              const base = getBaseCode(comp.code);
+              if (acc.some((existing) => getBaseCode(existing.code) === base)) return acc;
+              return [...acc, { ...comp, code: base }];
+            }, [])
+        : [];
+    const quantity = Number(line.quantity);
+    const unitPrice = Number(line.unit_price_usd);
+    const total = roundMoney(quantity * unitPrice);
+
+    return {
+      components,
+      dbQuantity: quantity,
+      description: line.item_description ?? product?.name_english ?? "Item",
+      itemCode: product?.code ?? null,
+      quantity,
+      sortOrder: index,
+      total,
+      unitPrice,
+    };
+  });
+
+  if (!invoiceLines.length) {
+    return {
+      error:
+        "No accepted or sent client quotation found for this trade. Please create and accept a client quotation first.",
+    };
+  }
+
+  return {
+    bankingAccount: Array.isArray(bankingAccounts) ? (bankingAccounts[0] ?? null) : (bankingAccounts ?? null),
+    client,
+    companySettings: companySettings ?? null,
+    invoiceLines,
+    subtotal: roundMoney(invoiceLines.reduce((sum, line) => sum + line.total, 0)),
+    trade,
+  };
+}
+
 export async function generateCommercialInvoice(tradeId: string, formData: FormData): Promise<ActionResult> {
   const access = await requireInvoiceManager();
 
   if ("error" in access) {
-    return { error: access.error };
+    return { error: access.error ?? "Unauthorized" };
   }
 
   const invoiceNumber = emptyToNull(formData.get("invoice_number"));
@@ -386,11 +561,355 @@ export async function generateCommercialInvoice(tradeId: string, formData: FormD
 export const generateProForma = (tradeId: string, formData: FormData) =>
   generateCommercialInvoice(tradeId, formData);
 
-export const generateDepositInvoice = (tradeId: string, formData: FormData) =>
-  generateCommercialInvoice(tradeId, formData);
+export async function generateDepositInvoice(tradeId: string, formData: FormData): Promise<ActionResult> {
+  const access = await requireInvoiceManager();
 
-export const generateFinalInvoice = (tradeId: string, formData: FormData) =>
-  generateCommercialInvoice(tradeId, formData);
+  if ("error" in access) {
+    return { error: access.error };
+  }
+
+  const invoiceNumber = emptyToNull(formData.get("invoice_number"));
+  const invoiceDate = emptyToNull(formData.get("invoice_date"));
+  const notes = emptyToNull(formData.get("notes"));
+
+  if (!invoiceNumber) {
+    return { error: "Invoice number is required" };
+  }
+
+  if (!invoiceDate || !/^\d{4}-\d{2}-\d{2}$/.test(invoiceDate)) {
+    return { error: "Invoice date is required" };
+  }
+
+  const supabase = createServerSupabaseClient();
+  const available = await ensureInvoiceNumberAvailable(supabase, invoiceNumber);
+
+  if ("error" in available) {
+    return available;
+  }
+
+  const source = await getInvoiceSourceData(supabase, tradeId);
+
+  if ("error" in source) {
+    return { error: source.error };
+  }
+
+  const depositPct = Math.min(100, Math.max(0, Number(source.client.deposit_pct) || 50));
+  const totalUsd = roundMoney((source.subtotal * depositPct) / 100);
+  const logoBase64 = loadLogoBase64();
+
+  const html = buildProFormaHtml({
+    adjustmentLines: [],
+    bankingAccount: source.bankingAccount,
+    billToAddress: source.client.address ?? null,
+    billToName: source.client.name,
+    companyInfo: source.companySettings,
+    currency: source.client.currency ?? "USD",
+    depositPct,
+    invoiceDate: normalizeDate(invoiceDate),
+    invoiceNumber,
+    invoiceType: "deposit",
+    lines: source.invoiceLines,
+    logoBase64,
+    notes,
+    paymentTerms: null,
+    shipToAddress: source.client.shipping_address ?? null,
+    shipToName: source.client.name,
+    subtotal: source.subtotal,
+    total: totalUsd,
+  });
+
+  const pdfBuffer = await generatePdf(html);
+  const fileName = `${invoiceNumber}.pdf`;
+  const uploaded = await uploadToOneDrive({
+    category: "invoice",
+    fileBuffer: pdfBuffer,
+    fileName,
+    mimeType: "application/pdf",
+    tradeCode: source.trade.trade_id,
+  });
+
+  const { data: invoice, error: invoiceError } = await supabase
+    .from("client_invoices")
+    .insert({
+      adjustment_lines: [],
+      deposit_pct: depositPct,
+      display_label: null,
+      due_date: null,
+      invoice_date: invoiceDate,
+      invoice_number: invoiceNumber,
+      invoice_type: "deposit",
+      notes,
+      payment_terms: null,
+      pdf_onedrive_url: uploaded.webUrl,
+      status: "draft",
+      subtotal_usd: source.subtotal,
+      total_usd: totalUsd,
+      trade_id: tradeId,
+    })
+    .select("id")
+    .single();
+
+  if (invoiceError) {
+    if (invoiceError.code === "23505") {
+      return {
+        error: `Invoice ${invoiceNumber} already exists. Use the existing invoice in the Invoices list, or delete it before regenerating.`,
+      };
+    }
+
+    return { error: invoiceError.message };
+  }
+
+  const { error: linesError } = await supabase.from("client_invoice_lines").insert(
+    source.invoiceLines.map((line) => ({
+      description: line.description,
+      invoice_id: invoice.id,
+      quantity: line.dbQuantity,
+      sort_order: line.sortOrder,
+      unit_price_usd: line.unitPrice,
+    }))
+  );
+
+  if (linesError) {
+    return { error: linesError.message };
+  }
+
+  const nextDocumentVersion = await getNextTradeDocumentVersion({
+    category: "invoice",
+    supabase,
+    tradeId,
+  });
+
+  const { error: documentError } = await supabase.from("trade_documents").insert({
+    document_category: "invoice",
+    document_type: "deposit",
+    file_name: fileName,
+    file_size_bytes: pdfBuffer.length,
+    notes,
+    onedrive_file_id: uploaded.fileId,
+    onedrive_url: uploaded.webUrl,
+    related_party: "client",
+    status: "draft",
+    trade_id: tradeId,
+    uploaded_by: access.user.id,
+    version: nextDocumentVersion,
+  });
+
+  if (documentError) {
+    return { error: documentError.message };
+  }
+
+  await notifyParticipants(
+    tradeId,
+    source.trade.trade_id,
+    access.user.id,
+    access.user.name,
+    `A deposit invoice was generated for trade ${source.trade.trade_id}.`
+  );
+  revalidatePath(`/trades/${tradeId}`);
+  return { success: true, downloadUrl: uploaded.webUrl, invoiceId: invoice.id };
+}
+
+const finalInvoiceSchema = z.object({
+  display_label: z.string().trim().min(1, "Display label is required"),
+  invoice_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Invalid invoice date"),
+  invoice_number: z.string().trim().min(1, "Invoice number is required"),
+  notes: z
+    .string()
+    .trim()
+    .transform((value) => (value.length ? value : null))
+    .nullable(),
+});
+
+export async function getTradeRemainingBalance(
+  tradeId: string
+): Promise<{ depositsPaid: number; remaining: number; subtotal: number } | { error: string }> {
+  const access = await requireInvoiceManager();
+
+  if ("error" in access) {
+    return { error: access.error ?? "Unauthorized" };
+  }
+
+  const supabase = createServerSupabaseClient();
+  const source = await getInvoiceSourceData(supabase, tradeId);
+
+  if ("error" in source) {
+    return source;
+  }
+
+  const { data: priorDeposits, error: depositError } = await supabase
+    .from("client_invoices")
+    .select("total_usd")
+    .eq("trade_id", tradeId)
+    .eq("invoice_type", "deposit");
+
+  if (depositError) {
+    return { error: depositError.message };
+  }
+
+  const depositsPaid = roundMoney((priorDeposits ?? []).reduce((sum, invoice) => sum + Number(invoice.total_usd), 0));
+
+  return {
+    depositsPaid,
+    remaining: roundMoney(source.subtotal - depositsPaid),
+    subtotal: source.subtotal,
+  };
+}
+
+export async function generateFinalInvoice(tradeId: string, formData: FormData): Promise<ActionResult> {
+  const access = await requireInvoiceManager();
+
+  if ("error" in access) {
+    return { error: access.error };
+  }
+
+  const parsed = finalInvoiceSchema.safeParse({
+    display_label: formData.get("display_label"),
+    invoice_date: formData.get("invoice_date"),
+    invoice_number: formData.get("invoice_number"),
+    notes: formData.get("notes"),
+  });
+
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "Invalid invoice" };
+  }
+
+  const supabase = createServerSupabaseClient();
+  const available = await ensureInvoiceNumberAvailable(supabase, parsed.data.invoice_number);
+
+  if ("error" in available) {
+    return available;
+  }
+
+  const source = await getInvoiceSourceData(supabase, tradeId);
+
+  if ("error" in source) {
+    return source;
+  }
+
+  const balance = await getTradeRemainingBalance(tradeId);
+
+  if ("error" in balance) {
+    return balance;
+  }
+
+  const adjustmentLines = parseAdjustmentLines(formData);
+  const adjustmentsTotal = adjustmentLines.reduce((sum, adjustment) => sum + adjustment.amount_usd, 0);
+  const totalUsd = roundMoney(balance.remaining + adjustmentsTotal);
+  const logoBase64 = loadLogoBase64();
+
+  const html = buildProFormaHtml({
+    adjustmentLines,
+    balanceLine: {
+      amountUsd: balance.remaining,
+      label: "Order Balance Due",
+    },
+    bankingAccount: source.bankingAccount,
+    billToAddress: source.client.address ?? null,
+    billToName: source.client.name,
+    companyInfo: source.companySettings,
+    currency: source.client.currency ?? "USD",
+    depositPct: 0,
+    invoiceDate: normalizeDate(parsed.data.invoice_date),
+    invoiceNumber: parsed.data.invoice_number,
+    invoiceType: "final",
+    lines: [],
+    logoBase64,
+    notes: parsed.data.notes,
+    paymentTerms: null,
+    shipToAddress: source.client.shipping_address ?? null,
+    shipToName: source.client.name,
+    subtotal: balance.remaining,
+    total: totalUsd,
+  });
+
+  const pdfBuffer = await generatePdf(html);
+  const fileName = `${parsed.data.invoice_number}.pdf`;
+  const uploaded = await uploadToOneDrive({
+    category: "invoice",
+    fileBuffer: pdfBuffer,
+    fileName,
+    mimeType: "application/pdf",
+    tradeCode: source.trade.trade_id,
+  });
+
+  const { data: invoice, error: invoiceError } = await supabase
+    .from("client_invoices")
+    .insert({
+      adjustment_lines: adjustmentLines,
+      deposit_pct: 0,
+      display_label: parsed.data.display_label,
+      due_date: null,
+      invoice_date: parsed.data.invoice_date,
+      invoice_number: parsed.data.invoice_number,
+      invoice_type: "final",
+      notes: parsed.data.notes,
+      payment_terms: null,
+      pdf_onedrive_url: uploaded.webUrl,
+      status: "draft",
+      subtotal_usd: balance.remaining,
+      total_usd: totalUsd,
+      trade_id: tradeId,
+    })
+    .select("id")
+    .single();
+
+  if (invoiceError) {
+    if (invoiceError.code === "23505") {
+      return {
+        error: `Invoice ${parsed.data.invoice_number} already exists. Use the existing invoice in the Invoices list, or delete it before regenerating.`,
+      };
+    }
+
+    return { error: invoiceError.message };
+  }
+
+  const { error: linesError } = await supabase.from("client_invoice_lines").insert({
+    description: "Order Balance Due",
+    invoice_id: invoice.id,
+    quantity: 1,
+    sort_order: 0,
+    unit_price_usd: balance.remaining,
+  });
+
+  if (linesError) {
+    return { error: linesError.message };
+  }
+
+  const nextDocumentVersion = await getNextTradeDocumentVersion({
+    category: "invoice",
+    supabase,
+    tradeId,
+  });
+
+  const { error: documentError } = await supabase.from("trade_documents").insert({
+    document_category: "invoice",
+    document_type: "final",
+    file_name: fileName,
+    file_size_bytes: pdfBuffer.length,
+    notes: parsed.data.notes,
+    onedrive_file_id: uploaded.fileId,
+    onedrive_url: uploaded.webUrl,
+    related_party: "client",
+    status: "draft",
+    trade_id: tradeId,
+    uploaded_by: access.user.id,
+    version: nextDocumentVersion,
+  });
+
+  if (documentError) {
+    return { error: documentError.message };
+  }
+
+  await notifyParticipants(
+    tradeId,
+    source.trade.trade_id,
+    access.user.id,
+    access.user.name,
+    `${parsed.data.display_label} was generated for trade ${source.trade.trade_id}.`
+  );
+  revalidatePath(`/trades/${tradeId}`);
+  return { success: true, downloadUrl: uploaded.webUrl, invoiceId: invoice.id };
+}
 
 export async function updateInvoiceStatus(
   invoiceId: string,
@@ -493,6 +1012,12 @@ export async function updateClientInvoice(invoiceId: string, formData: FormData)
 
   if (!invoice) {
     return { error: "Invoice not found" };
+  }
+
+  const available = await ensureInvoiceNumberAvailable(supabase, parsed.data.invoice_number, invoiceId);
+
+  if ("error" in available) {
+    return available;
   }
 
   const { error } = await supabase

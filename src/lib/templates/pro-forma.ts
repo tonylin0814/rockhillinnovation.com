@@ -17,6 +17,10 @@ type InvoiceLine = {
 type BuildProFormaParams = {
   adjustmentLines?: InvoiceAdjustmentLine[];
   bankingAccount?: CompanyBankingAccount | null;
+  balanceLine?: {
+    amountUsd: number;
+    label: string;
+  } | null;
   billToAddress?: string | null;
   billToName?: string;
   clientAddress?: string | null;
@@ -191,6 +195,7 @@ function round2(value: number) {
 export function buildProFormaHtml({
   adjustmentLines = [],
   bankingAccount = null,
+  balanceLine = null,
   billToAddress,
   billToName,
   clientAddress,
@@ -213,10 +218,11 @@ export function buildProFormaHtml({
   const resolvedBillToName = billToName ?? clientName ?? "";
   const resolvedBillToAddress = billToAddress ?? clientAddress ?? null;
   const adjustmentsTotal = adjustmentLines.reduce((sum, adjustment) => sum + adjustment.amount_usd, 0);
-  const grandTotal = round2(subtotal + adjustmentsTotal);
+  const invoiceSubtotal = balanceLine ? balanceLine.amountUsd : subtotal;
+  const grandTotal = round2(invoiceSubtotal + adjustmentsTotal);
   const depositAmount = round2((grandTotal * depositPct) / 100);
   const balanceAmount = round2(grandTotal - depositAmount);
-  const showSchedule = depositPct > 0 && depositPct < 100;
+  const showSchedule = !balanceLine && depositPct > 0 && depositPct < 100;
 
   const companyName = companyInfo?.company_name ?? "ROCK HILL INNOVATION CO., LTD";
   const logoHtml = logoBase64
@@ -327,9 +333,18 @@ export function buildProFormaHtml({
         </tr>
       </thead>
       <tbody>
-        ${lines
-          .map(
-            (line) => `<tr class="no-break">
+        ${
+          balanceLine
+            ? `<tr class="no-break">
+              <td class="item-code"></td>
+              <td>${escapeHtml(balanceLine.label)}</td>
+              <td class="amount">1</td>
+              <td class="amount">${formatUsd(balanceLine.amountUsd)}</td>
+              <td class="amount" style="font-weight:700;color:#0d1b34;">${formatUsd(balanceLine.amountUsd)}</td>
+            </tr>`
+            : lines
+                .map(
+                  (line) => `<tr class="no-break">
               <td class="item-code">${escapeHtml(line.itemCode ?? "")}</td>
               <td>
                 ${escapeHtml(line.description)}
@@ -353,8 +368,9 @@ export function buildProFormaHtml({
               <td class="amount">${formatUsd(line.unitPrice)}</td>
               <td class="amount" style="font-weight:700;color:#0d1b34;">${formatUsd(line.total)}</td>
             </tr>`
-          )
-          .join("")}
+                )
+                .join("")
+        }
       </tbody>
     </table>
 
@@ -363,7 +379,7 @@ export function buildProFormaHtml({
     <div class="totals-block no-break">
       ${
         adjustmentLines.length
-          ? `<div class="totals-row"><span style="color:#555;">Subtotal</span><span>${formatUsd(subtotal)}</span></div>`
+              ? `<div class="totals-row"><span style="color:#555;">Subtotal</span><span>${formatUsd(invoiceSubtotal)}</span></div>`
           : ""
       }
       <div class="totals-divider"></div>
