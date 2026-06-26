@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronDown, FileText, Loader2, Mail, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
+import { ChevronDown, FileText, Loader2, Mail, MoreHorizontal, Pencil, Plus, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { FormEvent, Fragment, useState, useTransition } from "react";
 import { toast } from "sonner";
@@ -187,11 +187,85 @@ function EditClientInvoiceDialog({ invoice }: { invoice: ClientInvoice }) {
   const [open, setOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+  const [lines, setLines] = useState(() =>
+    (invoice.lines ?? [])
+      .slice()
+      .sort((a, b) => a.sort_order - b.sort_order)
+      .map((line, index) => ({
+        _key: line.id ?? `${invoice.id}-${index}`,
+        description: line.description ?? "",
+        quantity: String(line.quantity ?? 0),
+        sort_order: index,
+        unit_price_usd: String(line.unit_price_usd ?? 0),
+      }))
+  );
+
+  function handleOpenChange(value: boolean) {
+    setOpen(value);
+
+    if (value) {
+      setLines(
+        (invoice.lines ?? [])
+          .slice()
+          .sort((a, b) => a.sort_order - b.sort_order)
+          .map((line, index) => ({
+            _key: line.id ?? `${invoice.id}-${index}`,
+            description: line.description ?? "",
+            quantity: String(line.quantity ?? 0),
+            sort_order: index,
+            unit_price_usd: String(line.unit_price_usd ?? 0),
+          }))
+      );
+    }
+  }
+
+  function updateLine(index: number, field: "description" | "quantity" | "unit_price_usd", value: string) {
+    setLines((currentLines) =>
+      currentLines.map((line, lineIndex) => (lineIndex === index ? { ...line, [field]: value } : line))
+    );
+  }
+
+  function addLine() {
+    setLines((currentLines) => [
+      ...currentLines,
+      {
+        _key: crypto.randomUUID(),
+        description: "",
+        quantity: "1",
+        sort_order: currentLines.length,
+        unit_price_usd: "0",
+      },
+    ]);
+  }
+
+  function removeLine(index: number) {
+    setLines((currentLines) =>
+      currentLines
+        .filter((_, lineIndex) => lineIndex !== index)
+        .map((line, lineIndex) => ({ ...line, sort_order: lineIndex }))
+    );
+  }
+
+  const lineSubtotal = lines.reduce(
+    (sum, line) => sum + (Number(line.quantity) || 0) * (Number(line.unit_price_usd) || 0),
+    0
+  );
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError(null);
     const formData = new FormData(event.currentTarget);
+    formData.set(
+      "invoice_lines_json",
+      JSON.stringify(
+        lines.map((line, index) => ({
+          description: line.description,
+          quantity: Number(line.quantity) || 0,
+          sort_order: index,
+          unit_price_usd: Number(line.unit_price_usd) || 0,
+        }))
+      )
+    );
 
     startTransition(async () => {
       const result = await updateClientInvoice(invoice.id, formData);
@@ -208,14 +282,14 @@ function EditClientInvoiceDialog({ invoice }: { invoice: ClientInvoice }) {
   }
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
         <Button size="icon" title="Edit invoice" type="button" variant="ghost">
           <Pencil className="h-4 w-4" />
           <span className="sr-only">Edit invoice</span>
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-xl">
+      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-4xl">
         <DialogHeader>
           <DialogTitle>Edit Client Invoice</DialogTitle>
           <DialogDescription>Update invoice details. This does not regenerate the PDF file.</DialogDescription>
@@ -297,6 +371,87 @@ function EditClientInvoiceDialog({ invoice }: { invoice: ClientInvoice }) {
               id={`client_notes_${invoice.id}`}
               name="notes"
             />
+          </div>
+          <div className="space-y-3 rounded-lg border border-slate-200 p-4">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <p className="text-sm font-semibold text-[#0d1b34]">Invoice Detail Lines</p>
+                <p className="text-xs text-slate-500">These line edits update the invoice totals, but do not regenerate the PDF.</p>
+              </div>
+              <Button disabled={isPending} onClick={addLine} size="sm" type="button" variant="outline">
+                <Plus className="mr-2 h-4 w-4" />
+                Add Line
+              </Button>
+            </div>
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="min-w-[260px]">Description</TableHead>
+                    <TableHead className="w-28">Qty</TableHead>
+                    <TableHead className="w-36">Unit Price</TableHead>
+                    <TableHead className="w-36 text-right">Total</TableHead>
+                    <TableHead className="w-12" />
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {lines.map((line, index) => {
+                    const total = (Number(line.quantity) || 0) * (Number(line.unit_price_usd) || 0);
+
+                    return (
+                      <TableRow key={line._key}>
+                        <TableCell>
+                          <Input
+                            disabled={isPending}
+                            onChange={(event) => updateLine(index, "description", event.currentTarget.value)}
+                            value={line.description}
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <Input
+                            disabled={isPending}
+                            min="0"
+                            onChange={(event) => updateLine(index, "quantity", event.currentTarget.value)}
+                            step="0.001"
+                            type="number"
+                            value={line.quantity}
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <Input
+                            disabled={isPending}
+                            min="0"
+                            onChange={(event) => updateLine(index, "unit_price_usd", event.currentTarget.value)}
+                            step="0.01"
+                            type="number"
+                            value={line.unit_price_usd}
+                          />
+                        </TableCell>
+                        <TableCell className="text-right font-medium">{formatUsd(total)}</TableCell>
+                        <TableCell>
+                          <Button
+                            disabled={isPending || lines.length === 1}
+                            onClick={() => removeLine(index)}
+                            size="icon"
+                            type="button"
+                            variant="ghost"
+                          >
+                            <Trash2 className="h-4 w-4 text-red-500" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                  <TableRow>
+                    <TableCell className="font-semibold" colSpan={3}>
+                      Subtotal
+                    </TableCell>
+                    <TableCell className="text-right font-semibold">{formatUsd(lineSubtotal)}</TableCell>
+                    <TableCell />
+                  </TableRow>
+                </TableBody>
+              </Table>
+            </div>
           </div>
           {error ? <p className="text-sm font-medium text-red-600">{error}</p> : null}
           <div className="flex justify-end gap-2">

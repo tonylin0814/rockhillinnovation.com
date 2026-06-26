@@ -206,7 +206,7 @@ export default async function TradeWorkspacePage({ params }: { params: { id: str
       .order("created_at", { ascending: false }),
     supabase
       .from("client_invoices")
-      .select("*")
+      .select("*, lines:client_invoice_lines(*)")
       .eq("trade_id", params.id)
       .order("created_at", { ascending: false }),
     supabase

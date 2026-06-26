@@ -74,6 +74,12 @@ type InvoiceSourceData = {
 };
 
 const invoiceStatusSchema = z.enum(["draft", "sent", "paid"]);
+const editableInvoiceLineSchema = z.object({
+  description: z.string().trim().min(1, "Line description is required"),
+  quantity: z.coerce.number().min(0, "Quantity cannot be negative"),
+  sort_order: z.coerce.number().int().min(0).default(0),
+  unit_price_usd: z.coerce.number().min(0, "Unit price cannot be negative"),
+});
 
 async function requireInvoiceManager() {
   const access = await requireManager();
@@ -130,6 +136,27 @@ function parseAdjustmentLines(formData: FormData): InvoiceAdjustmentLine[] {
     );
   } catch {
     return [];
+  }
+}
+
+function parseEditableInvoiceLines(formData: FormData) {
+  const raw = formData.get("invoice_lines_json");
+
+  if (typeof raw !== "string" || !raw.trim()) {
+    return null;
+  }
+
+  try {
+    const parsed = JSON.parse(raw);
+    const result = z.array(editableInvoiceLineSchema).min(1, "At least one invoice line is required").safeParse(parsed);
+
+    if (!result.success) {
+      return { error: result.error.issues[0]?.message ?? "Invalid invoice lines" };
+    }
+
+    return { lines: result.data };
+  } catch {
+    return { error: "Invoice lines must be valid JSON" };
   }
 }
 
@@ -932,7 +959,7 @@ export async function updateInvoiceStatus(
   const supabase = createServerSupabaseClient();
   const { data: invoice, error: invoiceError } = await supabase
     .from("client_invoices")
-    .select("id, trade_id")
+    .select("id, trade_id, adjustment_lines")
     .eq("id", invoiceId)
     .maybeSingle();
 
@@ -1002,7 +1029,7 @@ export async function updateClientInvoice(invoiceId: string, formData: FormData)
   const supabase = createServerSupabaseClient();
   const { data: invoice, error: invoiceError } = await supabase
     .from("client_invoices")
-    .select("id, trade_id")
+    .select("id, trade_id, adjustment_lines")
     .eq("id", invoiceId)
     .maybeSingle();
 
@@ -1020,17 +1047,39 @@ export async function updateClientInvoice(invoiceId: string, formData: FormData)
     return available;
   }
 
+  const parsedLines = parseEditableInvoiceLines(formData);
+
+  if (parsedLines?.error) {
+    return { error: parsedLines.error };
+  }
+
+  const invoiceLines = parsedLines?.lines ?? null;
+  const subtotalUsd = invoiceLines
+    ? roundMoney(invoiceLines.reduce((sum, line) => sum + Number(line.quantity) * Number(line.unit_price_usd), 0))
+    : null;
+  const adjustmentLines = Array.isArray(invoice.adjustment_lines)
+    ? (invoice.adjustment_lines as InvoiceAdjustmentLine[])
+    : [];
+  const adjustmentsTotal = adjustmentLines.reduce((sum, adjustment) => sum + Number(adjustment.amount_usd), 0);
+
+  const updatePayload: Record<string, unknown> = {
+    deposit_pct: parsed.data.deposit_pct,
+    due_date: parsed.data.due_date,
+    invoice_date: parsed.data.invoice_date,
+    invoice_number: parsed.data.invoice_number,
+    notes: parsed.data.notes,
+    payment_terms: parsed.data.payment_terms,
+    status: parsed.data.status,
+  };
+
+  if (subtotalUsd !== null) {
+    updatePayload.subtotal_usd = subtotalUsd;
+    updatePayload.total_usd = roundMoney(subtotalUsd + adjustmentsTotal);
+  }
+
   const { error } = await supabase
     .from("client_invoices")
-    .update({
-      deposit_pct: parsed.data.deposit_pct,
-      due_date: parsed.data.due_date,
-      invoice_date: parsed.data.invoice_date,
-      invoice_number: parsed.data.invoice_number,
-      notes: parsed.data.notes,
-      payment_terms: parsed.data.payment_terms,
-      status: parsed.data.status,
-    })
+    .update(updatePayload)
     .eq("id", invoiceId);
 
   if (error) {
@@ -1039,6 +1088,28 @@ export async function updateClientInvoice(invoiceId: string, formData: FormData)
     }
 
     return { error: error.message };
+  }
+
+  if (invoiceLines) {
+    const { error: deleteLinesError } = await supabase.from("client_invoice_lines").delete().eq("invoice_id", invoiceId);
+
+    if (deleteLinesError) {
+      return { error: deleteLinesError.message };
+    }
+
+    const { error: insertLinesError } = await supabase.from("client_invoice_lines").insert(
+      invoiceLines.map((line) => ({
+        description: line.description,
+        invoice_id: invoiceId,
+        quantity: line.quantity,
+        sort_order: line.sort_order,
+        unit_price_usd: line.unit_price_usd,
+      }))
+    );
+
+    if (insertLinesError) {
+      return { error: insertLinesError.message };
+    }
   }
 
   revalidatePath(`/trades/${invoice.trade_id}`);

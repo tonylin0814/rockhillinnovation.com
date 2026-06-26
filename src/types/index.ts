@@ -450,6 +450,7 @@ export type ClientInvoice = {
   pdf_onedrive_url: string | null;
   notes: string | null;
   created_at: string;
+  lines?: ClientInvoiceLine[];
 };
 
 export type ClientInvoiceLine = {
