@@ -435,6 +435,91 @@ export async function updateInvoiceStatus(
   return { success: true };
 }
 
+export async function updateClientInvoice(invoiceId: string, formData: FormData): Promise<ActionResult> {
+  const access = await requireInvoiceManager();
+
+  if ("error" in access) {
+    return { error: access.error };
+  }
+
+  const parsed = z
+    .object({
+      invoiceId: z.string().uuid(),
+      invoice_number: z.string().trim().min(1, "Invoice number is required"),
+      invoice_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Invalid invoice date"),
+      due_date: z
+        .string()
+        .trim()
+        .transform((value) => (value.length ? value : null))
+        .nullable(),
+      deposit_pct: z.coerce.number().min(0).max(100),
+      payment_terms: z
+        .string()
+        .trim()
+        .transform((value) => (value.length ? value : null))
+        .nullable(),
+      notes: z
+        .string()
+        .trim()
+        .transform((value) => (value.length ? value : null))
+        .nullable(),
+      status: invoiceStatusSchema,
+    })
+    .safeParse({
+      invoiceId,
+      invoice_number: formData.get("invoice_number"),
+      invoice_date: formData.get("invoice_date"),
+      due_date: formData.get("due_date"),
+      deposit_pct: formData.get("deposit_pct"),
+      payment_terms: formData.get("payment_terms"),
+      notes: formData.get("notes"),
+      status: formData.get("status"),
+    });
+
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "Invalid invoice" };
+  }
+
+  const supabase = createServerSupabaseClient();
+  const { data: invoice, error: invoiceError } = await supabase
+    .from("client_invoices")
+    .select("id, trade_id")
+    .eq("id", invoiceId)
+    .maybeSingle();
+
+  if (invoiceError) {
+    return { error: invoiceError.message };
+  }
+
+  if (!invoice) {
+    return { error: "Invoice not found" };
+  }
+
+  const { error } = await supabase
+    .from("client_invoices")
+    .update({
+      deposit_pct: parsed.data.deposit_pct,
+      due_date: parsed.data.due_date,
+      invoice_date: parsed.data.invoice_date,
+      invoice_number: parsed.data.invoice_number,
+      notes: parsed.data.notes,
+      payment_terms: parsed.data.payment_terms,
+      status: parsed.data.status,
+    })
+    .eq("id", invoiceId);
+
+  if (error) {
+    if (error.code === "23505") {
+      return { error: `Invoice ${parsed.data.invoice_number} already exists.` };
+    }
+
+    return { error: error.message };
+  }
+
+  revalidatePath(`/trades/${invoice.trade_id}`);
+  return { success: true };
+}
+
 export async function deleteClientInvoice(invoiceId: string): Promise<ActionResult> {
   const access = await requireInvoiceManager();
 

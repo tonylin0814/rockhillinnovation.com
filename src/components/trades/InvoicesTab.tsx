@@ -1,13 +1,17 @@
 "use client";
 
-import { ChevronDown, FileText, Mail, MoreHorizontal, Trash2 } from "lucide-react";
+import { ChevronDown, FileText, Mail, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { Fragment, useTransition } from "react";
+import { FormEvent, Fragment, ReactNode, useState, useTransition } from "react";
 import { toast } from "sonner";
 
-import { deleteClientInvoice, updateInvoiceStatus } from "@/app/actions/invoices";
+import { deleteClientInvoice, updateClientInvoice, updateInvoiceStatus } from "@/app/actions/invoices";
 import { sendClientInvoice } from "@/app/actions/send-invoice";
-import { deleteSupplierInvoice, updateSupplierInvoiceStatus } from "@/app/actions/supplier-invoices-outgoing";
+import {
+  deleteSupplierInvoice,
+  updateSupplierInvoice,
+  updateSupplierInvoiceStatus,
+} from "@/app/actions/supplier-invoices-outgoing";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -23,11 +27,28 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Table,
   TableBody,
@@ -36,6 +57,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Textarea } from "@/components/ui/textarea";
 import { buildDownloadUrl } from "@/lib/download";
 import type { ClientInvoice, SupplierInvoiceOutgoing } from "@/types";
 import { GenerateInvoiceDialog } from "./GenerateProFormaDialog";
@@ -135,6 +157,147 @@ function ClientInvoiceStatusDropdown({ invoice }: { invoice: ClientInvoice }) {
         ))}
       </DropdownMenuContent>
     </DropdownMenu>
+  );
+}
+
+function dateInputValue(value: string | null) {
+  return value ? value.slice(0, 10) : "";
+}
+
+function EditDialogButton({ children }: { children: ReactNode }) {
+  return (
+    <Button size="icon" title="Edit invoice" type="button" variant="ghost">
+      <Pencil className="h-4 w-4" />
+      <span className="sr-only">{children}</span>
+    </Button>
+  );
+}
+
+function EditClientInvoiceDialog({ invoice }: { invoice: ClientInvoice }) {
+  const router = useRouter();
+  const [open, setOpen] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [isPending, startTransition] = useTransition();
+
+  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setError(null);
+    const formData = new FormData(event.currentTarget);
+
+    startTransition(async () => {
+      const result = await updateClientInvoice(invoice.id, formData);
+
+      if (result.error) {
+        setError(result.error);
+        return;
+      }
+
+      toast.success("Client invoice updated");
+      setOpen(false);
+      router.refresh();
+    });
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <EditDialogButton>Edit invoice</EditDialogButton>
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-xl">
+        <DialogHeader>
+          <DialogTitle>Edit Client Invoice</DialogTitle>
+          <DialogDescription>Update invoice details. This does not regenerate the PDF file.</DialogDescription>
+        </DialogHeader>
+        <form className="space-y-4" onSubmit={handleSubmit}>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-2">
+              <Label htmlFor={`client_invoice_number_${invoice.id}`}>Invoice Number</Label>
+              <Input
+                defaultValue={invoice.invoice_number}
+                disabled={isPending}
+                id={`client_invoice_number_${invoice.id}`}
+                name="invoice_number"
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor={`client_status_${invoice.id}`}>Status</Label>
+              <Select defaultValue={invoice.status} disabled={isPending} name="status">
+                <SelectTrigger id={`client_status_${invoice.id}`}>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="draft">Draft</SelectItem>
+                  <SelectItem value="sent">Sent</SelectItem>
+                  <SelectItem value="paid">Paid</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor={`client_invoice_date_${invoice.id}`}>Invoice Date</Label>
+              <Input
+                defaultValue={dateInputValue(invoice.invoice_date)}
+                disabled={isPending}
+                id={`client_invoice_date_${invoice.id}`}
+                name="invoice_date"
+                required
+                type="date"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor={`client_due_date_${invoice.id}`}>Deposit Due Date</Label>
+              <Input
+                defaultValue={dateInputValue(invoice.due_date)}
+                disabled={isPending}
+                id={`client_due_date_${invoice.id}`}
+                name="due_date"
+                type="date"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor={`client_deposit_pct_${invoice.id}`}>Deposit %</Label>
+              <Input
+                defaultValue={invoice.deposit_pct}
+                disabled={isPending}
+                id={`client_deposit_pct_${invoice.id}`}
+                max="100"
+                min="0"
+                name="deposit_pct"
+                step="0.01"
+                type="number"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor={`client_payment_terms_${invoice.id}`}>Balance Due</Label>
+              <Input
+                defaultValue={invoice.payment_terms ?? ""}
+                disabled={isPending}
+                id={`client_payment_terms_${invoice.id}`}
+                name="payment_terms"
+              />
+            </div>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor={`client_notes_${invoice.id}`}>Notes</Label>
+            <Textarea
+              defaultValue={invoice.notes ?? ""}
+              disabled={isPending}
+              id={`client_notes_${invoice.id}`}
+              name="notes"
+            />
+          </div>
+          {error ? <p className="text-sm font-medium text-red-600">{error}</p> : null}
+          <div className="flex justify-end gap-2">
+            <Button disabled={isPending} onClick={() => setOpen(false)} type="button" variant="outline">
+              Cancel
+            </Button>
+            <Button className="bg-[#0d1b34] hover:bg-[#13294d]" disabled={isPending} type="submit">
+              Save
+            </Button>
+          </div>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -278,6 +441,123 @@ function SupplierInvoiceStatusDropdown({ invoice }: { invoice: SupplierInvoiceOu
         ))}
       </DropdownMenuContent>
     </DropdownMenu>
+  );
+}
+
+function EditSupplierInvoiceDialog({ invoice }: { invoice: SupplierInvoiceOutgoing }) {
+  const router = useRouter();
+  const [open, setOpen] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [isPending, startTransition] = useTransition();
+
+  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setError(null);
+    const formData = new FormData(event.currentTarget);
+
+    startTransition(async () => {
+      const result = await updateSupplierInvoice(invoice.id, formData);
+
+      if (result.error) {
+        setError(result.error);
+        return;
+      }
+
+      toast.success("Supplier invoice updated");
+      setOpen(false);
+      router.refresh();
+    });
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <EditDialogButton>Edit supplier invoice</EditDialogButton>
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-xl">
+        <DialogHeader>
+          <DialogTitle>Edit Supplier Invoice</DialogTitle>
+          <DialogDescription>Update supplier invoice details. This does not regenerate the PDF file.</DialogDescription>
+        </DialogHeader>
+        <form className="space-y-4" onSubmit={handleSubmit}>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-2">
+              <Label htmlFor={`supplier_invoice_number_${invoice.id}`}>Invoice Number</Label>
+              <Input
+                defaultValue={invoice.invoice_number}
+                disabled={isPending}
+                id={`supplier_invoice_number_${invoice.id}`}
+                name="invoice_number"
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor={`supplier_status_${invoice.id}`}>Status</Label>
+              <Select defaultValue={invoice.status} disabled={isPending} name="status">
+                <SelectTrigger id={`supplier_status_${invoice.id}`}>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="draft">Draft</SelectItem>
+                  <SelectItem value="sent">Sent</SelectItem>
+                  <SelectItem value="paid">Paid</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor={`supplier_invoice_date_${invoice.id}`}>Invoice Date</Label>
+              <Input
+                defaultValue={dateInputValue(invoice.invoice_date)}
+                disabled={isPending}
+                id={`supplier_invoice_date_${invoice.id}`}
+                name="invoice_date"
+                required
+                type="date"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor={`supplier_ref_${invoice.id}`}>Supplier Ref</Label>
+              <Input
+                defaultValue={invoice.supplier_invoice_ref ?? ""}
+                disabled={isPending}
+                id={`supplier_ref_${invoice.id}`}
+                name="supplier_invoice_ref"
+              />
+            </div>
+            <div className="space-y-2 sm:col-span-2">
+              <Label htmlFor={`supplier_amount_${invoice.id}`}>Supplier Stated Amount (RMB)</Label>
+              <Input
+                defaultValue={invoice.supplier_stated_amount_rmb ?? ""}
+                disabled={isPending}
+                id={`supplier_amount_${invoice.id}`}
+                min="0"
+                name="supplier_stated_amount_rmb"
+                step="0.01"
+                type="number"
+              />
+            </div>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor={`supplier_notes_${invoice.id}`}>Notes</Label>
+            <Textarea
+              defaultValue={invoice.notes ?? ""}
+              disabled={isPending}
+              id={`supplier_notes_${invoice.id}`}
+              name="notes"
+            />
+          </div>
+          {error ? <p className="text-sm font-medium text-red-600">{error}</p> : null}
+          <div className="flex justify-end gap-2">
+            <Button disabled={isPending} onClick={() => setOpen(false)} type="button" variant="outline">
+              Cancel
+            </Button>
+            <Button className="bg-[#0d1b34] hover:bg-[#13294d]" disabled={isPending} type="submit">
+              Save
+            </Button>
+          </div>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -431,6 +711,7 @@ export function InvoicesTab({
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center justify-end gap-1">
+                          {canManage ? <EditClientInvoiceDialog invoice={invoice} /> : null}
                           {canManage ? <SendInvoiceButton invoice={invoice} /> : null}
                           {canManage ? <ClientInvoiceStatusDropdown invoice={invoice} /> : null}
                           {canManage ? <DeleteClientInvoiceButton invoice={invoice} /> : null}
@@ -509,6 +790,7 @@ export function InvoicesTab({
                           </TableCell>
                           <TableCell>
                             <div className="flex items-center justify-end gap-1">
+                              {canManage ? <EditSupplierInvoiceDialog invoice={invoice} /> : null}
                               {canManage ? <SupplierInvoiceStatusDropdown invoice={invoice} /> : null}
                               {canManage ? <DeleteSupplierInvoiceButton invoice={invoice} /> : null}
                             </div>

@@ -514,6 +514,87 @@ export async function updateSupplierInvoiceStatus(
   return { success: true };
 }
 
+export async function updateSupplierInvoice(invoiceId: string, formData: FormData): Promise<ActionResult> {
+  const access = await requireManager();
+
+  if ("error" in access) {
+    return { error: access.error };
+  }
+
+  const parsed = z
+    .object({
+      invoiceId: z.string().uuid(),
+      invoice_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Invalid invoice date"),
+      invoice_number: z.string().trim().min(1, "Invoice number is required"),
+      notes: z
+        .string()
+        .trim()
+        .transform((value) => (value.length ? value : null))
+        .nullable(),
+      status: z.enum(["draft", "sent", "paid"]),
+      supplier_invoice_ref: z
+        .string()
+        .trim()
+        .transform((value) => (value.length ? value : null))
+        .nullable(),
+      supplier_stated_amount_rmb: z.preprocess(
+        (value) => (value === "" || value === null ? null : value),
+        z.coerce.number().positive("Supplier stated amount must be greater than zero").nullable()
+      ),
+    })
+    .safeParse({
+      invoiceId,
+      invoice_date: formData.get("invoice_date"),
+      invoice_number: formData.get("invoice_number"),
+      notes: formData.get("notes"),
+      status: formData.get("status"),
+      supplier_invoice_ref: formData.get("supplier_invoice_ref"),
+      supplier_stated_amount_rmb: formData.get("supplier_stated_amount_rmb"),
+    });
+
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "Invalid invoice" };
+  }
+
+  const supabase = createServerSupabaseClient();
+  const { data: invoice, error: invoiceError } = await supabase
+    .from("supplier_invoices_outgoing")
+    .select("id, trade_id")
+    .eq("id", invoiceId)
+    .maybeSingle();
+
+  if (invoiceError) {
+    return { error: invoiceError.message };
+  }
+
+  if (!invoice) {
+    return { error: "Invoice not found" };
+  }
+
+  const { error } = await supabase
+    .from("supplier_invoices_outgoing")
+    .update({
+      invoice_date: parsed.data.invoice_date,
+      invoice_number: parsed.data.invoice_number,
+      notes: parsed.data.notes,
+      status: parsed.data.status,
+      supplier_invoice_ref: parsed.data.supplier_invoice_ref,
+      supplier_stated_amount_rmb: parsed.data.supplier_stated_amount_rmb,
+    })
+    .eq("id", invoiceId);
+
+  if (error) {
+    if (error.code === "23505") {
+      return { error: `Supplier invoice ${parsed.data.invoice_number} already exists.` };
+    }
+
+    return { error: error.message };
+  }
+
+  revalidatePath(`/trades/${invoice.trade_id}`);
+  return { success: true };
+}
+
 export async function deleteSupplierInvoice(invoiceId: string): Promise<ActionResult> {
   const access = await requireManager();
 
