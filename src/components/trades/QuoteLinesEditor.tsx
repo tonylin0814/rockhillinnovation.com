@@ -101,6 +101,7 @@ function compareProductsByName(a: ProductOption, b: ProductOption) {
 export function QuoteLinesEditor({
   availableProducts,
   canManage,
+  editRequestKey = 0,
   initialLines,
   sessionId,
   sessionStatus,
@@ -109,6 +110,7 @@ export function QuoteLinesEditor({
   tradeId: string;
   initialLines: SupplierQuoteLine[];
   availableProducts: ProductOption[];
+  editRequestKey?: number;
   sessionStatus: SupplierQuoteSession["status"];
   canManage: boolean;
 }) {
@@ -180,6 +182,11 @@ export function QuoteLinesEditor({
       window.localStorage.removeItem(draftKey);
     }
   }, [canEdit, draftKey]);
+
+  useEffect(() => {
+    if (!canEdit || editRequestKey <= 0) return;
+    setIsEditing(true);
+  }, [canEdit, editRequestKey]);
 
   useEffect(() => {
     if (!canEdit || !isEditing) return;
@@ -266,7 +273,7 @@ export function QuoteLinesEditor({
       <div className="flex justify-end">
         {canEdit && !isEditing ? (
           <Button onClick={() => setIsEditing(true)} size="sm" variant="outline">
-            Edit Lines
+            Edit
           </Button>
         ) : null}
       </div>

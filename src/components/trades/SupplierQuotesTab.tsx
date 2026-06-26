@@ -1,6 +1,6 @@
 "use client";
 
-import { BarChart2, CheckCircle2, ChevronsUpDown, FileText, RotateCcw, Trash2 } from "lucide-react";
+import { BarChart2, CheckCircle2, ChevronsUpDown, FileText, PencilLine, RotateCcw, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
 import { toast } from "sonner";
@@ -121,6 +121,7 @@ export function SupplierQuotesTab({
 }) {
   const router = useRouter();
   const [expandedSessionId, setExpandedSessionId] = useState<string | null>(null);
+  const [editRequestBySession, setEditRequestBySession] = useState<Record<string, number>>({});
   const [pendingSessionId, setPendingSessionId] = useState<string | null>(null);
   const [loadedLines, setLoadedLines] = useState<Record<string, LoadedQuoteLines>>({});
   const [loadingSessionId, setLoadingSessionId] = useState<string | null>(null);
@@ -172,11 +173,8 @@ export function SupplierQuotesTab({
     });
   }
 
-  async function toggleLines(sessionId: string) {
-    const nextExpandedSessionId = expandedSessionId === sessionId ? null : sessionId;
-    setExpandedSessionId(nextExpandedSessionId);
-
-    if (!nextExpandedSessionId || loadedLines[sessionId]) {
+  async function loadLines(sessionId: string) {
+    if (loadedLines[sessionId]) {
       return;
     }
 
@@ -203,6 +201,26 @@ export function SupplierQuotesTab({
     } finally {
       setLoadingSessionId(null);
     }
+  }
+
+  async function toggleLines(sessionId: string) {
+    const nextExpandedSessionId = expandedSessionId === sessionId ? null : sessionId;
+    setExpandedSessionId(nextExpandedSessionId);
+
+    if (!nextExpandedSessionId) {
+      return;
+    }
+
+    await loadLines(sessionId);
+  }
+
+  async function editLines(sessionId: string) {
+    setExpandedSessionId(sessionId);
+    setEditRequestBySession((currentRequests) => ({
+      ...currentRequests,
+      [sessionId]: (currentRequests[sessionId] ?? 0) + 1,
+    }));
+    await loadLines(sessionId);
   }
 
   return (
@@ -325,12 +343,18 @@ export function SupplierQuotesTab({
                           Supersede
                         </Button>
                       ) : null}
+                      {canManage && session.status === "draft" ? (
+                        <Button disabled={loadingSessionId === session.id} onClick={() => editLines(session.id)} size="sm">
+                          <PencilLine className="mr-1.5 h-3.5 w-3.5" />
+                          Edit
+                        </Button>
+                      ) : null}
                       <Button
                         onClick={() => toggleLines(session.id)}
                         size="sm"
                         variant="outline"
                       >
-                        View Lines
+                        {isExpanded ? "Hide Lines" : "View Lines"}
                       </Button>
                       {canManage ? (
                         <AlertDialog>
@@ -375,6 +399,7 @@ export function SupplierQuotesTab({
                       <QuoteLinesEditor
                         availableProducts={loadedLines[session.id]?.products ?? availableProducts}
                         canManage={canManage}
+                        editRequestKey={editRequestBySession[session.id] ?? 0}
                         initialLines={loadedLines[session.id]?.lines ?? []}
                         sessionId={session.id}
                         sessionStatus={session.status}
