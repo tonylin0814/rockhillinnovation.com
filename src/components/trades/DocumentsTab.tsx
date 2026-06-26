@@ -6,6 +6,17 @@ import { useMemo, useTransition } from "react";
 import { toast } from "sonner";
 
 import { deleteDocument, updateDocumentStatus } from "@/app/actions/documents";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -101,8 +112,6 @@ function DocumentStatusDropdown({ document }: { document: TradeDocument }) {
   }
 
   function handleDelete() {
-    if (!confirm("Delete this document? This cannot be undone.")) return;
-
     startTransition(async () => {
       const result = await deleteDocument(document.id);
 
@@ -117,26 +126,44 @@ function DocumentStatusDropdown({ document }: { document: TradeDocument }) {
   }
 
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button disabled={isPending} size="icon" type="button" variant="ghost">
-          <MoreHorizontal className="h-4 w-4" />
-          <span className="sr-only">Update status</span>
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end">
-        {(Object.keys(statusLabels) as TradeDocument["status"][]).map((status) => (
-          <DropdownMenuItem disabled={status === document.status} key={status} onClick={() => setStatus(status)}>
-            {statusLabels[status]}
-          </DropdownMenuItem>
-        ))}
-        <DropdownMenuSeparator />
-        <DropdownMenuItem className="text-red-600 focus:text-red-600" onClick={handleDelete}>
-          <Trash2 className="mr-2 h-4 w-4" />
-          Delete
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
+    <AlertDialog>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button disabled={isPending} size="icon" type="button" variant="ghost">
+            <MoreHorizontal className="h-4 w-4" />
+            <span className="sr-only">Update status</span>
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
+          {(Object.keys(statusLabels) as TradeDocument["status"][]).map((status) => (
+            <DropdownMenuItem disabled={status === document.status} key={status} onClick={() => setStatus(status)}>
+              {statusLabels[status]}
+            </DropdownMenuItem>
+          ))}
+          <DropdownMenuSeparator />
+          <AlertDialogTrigger asChild>
+            <DropdownMenuItem className="text-red-600 focus:text-red-600" onSelect={(event) => event.preventDefault()}>
+              <Trash2 className="mr-2 h-4 w-4" />
+              Delete
+            </DropdownMenuItem>
+          </AlertDialogTrigger>
+        </DropdownMenuContent>
+      </DropdownMenu>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Delete document?</AlertDialogTitle>
+          <AlertDialogDescription>
+            This removes the document record from the trade. This cannot be undone.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel disabled={isPending}>Cancel</AlertDialogCancel>
+          <AlertDialogAction className="bg-red-600 hover:bg-red-700" disabled={isPending} onClick={handleDelete}>
+            Delete Document
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   );
 }
 
