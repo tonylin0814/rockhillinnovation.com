@@ -267,6 +267,25 @@ function parseOutgoingLines(value: FormDataEntryValue | null) {
   return JSON.parse(value);
 }
 
+function parseEditableVendorInvoiceLines(value: FormDataEntryValue | null) {
+  if (typeof value !== "string" || !value.trim()) {
+    return null;
+  }
+
+  try {
+    const parsed = JSON.parse(value);
+    const result = z.array(outgoingLineSchema).min(1, "At least one line item required").safeParse(parsed);
+
+    if (!result.success) {
+      return { error: result.error.issues[0]?.message ?? "Invalid vendor invoice lines" };
+    }
+
+    return { lines: result.data };
+  } catch {
+    return { error: "Vendor invoice lines must be valid JSON" };
+  }
+}
+
 function buildCompanyAddress(company: {
   address_line1?: string | null;
   address_line2?: string | null;
@@ -494,14 +513,28 @@ export async function updateVendorOutgoingInvoice(invoiceId: string, formData: F
     return { error: "Invoice not found" };
   }
 
+  const parsedLines = parseEditableVendorInvoiceLines(formData.get("lines"));
+
+  if (parsedLines?.error) {
+    return { error: parsedLines.error };
+  }
+
+  const invoiceLines = parsedLines?.lines ?? null;
+  const updatePayload: Record<string, unknown> = {
+    invoice_date: parsed.data.invoice_date,
+    invoice_number: parsed.data.invoice_number,
+    notes: parsed.data.notes,
+    status: parsed.data.status,
+  };
+
+  if (invoiceLines) {
+    updatePayload.lines = invoiceLines;
+    updatePayload.amount_usd = invoiceLines.reduce((sum, line) => sum + Number(line.amount_usd), 0);
+  }
+
   const { error } = await supabase
     .from("expense_vendor_invoices")
-    .update({
-      invoice_date: parsed.data.invoice_date,
-      invoice_number: parsed.data.invoice_number,
-      notes: parsed.data.notes,
-      status: parsed.data.status,
-    })
+    .update(updatePayload)
     .eq("id", invoiceId);
 
   if (error) {
