@@ -50,7 +50,7 @@ function formatDate(value: string) {
 }
 
 function formatRate(rate: number | null) {
-  return typeof rate === "number" ? `¥${rate.toFixed(2)}` : "-";
+  return typeof rate === "number" ? `¥${rate.toFixed(4)}` : "-";
 }
 
 export function TradesTable({ trades }: { trades: Trade[] }) {

@@ -84,7 +84,7 @@ function formatDate(value: string) {
 }
 
 function formatRate(rate: number | null) {
-  return typeof rate === "number" ? `\u00A5${rate.toFixed(2)} / $1` : "-";
+  return typeof rate === "number" ? `\u00A5${rate.toFixed(4)} / $1` : "-";
 }
 
 function formatPercent(value: number | undefined | null) {
@@ -262,7 +262,7 @@ export default async function TradeWorkspacePage({ params }: { params: { id: str
       .eq("client_quotation_sessions.status", "accepted"),
     supabase
       .from("supplier_quote_lines")
-      .select("total_price_rmb, session:supplier_quote_sessions!inner(status, trade_id)")
+      .select("total_price_rmb, product:products(product_type), session:supplier_quote_sessions!inner(status, trade_id)")
       .eq("supplier_quote_sessions.trade_id", params.id)
       .eq("supplier_quote_sessions.status", "confirmed"),
     supabase
@@ -485,7 +485,17 @@ export default async function TradeWorkspacePage({ params }: { params: { id: str
 
   const costRmb: number | null =
     confirmedQuoteLines && confirmedQuoteLines.length > 0
-      ? round2(confirmedQuoteLines.reduce((sum, line) => sum + Number(line.total_price_rmb ?? 0), 0))
+      ? round2(
+          confirmedQuoteLines.reduce((sum, line) => {
+            const product = Array.isArray(line.product) ? line.product[0] : line.product;
+
+            if (product?.product_type === "set") {
+              return sum;
+            }
+
+            return sum + Number(line.total_price_rmb ?? 0);
+          }, 0)
+        )
       : null;
 
   const absorbedDevCostRmb = round2(

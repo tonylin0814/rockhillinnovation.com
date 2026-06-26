@@ -87,7 +87,7 @@ export function TradePnlCard({
   finalRateValue: number | null;
 }) {
   function rateLabel(rate: number | null) {
-    return rate ? `\u00A5${rate.toFixed(2)}/$1` : null;
+    return rate ? `\u00A5${rate.toFixed(4)}/$1` : null;
   }
 
   const hasDevCosts = absorbedDevCostRmb > 0 || absorbedDevCostCad > 0 || absorbedDevCostUsd > 0;
