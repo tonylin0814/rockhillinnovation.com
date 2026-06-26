@@ -9,7 +9,7 @@ import { notifyParticipants } from "@/lib/notifications";
 import { uploadToOneDrive } from "@/lib/onedrive";
 import { generatePdf } from "@/lib/pdf";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
-import { buildSupplierInvoiceOutgoingHtml } from "@/lib/templates/supplier-invoice-outgoing";
+import { buildSupplierInvoiceOutgoingHtml, type SupplierBanking } from "@/lib/templates/supplier-invoice-outgoing";
 
 export type ActionResult = { success?: true; error?: string; invoiceId?: string; downloadUrl?: string };
 
@@ -155,7 +155,7 @@ export async function generateSupplierInvoiceOutgoing(
   const { data: rawLines, error: linesError } = await supabase
     .from("supplier_quote_lines")
     .select(
-      "id, item_name_chinese, item_name_english, quantity, unit_price_rmb, total_price_rmb, payment_category, sort_order, product:products(id, name_english, name_chinese, product_type, payment_category, supplier_id, supplier:suppliers(id, name, address))"
+      "id, item_name_chinese, item_name_english, quantity, unit_price_rmb, total_price_rmb, payment_category, sort_order, product:products(id, name_english, name_chinese, product_type, payment_category, supplier_id, supplier:suppliers(id, name, address, bank_account_name, bank_account_number, bank_name, bank_address, bank_cnaps_no, bank_swift_code, bank_currency, bank_institution_no, bank_transit_no, bank_tel, banking_instructions))"
     )
     .eq("session_id", session.id)
     .order("sort_order", { ascending: true });
@@ -243,6 +243,7 @@ export async function generateSupplierInvoiceOutgoing(
 
   let supplierName: string | null = null;
   let supplierAddress: string | null = null;
+  let supplierBanking: SupplierBanking | null = null;
 
   for (const line of consolidatedLines) {
     const product = Array.isArray(line.product) ? line.product[0] : line.product;
@@ -255,6 +256,19 @@ export async function generateSupplierInvoiceOutgoing(
     if (supplier?.name) {
       supplierName = supplier.name;
       supplierAddress = supplier.address ?? null;
+      if (supplier.bank_name || supplier.bank_account_number) {
+        supplierBanking = {
+          accountName: supplier.bank_account_name ?? null,
+          accountNumber: supplier.bank_account_number ?? null,
+          bankAddress: supplier.bank_address ?? null,
+          bankName: supplier.bank_name ?? null,
+          bankTel: supplier.bank_tel ?? null,
+          bankingInstructions: supplier.banking_instructions ?? null,
+          cnapsNo: supplier.bank_cnaps_no ?? null,
+          currency: supplier.bank_currency ?? null,
+          swiftCode: supplier.bank_swift_code ?? null,
+        };
+      }
       break;
     }
   }
@@ -267,14 +281,14 @@ export async function generateSupplierInvoiceOutgoing(
     const unitPriceFull = Number(line.unit_price_rmb);
     const unitPriceInvoice = roundMoney(unitPriceFull * pct);
     const totalRmb = roundMoney(quantity * unitPriceInvoice);
-    const pctSuffix = pct < 1 ? ` (${Math.round(pct * 100)}% ${invoiceType === "deposit" ? "Deposit" : "Final"})` : "";
+    const paymentPct = Math.round(pct * 100);
     const descriptionChinese = line.item_name_chinese ?? product?.name_chinese ?? null;
     const descriptionEnglish = line.item_name_english ?? product?.name_english ?? "Item";
 
     return {
       dbLine: {
-        description_chinese: descriptionChinese ? `${descriptionChinese}${pctSuffix}` : null,
-        description_english: `${descriptionEnglish}${pctSuffix}`,
+        description_chinese: descriptionChinese ?? null,
+        description_english: descriptionEnglish,
         payment_category: paymentCategory as PaymentCategory,
         product_id: product?.id ?? null,
         quantity,
@@ -283,9 +297,10 @@ export async function generateSupplierInvoiceOutgoing(
         unit_price_rmb: unitPriceInvoice,
       },
       pdf: {
-        descriptionChinese: descriptionChinese ? `${descriptionChinese}${pctSuffix}` : null,
-        descriptionEnglish: `${descriptionEnglish}${pctSuffix}`,
+        descriptionChinese: descriptionChinese ?? null,
+        descriptionEnglish,
         paymentCategory: paymentCategory as PaymentCategory,
+        paymentPct,
         quantity,
         totalRmb,
         unitPriceRmb: unitPriceInvoice,
@@ -302,6 +317,7 @@ export async function generateSupplierInvoiceOutgoing(
       descriptionChinese: null,
       descriptionEnglish: adjustment.description,
       paymentCategory: "adjustment" as const,
+      paymentPct: 100,
       quantity: 1,
       totalRmb: adjustment.amount_rmb,
       unitPriceRmb: adjustment.amount_rmb,
@@ -320,6 +336,7 @@ export async function generateSupplierInvoiceOutgoing(
     lines: [...invoiceLines.map((line) => line.pdf), ...adjustmentLines.map((line) => line.pdf)],
     notes: parsed.data.invoice.notes,
     supplierAddress,
+    supplierBanking,
     supplierName,
     totalRmb,
     totalUsd,
