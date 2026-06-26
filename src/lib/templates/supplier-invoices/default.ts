@@ -52,6 +52,7 @@ export function buildDefaultSupplierInvoiceHtml({
   supplierAddress,
   supplierBanking,
   supplierName,
+  supplierNameChinese: _supplierNameChinese,
   totalRmb,
   totalUsd,
 }: SupplierInvoiceParams): string {

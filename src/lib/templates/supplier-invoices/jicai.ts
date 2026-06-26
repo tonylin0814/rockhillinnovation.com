@@ -51,12 +51,14 @@ export function buildJicaiInvoiceHtml({
   supplierAddress,
   supplierBanking,
   supplierName,
+  supplierNameChinese,
   totalRmb,
   totalUsd,
 }: SupplierInvoiceParams): string {
   const invoiceTypeLabel = invoiceType === "deposit" ? "定金付款通知" : "尾款付款通知";
   const invoiceTypeSub = invoiceType === "deposit" ? "Supplier Deposit Invoice" : "Supplier Final Invoice";
-  const supplierNameDisplay = escapeHtml(supplierName ?? "供应商");
+  const supplierNameDisplay = escapeHtml(supplierNameChinese ?? supplierName ?? "供应商");
+  const supplierBankingNameDisplay = escapeHtml(supplierName ?? supplierNameChinese ?? "供应商");
   const tableRows = lines
     .map(
       (line, i) => `
@@ -76,7 +78,7 @@ export function buildJicaiInvoiceHtml({
     <div class="page-break"></div>
     <div class="banking-page">
       <div class="banking-header">
-        <div class="banking-title">${supplierNameDisplay} 银行信息</div>
+        <div class="banking-title">${supplierBankingNameDisplay} 银行信息</div>
         <div class="banking-subtitle">电汇转账信息 - ${escapeHtml(invoiceNumber)}</div>
       </div>
       <table class="banking-table">
@@ -99,7 +101,7 @@ export function buildJicaiInvoiceHtml({
              </div>`
           : ""
       }
-      <div class="banking-footer">内部文件 - 仅供 Rock Hill Innovation Inc. 内部使用</div>
+      <div class="banking-footer"></div>
     </div>`
     : "";
 
@@ -256,7 +258,6 @@ export function buildJicaiInvoiceHtml({
           : ""
       }
 
-      <div class="si-footer">内部文件 - 仅供 Rock Hill Innovation Inc. 内部使用</div>
     </div>
     ${bankingPage}
   </body>

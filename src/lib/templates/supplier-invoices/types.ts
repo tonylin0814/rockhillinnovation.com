@@ -26,6 +26,7 @@ export type SupplierInvoiceParams = {
   invoiceType: "deposit" | "final";
   supplierCode: string | null;
   supplierName: string | null;
+  supplierNameChinese: string | null;
   supplierAddress: string | null;
   supplierBanking: SupplierBanking | null;
   lines: SupplierInvoiceLine[];

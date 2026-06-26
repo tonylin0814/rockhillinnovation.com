@@ -155,7 +155,7 @@ export async function generateSupplierInvoiceOutgoing(
   const { data: rawLines, error: linesError } = await supabase
     .from("supplier_quote_lines")
     .select(
-      "id, item_name_chinese, item_name_english, quantity, unit_price_rmb, total_price_rmb, payment_category, sort_order, product:products(id, name_english, name_chinese, product_type, payment_category, supplier_id, supplier:suppliers(id, code, name, address, bank_account_name, bank_account_number, bank_name, bank_address, bank_cnaps_no, bank_swift_code, bank_currency, bank_institution_no, bank_transit_no, bank_tel, banking_instructions))"
+      "id, item_name_chinese, item_name_english, quantity, unit_price_rmb, total_price_rmb, payment_category, sort_order, product:products(id, name_english, name_chinese, product_type, payment_category, supplier_id, supplier:suppliers(id, code, name, name_chinese, address, bank_account_name, bank_account_number, bank_name, bank_address, bank_cnaps_no, bank_swift_code, bank_currency, bank_institution_no, bank_transit_no, bank_tel, banking_instructions))"
     )
     .eq("session_id", session.id)
     .order("sort_order", { ascending: true });
@@ -242,6 +242,7 @@ export async function generateSupplierInvoiceOutgoing(
   }
 
   let supplierName: string | null = null;
+  let supplierNameChinese: string | null = null;
   let supplierCode: string | null = null;
   let supplierAddress: string | null = null;
   let supplierBanking: SupplierBanking | null = null;
@@ -257,6 +258,7 @@ export async function generateSupplierInvoiceOutgoing(
     if (supplier?.name) {
       supplierCode = supplier.code ?? null;
       supplierName = supplier.name;
+      supplierNameChinese = supplier.name_chinese ?? null;
       supplierAddress = supplier.address ?? null;
       if (supplier.bank_name || supplier.bank_account_number) {
         supplierBanking = {
@@ -341,6 +343,7 @@ export async function generateSupplierInvoiceOutgoing(
     supplierBanking,
     supplierCode,
     supplierName,
+    supplierNameChinese,
     totalRmb,
     totalUsd,
   });
