@@ -155,7 +155,7 @@ export async function generateSupplierInvoiceOutgoing(
   const { data: rawLines, error: linesError } = await supabase
     .from("supplier_quote_lines")
     .select(
-      "id, item_name_chinese, item_name_english, quantity, unit_price_rmb, total_price_rmb, payment_category, sort_order, product:products(id, name_english, name_chinese, product_type, supplier_id, supplier:suppliers(id, name, address))"
+      "id, item_name_chinese, item_name_english, quantity, unit_price_rmb, total_price_rmb, payment_category, sort_order, product:products(id, name_english, name_chinese, product_type, payment_category, supplier_id, supplier:suppliers(id, name, address))"
     )
     .eq("session_id", session.id)
     .order("sort_order", { ascending: true });
@@ -179,13 +179,19 @@ export async function generateSupplierInvoiceOutgoing(
   const exchangeRate: number | null = rateRow?.rate_rmb_per_usd ?? trade.working_exchange_rate ?? null;
 
   type QuoteLine = (typeof rawLines)[number];
+  type PaymentCategory = "outsourced" | "produced" | "misc_expense";
   const nonSetLines = rawLines.filter((line) => {
     const product = Array.isArray(line.product) ? line.product[0] : line.product;
     return product?.product_type !== "set";
   });
 
+  function paymentCategoryForLine(line: QuoteLine): PaymentCategory | null {
+    const product = Array.isArray(line.product) ? line.product[0] : line.product;
+    return (line.payment_category ?? product?.payment_category ?? null) as PaymentCategory | null;
+  }
+
   function shouldInclude(line: QuoteLine): boolean {
-    const category = line.payment_category;
+    const category = paymentCategoryForLine(line);
     if (invoiceType === "deposit") {
       return category === "outsourced" || category === "produced";
     }
@@ -194,11 +200,13 @@ export async function generateSupplierInvoiceOutgoing(
   }
 
   function pctForLine(line: QuoteLine): number {
-    if (line.payment_category === "outsourced") {
+    const category = paymentCategoryForLine(line);
+
+    if (category === "outsourced") {
       return 1;
     }
 
-    if (line.payment_category === "produced") {
+    if (category === "produced") {
       return 0.5;
     }
 
@@ -253,6 +261,7 @@ export async function generateSupplierInvoiceOutgoing(
 
   const invoiceLines = consolidatedLines.map((line, index) => {
     const product = Array.isArray(line.product) ? line.product[0] : line.product;
+    const paymentCategory = paymentCategoryForLine(line);
     const pct = pctForLine(line);
     const quantity = Number(line.quantity);
     const unitPriceFull = Number(line.unit_price_rmb);
@@ -266,7 +275,7 @@ export async function generateSupplierInvoiceOutgoing(
       dbLine: {
         description_chinese: descriptionChinese ? `${descriptionChinese}${pctSuffix}` : null,
         description_english: `${descriptionEnglish}${pctSuffix}`,
-        payment_category: line.payment_category as "outsourced" | "produced" | "misc_expense",
+        payment_category: paymentCategory as PaymentCategory,
         product_id: product?.id ?? null,
         quantity,
         sort_order: Number(line.sort_order ?? index + 1),
@@ -276,7 +285,7 @@ export async function generateSupplierInvoiceOutgoing(
       pdf: {
         descriptionChinese: descriptionChinese ? `${descriptionChinese}${pctSuffix}` : null,
         descriptionEnglish: `${descriptionEnglish}${pctSuffix}`,
-        paymentCategory: line.payment_category as "outsourced" | "produced" | "misc_expense",
+        paymentCategory: paymentCategory as PaymentCategory,
         quantity,
         totalRmb,
         unitPriceRmb: unitPriceInvoice,
