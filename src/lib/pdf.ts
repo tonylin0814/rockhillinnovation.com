@@ -1,7 +1,21 @@
+import chromium from "@sparticuz/chromium";
 import puppeteer from "puppeteer";
+import puppeteerCore from "puppeteer-core";
+
+async function launchBrowser() {
+  if (process.env.VERCEL) {
+    return puppeteerCore.launch({
+      args: chromium.args,
+      executablePath: await chromium.executablePath(),
+      headless: true,
+    });
+  }
+
+  return puppeteer.launch({ headless: "new" as never });
+}
 
 export async function generatePdf(html: string): Promise<Buffer> {
-  const browser = await puppeteer.launch({ headless: "new" as never });
+  const browser = await launchBrowser();
 
   try {
     const page = await browser.newPage();

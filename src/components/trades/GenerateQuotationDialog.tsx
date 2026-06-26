@@ -64,7 +64,7 @@ export function GenerateQuotationDialog({
 
         <form className="space-y-4" onSubmit={handleSubmit}>
           <div className="space-y-2">
-            <Label htmlFor="quotation_ref">Quotation Reference</Label>
+            <Label htmlFor="quotation_ref">Order Number</Label>
             <Input
               defaultValue={defaultRef ?? ""}
               disabled={isPending}

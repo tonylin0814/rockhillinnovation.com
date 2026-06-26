@@ -328,42 +328,52 @@ export async function generateQuotationPdf(
     validUntil: validUntil ? normalizeDate(validUntil) : null,
   });
 
-  const pdfBuffer = await generatePdf(html);
-  const fileName = `${quotationRef}.pdf`;
-  const uploaded = await uploadToOneDrive({
-    category: "quotation",
-    fileBuffer: pdfBuffer,
-    fileName,
-    mimeType: "application/pdf",
-    tradeCode: trade?.trade_id ?? "unknown",
-  });
+  let uploadedUrl: string;
 
-  const { error: updateError } = await supabase
-    .from("client_quotation_sessions")
-    .update({ pdf_onedrive_url: uploaded.webUrl, quotation_ref: quotationRef, valid_until: validUntil })
-    .eq("id", sessionId);
+  try {
+    const pdfBuffer = await generatePdf(html);
+    const fileName = `${quotationRef}.pdf`;
+    const uploaded = await uploadToOneDrive({
+      category: "quotation",
+      fileBuffer: pdfBuffer,
+      fileName,
+      mimeType: "application/pdf",
+      tradeCode: trade?.trade_id ?? "unknown",
+    });
+    uploadedUrl = uploaded.webUrl;
 
-  if (updateError) {
-    return { error: updateError.message };
-  }
+    const { error: updateError } = await supabase
+      .from("client_quotation_sessions")
+      .update({ pdf_onedrive_url: uploaded.webUrl, quotation_ref: quotationRef, valid_until: validUntil })
+      .eq("id", sessionId);
 
-  const { error: documentError } = await supabase.from("trade_documents").insert({
-    document_category: "client_quotation",
-    document_type: "quotation",
-    file_name: fileName,
-    file_size_bytes: pdfBuffer.length,
-    notes,
-    onedrive_file_id: uploaded.fileId,
-    onedrive_url: uploaded.webUrl,
-    related_party: "client",
-    status: "draft",
-    trade_id: session.trade_id,
-    uploaded_by: user.id,
-    version: 1,
-  });
+    if (updateError) {
+      return { error: updateError.message };
+    }
 
-  if (documentError) {
-    return { error: documentError.message };
+    const { error: documentError } = await supabase.from("trade_documents").insert({
+      document_category: "client_quotation",
+      document_type: "quotation",
+      file_name: fileName,
+      file_size_bytes: pdfBuffer.length,
+      notes,
+      onedrive_file_id: uploaded.fileId,
+      onedrive_url: uploaded.webUrl,
+      related_party: "client",
+      status: "draft",
+      trade_id: session.trade_id,
+      uploaded_by: user.id,
+      version: 1,
+    });
+
+    if (documentError) {
+      return { error: documentError.message };
+    }
+  } catch (error) {
+    console.error("Quotation PDF generation failed", error);
+    return {
+      error: error instanceof Error ? error.message : "Unable to generate quotation PDF",
+    };
   }
 
   await logActivity({
@@ -376,7 +386,7 @@ export async function generateQuotationPdf(
   });
 
   revalidatePath(`/trades/${session.trade_id}`);
-  return { success: true, downloadUrl: uploaded.webUrl };
+  return { success: true, downloadUrl: uploadedUrl };
 }
 
 export async function saveQuotationLines(sessionId: string, lines: QuotationLineInput[]): Promise<ActionResult> {
