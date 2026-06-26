@@ -477,7 +477,14 @@ function SendInvoiceButton({ invoice }: { invoice: ClientInvoice }) {
 
   function handleDraft() {
     startTransition(async () => {
-      const result = await draftClientInvoiceEmail(invoice.id);
+      let result;
+
+      try {
+        result = await draftClientInvoiceEmail(invoice.id);
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : "Failed to create Outlook draft");
+        return;
+      }
 
       if (result.error) {
         toast.error(result.error);

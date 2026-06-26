@@ -196,111 +196,116 @@ export async function sendClientInvoice(invoiceId: string): Promise<SendResult> 
 }
 
 export async function draftClientInvoiceEmail(invoiceId: string): Promise<DraftResult> {
-  const access = await requireManager();
+  try {
+    const access = await requireManager();
 
-  if ("error" in access) {
-    return { error: access.error ?? "Access denied" };
-  }
-
-  const idParsed = z.string().uuid().safeParse(invoiceId);
-
-  if (!idParsed.success) {
-    return { error: "Invalid invoice ID" };
-  }
-
-  const supabase = createServerSupabaseClient();
-  const { data: invoice, error: invoiceError } = await supabase
-    .from("client_invoices")
-    .select(
-      "id, invoice_number, invoice_type, display_label, invoice_date, total_usd, pdf_onedrive_url, trade_id, trade:trades(trade_id, client:clients(id, name, contacts))"
-    )
-    .eq("id", invoiceId)
-    .maybeSingle();
-
-  if (invoiceError) {
-    return { error: invoiceError.message };
-  }
-
-  if (!invoice) {
-    return { error: "Invoice not found" };
-  }
-
-  const trade = Array.isArray(invoice.trade) ? invoice.trade[0] : invoice.trade;
-  const client = trade ? (Array.isArray(trade.client) ? trade.client[0] : trade.client) : null;
-
-  if (!client) {
-    return { error: "Client not found for this invoice" };
-  }
-
-  const contacts = ((client.contacts as Contact[]) ?? []).filter(
-    (contact) => typeof contact.email === "string" && contact.email.trim().length > 0
-  );
-  const primary = contacts.find((contact) => contact.is_primary) ?? contacts[0];
-
-  if (!primary) {
-    return { error: "No email contact configured for this client." };
-  }
-
-  const { data: companySettings } = await supabase
-    .from("company_settings")
-    .select("company_name, invoice_bcc_email")
-    .limit(1)
-    .maybeSingle();
-
-  let pdfBuffer: Buffer | undefined;
-
-  if (invoice.pdf_onedrive_url) {
-    const downloaded = await downloadFromOneDrive(invoice.pdf_onedrive_url);
-
-    if (downloaded?.buffer) {
-      pdfBuffer = downloaded.buffer;
+    if ("error" in access) {
+      return { error: access.error ?? "Access denied" };
     }
+
+    const idParsed = z.string().uuid().safeParse(invoiceId);
+
+    if (!idParsed.success) {
+      return { error: "Invalid invoice ID" };
+    }
+
+    const supabase = createServerSupabaseClient();
+    const { data: invoice, error: invoiceError } = await supabase
+      .from("client_invoices")
+      .select(
+        "id, invoice_number, invoice_type, display_label, invoice_date, total_usd, pdf_onedrive_url, trade_id, trade:trades(trade_id, client:clients(id, name, contacts))"
+      )
+      .eq("id", invoiceId)
+      .maybeSingle();
+
+    if (invoiceError) {
+      return { error: invoiceError.message };
+    }
+
+    if (!invoice) {
+      return { error: "Invoice not found" };
+    }
+
+    const trade = Array.isArray(invoice.trade) ? invoice.trade[0] : invoice.trade;
+    const client = trade ? (Array.isArray(trade.client) ? trade.client[0] : trade.client) : null;
+
+    if (!client) {
+      return { error: "Client not found for this invoice" };
+    }
+
+    const contacts = ((client.contacts as Contact[]) ?? []).filter(
+      (contact) => typeof contact.email === "string" && contact.email.trim().length > 0
+    );
+    const primary = contacts.find((contact) => contact.is_primary) ?? contacts[0];
+
+    if (!primary) {
+      return { error: "No email contact configured for this client." };
+    }
+
+    const { data: companySettings } = await supabase
+      .from("company_settings")
+      .select("company_name, invoice_bcc_email")
+      .limit(1)
+      .maybeSingle();
+
+    let pdfBuffer: Buffer | undefined;
+
+    if (invoice.pdf_onedrive_url) {
+      const downloaded = await downloadFromOneDrive(invoice.pdf_onedrive_url);
+
+      if (downloaded?.buffer) {
+        pdfBuffer = downloaded.buffer;
+      }
+    }
+
+    const typeLabel =
+      invoice.display_label ??
+      invoiceTypeLabels[invoice.invoice_type as ClientInvoice["invoice_type"]] ??
+      "Invoice";
+    const subject = `${typeLabel}: ${invoice.invoice_number} - Rock Hill Innovation`;
+    const bodyHtml = buildDraftEmailHtml({
+      clientName: client.name,
+      contactName: primary.name || [primary.first_name, primary.last_name].filter(Boolean).join(" "),
+      invoiceDate: invoice.invoice_date,
+      invoiceNumber: invoice.invoice_number,
+      invoiceTypeLabel: typeLabel,
+      pdfWebUrl: invoice.pdf_onedrive_url,
+      totalUsd: Number(invoice.total_usd),
+      tradeCode: trade?.trade_id ?? "",
+    });
+
+    const bccEmail =
+      typeof companySettings?.invoice_bcc_email === "string" ? companySettings.invoice_bcc_email.trim() : "";
+    const draft = await createOutlookDraft({
+      attachmentBuffer: pdfBuffer,
+      attachmentFileName: pdfBuffer ? `${invoice.invoice_number}.pdf` : undefined,
+      bcc: bccEmail ? [{ email: bccEmail, name: companySettings?.company_name ?? "Rock Hill Innovation" }] : [],
+      bodyHtml,
+      subject,
+      to: [
+        {
+          email: primary.email.trim(),
+          name: primary.name || [primary.first_name, primary.last_name].filter(Boolean).join(" "),
+        },
+      ],
+    });
+
+    if ("error" in draft) {
+      return { error: draft.error };
+    }
+
+    await logActivity({
+      action: "created",
+      summary: `Email draft created in Outlook for invoice ${invoice.invoice_number} -> ${primary.email}`,
+      targetId: invoiceId,
+      targetTable: "client_invoices",
+      tradeId: invoice.trade_id,
+      user: access.user,
+    });
+
+    return { draftUrl: draft.webLink, success: true };
+  } catch (error) {
+    console.error("Outlook draft creation failed", error);
+    return { error: error instanceof Error ? error.message : "Failed to create Outlook draft" };
   }
-
-  const typeLabel =
-    invoice.display_label ??
-    invoiceTypeLabels[invoice.invoice_type as ClientInvoice["invoice_type"]] ??
-    "Invoice";
-  const subject = `${typeLabel}: ${invoice.invoice_number} - Rock Hill Innovation`;
-  const bodyHtml = buildDraftEmailHtml({
-    clientName: client.name,
-    contactName: primary.name || [primary.first_name, primary.last_name].filter(Boolean).join(" "),
-    invoiceDate: invoice.invoice_date,
-    invoiceNumber: invoice.invoice_number,
-    invoiceTypeLabel: typeLabel,
-    pdfWebUrl: invoice.pdf_onedrive_url,
-    totalUsd: Number(invoice.total_usd),
-    tradeCode: trade?.trade_id ?? "",
-  });
-
-  const bccEmail =
-    typeof companySettings?.invoice_bcc_email === "string" ? companySettings.invoice_bcc_email.trim() : "";
-  const draft = await createOutlookDraft({
-    attachmentBuffer: pdfBuffer,
-    attachmentFileName: pdfBuffer ? `${invoice.invoice_number}.pdf` : undefined,
-    bcc: bccEmail ? [{ email: bccEmail, name: companySettings?.company_name ?? "Rock Hill Innovation" }] : [],
-    bodyHtml,
-    subject,
-    to: [
-      {
-        email: primary.email.trim(),
-        name: primary.name || [primary.first_name, primary.last_name].filter(Boolean).join(" "),
-      },
-    ],
-  });
-
-  if ("error" in draft) {
-    return { error: draft.error };
-  }
-
-  await logActivity({
-    action: "created",
-    summary: `Email draft created in Outlook for invoice ${invoice.invoice_number} -> ${primary.email}`,
-    targetId: invoiceId,
-    targetTable: "client_invoices",
-    tradeId: invoice.trade_id,
-    user: access.user,
-  });
-
-  return { draftUrl: draft.webLink, success: true };
 }
