@@ -206,6 +206,7 @@ export function buildProFormaHtml({
   depositPct = 50,
   invoiceDate,
   invoiceNumber,
+  invoiceType,
   lines,
   logoBase64 = null,
   notes,
@@ -282,6 +283,90 @@ export function buildProFormaHtml({
     : paymentTerms
       ? `<div class="info-block no-break"><strong>Payment Terms:</strong> ${escapeHtml(paymentTerms)}</div>`
       : "";
+
+  const amountDueCalloutHtml = (() => {
+    if (invoiceType === "deposit") {
+      const dueNote = depositDueDate ? `Payable by ${escapeHtml(depositDueDate)}` : "Payable upon order confirmation";
+
+      return `
+      <div class="no-break" style="
+        margin: 22px 0 0;
+        background: #0d1b34;
+        border-radius: 6px;
+        padding: 24px 32px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      ">
+        <div>
+          <div style="
+            font-size: 8pt;
+            font-weight: 700;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            color: #7fa8d4;
+            margin-bottom: 4px;
+          ">Deposit Due Now (${depositPct}%)</div>
+          <div style="
+            font-size: 7pt;
+            color: #94a3b8;
+            margin-top: 6px;
+          ">${dueNote}</div>
+        </div>
+        <div style="
+          font-size: 28pt;
+          font-weight: 800;
+          color: #ffffff;
+          letter-spacing: -0.01em;
+          white-space: nowrap;
+        ">${formatUsd(depositAmount)}</div>
+      </div>`;
+    }
+
+    if (invoiceType === "final") {
+      const dueNote = paymentTerms ? escapeHtml(paymentTerms) : "Payable prior to shipment";
+
+      return `
+      <div class="no-break" style="
+        margin: 22px 0 0;
+        background: #1a3a2a;
+        border-radius: 6px;
+        padding: 24px 32px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      ">
+        <div>
+          <div style="
+            font-size: 8pt;
+            font-weight: 700;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            color: #6dbf9e;
+            margin-bottom: 4px;
+          ">Balance Due</div>
+          <div style="
+            font-size: 7pt;
+            color: #94a3b8;
+            margin-top: 6px;
+          ">${dueNote}</div>
+        </div>
+        <div style="
+          font-size: 28pt;
+          font-weight: 800;
+          color: #ffffff;
+          letter-spacing: -0.01em;
+          white-space: nowrap;
+        ">${formatUsd(grandTotal)}</div>
+      </div>`;
+    }
+
+    return "";
+  })();
 
   const content = `
     <div class="doc-header">
@@ -390,6 +475,8 @@ export function buildProFormaHtml({
     </div>
 
     ${paymentScheduleHtml}
+
+    ${amountDueCalloutHtml}
 
     ${notes ? `<div class="info-block no-break"><strong>Notes:</strong> ${multiline(notes)}</div>` : ""}
 
