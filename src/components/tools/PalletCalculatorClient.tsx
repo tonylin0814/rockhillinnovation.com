@@ -718,7 +718,7 @@ function PalletCanvasEditor({
     const pointerY = svgPt.y / scale;
 
     const hit = hitTest(pointerX, pointerY);
-    if (hit >= 0) {
+       if (hit >= 0) {
       onUpdate(editCartons.filter((_, i) => i !== hit));
       return;
     }

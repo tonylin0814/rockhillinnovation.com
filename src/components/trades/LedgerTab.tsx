@@ -46,9 +46,9 @@ type EntryType = TradeLedgerEntry["entry_type"];
 
 const ENTRY_TYPE_LABELS: Record<EntryType, string> = {
   bank_fee: "Bank Fee",
-  client_payment_received: "Client Payment",
-  expense_vendor_payment: "Vendor Payment",
-  misc: "Miscellaneous",
+  client_payment_received: "Client Receipt",
+  expense_vendor_payment: "Vendor Expense",
+  misc: "Other",
   reimbursement: "Reimbursement",
   supplier_payment_sent: "Supplier Payment",
 };
@@ -129,8 +129,8 @@ function LedgerSummary({ entries }: { entries: TradeLedgerEntry[] }) {
   const totalFees = roundMoney(entries.reduce((sum, entry) => sum + Number(entry.bank_fee_usd ?? 0), 0));
   const net = roundMoney(totalIn - totalOut - totalFees);
   const stats = [
-    { color: "text-green-700", label: "Total Received", value: formatUsd(totalIn) },
-    { color: "text-red-700", label: "Total Sent", value: formatUsd(totalOut) },
+    { color: "text-green-700", label: "Income", value: formatUsd(totalIn) },
+    { color: "text-red-700", label: "Expenses", value: formatUsd(totalOut) },
     { color: "text-slate-600", label: "Bank Fees", value: formatUsd(totalFees) },
     { color: net >= 0 ? "text-green-700" : "text-red-700", label: "Net (USD)", value: formatUsd(net) },
   ];
@@ -201,7 +201,7 @@ function LedgerEntryDialog({
         return;
       }
 
-      toast.success(entry ? "Ledger entry updated" : "Ledger entry added");
+      toast.success(entry ? "Transaction updated" : "Transaction added");
       setOpen(false);
       router.refresh();
     });
@@ -212,8 +212,8 @@ function LedgerEntryDialog({
       <DialogTrigger asChild>{children}</DialogTrigger>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>{entry ? "Edit Ledger Entry" : "Add Ledger Entry"}</DialogTitle>
-          <DialogDescription>Record a cash movement for this trade.</DialogDescription>
+          <DialogTitle>{entry ? "Edit Transaction" : "Add Transaction"}</DialogTitle>
+          <DialogDescription>Record an income or expense for this trade.</DialogDescription>
         </DialogHeader>
 
         <form className="space-y-4" onSubmit={handleSubmit}>
@@ -490,9 +490,9 @@ function DeleteEntryButton({ entryId, tradeId }: { entryId: string; tradeId: str
       </AlertDialogTrigger>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>Delete ledger entry?</AlertDialogTitle>
+          <AlertDialogTitle>Delete transaction?</AlertDialogTitle>
           <AlertDialogDescription>
-            This will permanently remove this ledger entry. This action cannot be undone.
+            This will permanently remove this transaction. This action cannot be undone.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
@@ -529,7 +529,7 @@ export function LedgerTab({
 
       <Card className="border-slate-200 shadow-sm">
         <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle>Cash Movements</CardTitle>
+          <CardTitle>Transactions</CardTitle>
           {canManage ? (
             <LedgerEntryDialog
               clientInvoices={clientInvoices}
@@ -540,7 +540,7 @@ export function LedgerTab({
             >
               <Button className="bg-[#0d1b34] hover:bg-[#13294d]">
                 <Plus className="mr-2 h-4 w-4" />
-                Add Entry
+                Add Transaction
               </Button>
             </LedgerEntryDialog>
           ) : null}

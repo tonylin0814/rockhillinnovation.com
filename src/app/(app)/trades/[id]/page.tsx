@@ -561,8 +561,8 @@ export default async function TradeWorkspacePage({ params }: { params: { id: str
           <TabsTrigger value="quotations">Quotations</TabsTrigger>
           <TabsTrigger value="invoices">Invoices</TabsTrigger>
           {canManage ? <TabsTrigger value="packing">Packing</TabsTrigger> : null}
+          <TabsTrigger value="ledger">Bookkeeping</TabsTrigger>
           {canViewFinancials ? <TabsTrigger value="financial">Financial</TabsTrigger> : null}
-          <TabsTrigger value="ledger">Ledger</TabsTrigger>
           <TabsTrigger value="documents">Documents</TabsTrigger>
           {canManage ? <TabsTrigger value="shareholders">Shareholders</TabsTrigger> : null}
           {canManage ? <TabsTrigger value="diary">Diary</TabsTrigger> : null}
