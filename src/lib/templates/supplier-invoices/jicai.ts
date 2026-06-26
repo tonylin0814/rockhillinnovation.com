@@ -261,9 +261,13 @@ export function buildJicaiInvoiceHtml({
         </div>
         ${
           exchangeRate && totalUsd != null
-            ? `<div class="si-total-divider"></div>
+            ? `<div class="si-total-row" style="color:#6b7280;font-size:8pt;padding:2px 0;">
+                 <span>÷ ${exchangeRate.toFixed(4)} 人民币/美元</span>
+                 <span></span>
+               </div>
+               <div class="si-total-divider"></div>
                <div class="si-total-row si-grand">
-                 <span class="si-total-label">美元等值</span>
+                 <span class="si-total-label">合计（美元）/ Grand Total (USD)</span>
                  <strong class="si-total-grand">${formatUsd(totalUsd)}</strong>
                </div>`
             : `<div class="si-total-divider"></div>`

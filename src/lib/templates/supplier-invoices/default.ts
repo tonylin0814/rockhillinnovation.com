@@ -179,14 +179,18 @@ export function buildDefaultSupplierInvoiceHtml({
             <span class="def-total-label">Total (RMB)</span>
             <span class="def-total-val">${formatRmb(totalRmb)}</span>
           </div>
-          ${
-            exchangeRate && totalUsd != null
-              ? `<div class="def-total-divider"></div>
-                 <div class="def-total-row def-grand">
-                   <span class="def-total-label">USD Equivalent</span>
+        ${
+          exchangeRate && totalUsd != null
+            ? `<div class="def-total-row" style="color:#6b7280;font-size:8pt;padding:2px 0;">
+                 <span>÷ ${exchangeRate.toFixed(4)} RMB/USD</span>
+                 <span></span>
+               </div>
+               <div class="def-total-divider"></div>
+               <div class="def-total-row def-grand">
+                   <span class="def-total-label">Grand Total (USD)</span>
                    <strong class="def-total-grand">${formatUsd(totalUsd)}</strong>
                  </div>`
-              : `<div class="def-total-divider"></div>`
+            : `<div class="def-total-divider"></div>`
           }
         </div>
 

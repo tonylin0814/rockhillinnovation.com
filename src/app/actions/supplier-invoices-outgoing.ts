@@ -206,15 +206,25 @@ export async function generateSupplierInvoiceOutgoing(
     return { error: "No quote lines found in the confirmed session." };
   }
 
+  const specificType = invoiceType === "final" ? "final" : "deposit";
   const { data: rateRow } = await supabase
     .from("exchange_rates")
     .select("id, rate_rmb_per_usd")
     .eq("trade_id", tradeId)
-    .eq("payment_type", invoiceType === "final" ? "final" : "deposit")
+    .eq("payment_type", specificType)
     .maybeSingle();
 
+  const { data: fallbackRateRow } = !rateRow
+    ? await supabase
+        .from("exchange_rates")
+        .select("id, rate_rmb_per_usd")
+        .eq("trade_id", tradeId)
+        .maybeSingle()
+    : { data: null };
+
   const exchangeRateId: string | null = rateRow?.id ?? null;
-  const exchangeRate: number | null = rateRow?.rate_rmb_per_usd ?? trade.working_exchange_rate ?? null;
+  const exchangeRate: number | null =
+    rateRow?.rate_rmb_per_usd ?? fallbackRateRow?.rate_rmb_per_usd ?? trade.working_exchange_rate ?? null;
 
   type QuoteLine = (typeof rawLines)[number];
   type PaymentCategory = "outsourced" | "produced" | "misc_expense";
@@ -273,7 +283,12 @@ export async function generateSupplierInvoiceOutgoing(
           ...acc[key],
           quantity: nextQuantity,
           total_price_rmb: nextTotal,
-          unit_price_rmb: nextQuantity > 0 ? nextTotal / nextQuantity : acc[key].unit_price_rmb,
+          unit_price_rmb:
+            Number(acc[key].unit_price_rmb) === Number(line.unit_price_rmb)
+              ? acc[key].unit_price_rmb
+              : nextQuantity > 0
+                ? nextTotal / nextQuantity
+                : acc[key].unit_price_rmb,
         };
       } else {
         acc[key] = { ...line };
@@ -351,11 +366,8 @@ export async function generateSupplierInvoiceOutgoing(
           const paymentCategory = invoiceType === "commercial" ? "produced" : paymentCategoryForLine(line);
           const pct = pctForLine(line);
           const quantity = Number(line.quantity);
-          const sourceTotalRmb = Number(line.total_price_rmb);
-          const hasSourceTotal = Number.isFinite(sourceTotalRmb) && sourceTotalRmb > 0;
-          const unitPriceFull = quantity > 0 && hasSourceTotal ? sourceTotalRmb / quantity : Number(line.unit_price_rmb);
-          const unitPriceInvoice = unitPriceFull * pct;
-          const totalRmb = roundMoney((hasSourceTotal ? sourceTotalRmb : quantity * unitPriceFull) * pct);
+          const unitPriceFull = Number(line.unit_price_rmb);
+          const totalRmb = roundMoney(quantity * unitPriceFull * pct);
           const paymentPct = Math.round(pct * 100);
           const descriptionChinese = line.item_name_chinese ?? product?.name_chinese ?? null;
           const descriptionEnglish = line.item_name_english ?? product?.name_english ?? "Item";
@@ -369,7 +381,7 @@ export async function generateSupplierInvoiceOutgoing(
               quantity,
               sort_order: Number(line.sort_order ?? index + 1),
               source_quote_line_id: line.id,
-              unit_price_rmb: unitPriceInvoice,
+              unit_price_rmb: unitPriceFull,
             },
             pdf: {
               descriptionChinese: descriptionChinese ?? null,
