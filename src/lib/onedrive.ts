@@ -214,3 +214,18 @@ export async function createOutlookDraft(params: {
     };
   }
 }
+
+/**
+ * Permanently deletes a file from OneDrive by its Graph item ID.
+ * Does not throw so invoice cleanup can continue if the file is already gone.
+ */
+export async function deleteFromOneDrive(fileId: string): Promise<void> {
+  const driveId = requireEnv("ONEDRIVE_DRIVE_ID");
+
+  try {
+    const client = await getGraphClient();
+    await client.api(`/drives/${driveId}/items/${fileId}`).delete();
+  } catch (error) {
+    console.error("[OneDrive] deleteFromOneDrive failed:", fileId, error);
+  }
+}

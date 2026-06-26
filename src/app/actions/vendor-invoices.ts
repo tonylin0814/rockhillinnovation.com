@@ -6,7 +6,7 @@ import { z } from "zod";
 import { requireManager as requireManagerRole } from "@/lib/auth";
 import { getNextTradeDocumentVersion } from "@/lib/document-version";
 import { notifyParticipants } from "@/lib/notifications";
-import { downloadFromOneDrive, uploadToOneDrive } from "@/lib/onedrive";
+import { deleteFromOneDrive, downloadFromOneDrive, uploadToOneDrive } from "@/lib/onedrive";
 import { generatePdf } from "@/lib/pdf";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { buildVendorInvoiceHtml } from "@/lib/templates/vendor-invoice";
@@ -531,7 +531,7 @@ export async function deleteVendorOutgoingInvoice(invoiceId: string): Promise<Ac
   const supabase = createServerSupabaseClient();
   const { data: invoice, error: invoiceError } = await supabase
     .from("expense_vendor_invoices")
-    .select("id, invoice_number, trade_id, trade:trades(trade_id)")
+    .select("id, invoice_number, trade_id, pdf_onedrive_url, trade:trades(trade_id)")
     .eq("id", invoiceId)
     .maybeSingle();
 
@@ -541,6 +541,30 @@ export async function deleteVendorOutgoingInvoice(invoiceId: string): Promise<Ac
 
   if (!invoice) {
     return { error: "Invoice not found" };
+  }
+
+  if (invoice.pdf_onedrive_url) {
+    const { data: document, error: documentError } = await supabase
+      .from("trade_documents")
+      .select("id, onedrive_file_id")
+      .eq("onedrive_url", invoice.pdf_onedrive_url)
+      .maybeSingle();
+
+    if (documentError) {
+      return { error: documentError.message };
+    }
+
+    if (document?.onedrive_file_id) {
+      await deleteFromOneDrive(document.onedrive_file_id);
+    }
+
+    if (document?.id) {
+      const { error: deleteDocumentError } = await supabase.from("trade_documents").delete().eq("id", document.id);
+
+      if (deleteDocumentError) {
+        return { error: deleteDocumentError.message };
+      }
+    }
   }
 
   const { error } = await supabase.from("expense_vendor_invoices").delete().eq("id", invoiceId);

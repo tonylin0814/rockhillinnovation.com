@@ -566,8 +566,7 @@ function DeleteClientInvoiceButton({ invoice }: { invoice: ClientInvoice }) {
         <AlertDialogHeader>
           <AlertDialogTitle>Delete invoice {invoice.invoice_number}?</AlertDialogTitle>
           <AlertDialogDescription>
-            This removes the invoice record and its line items from the system. The generated PDF file in OneDrive is not
-            deleted automatically.
+            This permanently deletes the invoice record and its PDF file from OneDrive.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
@@ -988,8 +987,7 @@ function DeleteSupplierInvoiceButton({ invoice }: { invoice: SupplierInvoiceOutg
         <AlertDialogHeader>
           <AlertDialogTitle>Delete supplier invoice {invoice.invoice_number}?</AlertDialogTitle>
           <AlertDialogDescription>
-            This removes the supplier invoice record and its line items from the system. The generated PDF file in
-            OneDrive is not deleted automatically.
+            This permanently deletes the supplier invoice record and its PDF file from OneDrive.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
@@ -1073,8 +1071,7 @@ function DeleteVendorOutgoingInvoiceButton({ invoice }: { invoice: ExpenseVendor
         <AlertDialogHeader>
           <AlertDialogTitle>Delete vendor invoice {invoice.invoice_number ?? invoice.id}?</AlertDialogTitle>
           <AlertDialogDescription>
-            This removes the vendor invoice record from the system. The generated PDF file in OneDrive is not deleted
-            automatically.
+            This permanently deletes the vendor invoice record and its PDF file from OneDrive.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
