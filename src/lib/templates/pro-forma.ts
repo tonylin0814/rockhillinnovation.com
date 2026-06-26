@@ -63,6 +63,14 @@ function multiline(value: string | null) {
   return escapeHtml(value ?? "").replace(/\n/g, "<br />");
 }
 
+function formatComponentName(component: { code: string | null; name: string }) {
+  if (component.code === "MLP-ASSEMBLY-1" || component.code === "MLP-ASSEMBLY-2") {
+    return "MLP-ASSEMBLY - Assembly";
+  }
+
+  return component.code ? `${component.code} - ${component.name}` : component.name;
+}
+
 function buildBankingPage(
   account: CompanyBankingAccount | null,
   invoiceNumber: string,
@@ -330,9 +338,7 @@ export function buildProFormaHtml({
                     ? `<div class="item-note"><strong>Components:</strong><br />${line.components
                         .map(
                           (component) =>
-                            `${escapeHtml(component.code ? `${component.code} - ` : "")}${escapeHtml(component.name)} x ${formatQuantity(
-                              component.quantityPerSet
-                            )}`
+                            `${escapeHtml(formatComponentName(component))} x ${formatQuantity(component.quantityPerSet)}`
                         )
                         .join("<br />")}</div>`
                     : ""
