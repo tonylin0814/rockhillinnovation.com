@@ -41,6 +41,28 @@ type ProductForQuoteImport = {
   product_type: "part" | "set";
 };
 
+type QuotationPdfProduct = {
+  code: string | null;
+  components?:
+    | {
+        quantity_per_set: number | string;
+        component:
+          | {
+              code: string | null;
+              name_english: string | null;
+            }
+          | {
+              code: string | null;
+              name_english: string | null;
+            }[]
+          | null;
+      }[]
+    | null;
+  id: string;
+  name_english: string | null;
+  product_type: "part" | "set";
+};
+
 type QuoteLineForImport = {
   product_id: string | null;
   item_name_english: string | null;
@@ -275,7 +297,13 @@ export async function generateQuotationPdf(
        client:clients(id, name, address, currency),
        lines:client_quotation_lines(
          id, item_description, quantity, unit_price_usd, total_price_usd, notes,
-         product:products(id, code, name_english)
+         product:products(
+           id, code, name_english, product_type,
+           components:product_components!product_components_set_product_id_fkey(
+             quantity_per_set,
+             component:products!product_components_component_product_id_fkey(code, name_english)
+           )
+         )
        ),
        trade:trades(trade_id)`
     )
@@ -300,9 +328,30 @@ export async function generateQuotationPdf(
   const { data: companySettings } = await supabase.from("company_settings").select("*").limit(1).maybeSingle();
 
   const lines = (Array.isArray(session.lines) ? session.lines : []).map((line) => {
-    const product = Array.isArray(line.product) ? line.product[0] : line.product;
+    const product = (Array.isArray(line.product) ? line.product[0] : line.product) as QuotationPdfProduct | null;
+    const components =
+      product?.product_type === "set"
+        ? (product.components ?? [])
+            .map((componentRow) => {
+              const component = Array.isArray(componentRow.component)
+                ? componentRow.component[0]
+                : componentRow.component;
+
+              if (!component?.name_english) {
+                return null;
+              }
+
+              return {
+                code: component.code ?? null,
+                name: component.name_english,
+                quantityPerSet: Number(componentRow.quantity_per_set),
+              };
+            })
+            .filter((component): component is { code: string | null; name: string; quantityPerSet: number } => Boolean(component))
+        : [];
 
     return {
+      components,
       description: line.item_description ?? product?.name_english ?? "Item",
       itemCode: product?.code ?? null,
       notes: line.notes ?? null,

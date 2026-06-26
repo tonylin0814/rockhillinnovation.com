@@ -2,6 +2,11 @@ import { buildBaseHtml } from "@/lib/templates/base";
 import type { CompanySettings } from "@/types";
 
 type QuotationLine = {
+  components?: {
+    code: string | null;
+    name: string;
+    quantityPerSet: number;
+  }[];
   itemCode: string | null;
   description: string;
   notes: string | null;
@@ -128,7 +133,7 @@ export function buildClientQuotationHtml({
     <table class="line-items">
       <thead>
         <tr>
-          <th style="width:11%;">Item #</th>
+          <th style="width:22%;">Item #</th>
           <th>Description</th>
           <th class="amount" style="width:10%;">Qty</th>
           <th class="amount" style="width:13%;">Unit Price</th>
@@ -142,6 +147,18 @@ export function buildClientQuotationHtml({
               <td class="item-code">${escapeHtml(line.itemCode ?? "")}</td>
               <td>
                 ${escapeHtml(line.description)}
+                ${
+                  line.components?.length
+                    ? `<div class="item-note"><strong>Components:</strong><br />${line.components
+                        .map(
+                          (component) =>
+                            `${escapeHtml(component.code ? `${component.code} - ` : "")}${escapeHtml(component.name)} x ${formatQuantity(
+                              component.quantityPerSet
+                            )}`
+                        )
+                        .join("<br />")}</div>`
+                    : ""
+                }
                 ${line.notes ? `<div class="item-note">${multiline(line.notes)}</div>` : ""}
               </td>
               <td class="amount">${formatQuantity(line.quantity)}</td>
