@@ -1,19 +1,8 @@
 import { buildBaseHtml } from "@/lib/templates/base";
-import { bankingRows, escapeHtml, formatDate, formatUsd, hasBankingDetails, lineRows, multiline } from "@/lib/templates/vendor-invoices/shared";
+import { buildVendorBankingPage, escapeHtml, formatDate, formatUsd, lineRows, multiline } from "@/lib/templates/vendor-invoices/shared";
 import type { VendorOutgoingInvoiceParams } from "@/lib/templates/vendor-invoices/types";
 
 export function buildSgracoInvoiceHtml(params: VendorOutgoingInvoiceParams): string {
-  const bankingHtml = hasBankingDetails(params.vendorBanking)
-    ? `<section class="banking no-break">
-        <h2>Banking Details</h2>
-        <div class="bank-grid">
-          ${bankingRows(params.vendorBanking)
-            .map(([label, value]) => `<div><span>${escapeHtml(label)}</span><strong>${multiline(value)}</strong></div>`)
-            .join("")}
-        </div>
-      </section>`
-    : "";
-
   const content = `
     <div class="top-row">
       <div>
@@ -42,8 +31,8 @@ export function buildSgracoInvoiceHtml(params: VendorOutgoingInvoiceParams): str
     </table>
     <div class="total-box"><span>Total</span><strong>${formatUsd(params.totalUsd)}</strong></div>
     ${params.notes ? `<div class="notes"><strong>Notes:</strong><br />${multiline(params.notes)}</div>` : ""}
-    ${bankingHtml}
     <footer>Internal document - for Rock Hill Innovation Co., Ltd use only</footer>
+    ${buildVendorBankingPage(params)}
   `;
 
   return buildBaseHtml({
@@ -70,11 +59,6 @@ export function buildSgracoInvoiceHtml(params: VendorOutgoingInvoiceParams): str
       .total-box { align-items:center; display:flex; justify-content:flex-end; gap:12px; margin:18px 0 28px auto; }
       .total-box span { color:#64748b; font-weight:700; }
       .total-box strong { background:#0D9488; border-radius:4px; color:#fff; font-size:13pt; font-weight:700; padding:10px 16px; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
-      .banking { border-radius:6px; margin-top:32px; overflow:hidden; }
-      .banking h2 { background:#0D9488; color:#fff; font-size:10pt; font-weight:600; margin:0; padding:10px 20px; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
-      .bank-grid { background:#f0fdfa; display:grid; grid-template-columns:1fr 1fr; gap:10px 18px; padding:16px 20px; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
-      .bank-grid span { color:#0D9488; display:block; font-size:8.5pt; font-weight:700; }
-      .bank-grid strong { color:#1e293b; display:block; font-weight:500; }
       .notes { color:#64748b; margin:18px 0; }
       footer { color:#94a3b8; font-size:8.5pt; margin-top:28px; text-align:right; }
     `,

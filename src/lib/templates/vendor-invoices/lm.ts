@@ -1,17 +1,8 @@
 import { buildBaseHtml } from "@/lib/templates/base";
-import { bankingRows, escapeHtml, formatDate, formatUsd, hasBankingDetails, lineRows, multiline } from "@/lib/templates/vendor-invoices/shared";
+import { buildVendorBankingPage, escapeHtml, formatDate, formatUsd, lineRows, multiline } from "@/lib/templates/vendor-invoices/shared";
 import type { VendorOutgoingInvoiceParams } from "@/lib/templates/vendor-invoices/types";
 
 export function buildLmInvoiceHtml(params: VendorOutgoingInvoiceParams): string {
-  const bankingHtml = hasBankingDetails(params.vendorBanking)
-    ? `<section class="banking no-break">
-        <h2>Banking Information</h2>
-        ${bankingRows(params.vendorBanking)
-          .map(([label, value]) => `<p><span>${escapeHtml(label)}:</span> ${multiline(value)}</p>`)
-          .join("")}
-      </section>`
-    : "";
-
   const content = `
     <div class="clean-shell">
       <div class="top-row">
@@ -38,9 +29,9 @@ export function buildLmInvoiceHtml(params: VendorOutgoingInvoiceParams): string 
       </table>
       <div class="total-box"><span>Total</span><strong>${formatUsd(params.totalUsd)}</strong></div>
       ${params.notes ? `<div class="notes"><strong>Notes:</strong><br />${multiline(params.notes)}</div>` : ""}
-      ${bankingHtml}
       <footer>${escapeHtml(params.vendorName)}<br /><span>${params.vendorAddress ? multiline(params.vendorAddress) : ""}</span></footer>
     </div>
+    ${buildVendorBankingPage(params)}
   `;
 
   return buildBaseHtml({
@@ -64,10 +55,6 @@ export function buildLmInvoiceHtml(params: VendorOutgoingInvoiceParams): string 
       .vendor-lines td { border-bottom:1px solid #eee; padding:8px 10px; }
       .vendor-lines .amount { text-align:right; width:1.6in; }
       .total-box { border-top:3px double #7B2D42; color:#7B2D42; display:flex; font-weight:700; justify-content:space-between; margin:20px 0 28px auto; padding-top:8px; width:2.6in; }
-      .banking { background:#fdf7f8; border-left:3px solid #7B2D42; margin-top:24px; padding:12px 16px; }
-      .banking h2 { color:#7B2D42; margin:0 0 8px; }
-      .banking p { margin:3px 0; }
-      .banking span { color:#888; }
       .notes { color:#555; margin:18px 0; }
       footer { color:#7B2D42; font-weight:700; margin-top:30px; text-align:center; }
       footer span { color:#888; font-weight:400; }

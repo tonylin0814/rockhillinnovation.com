@@ -1,19 +1,8 @@
 import { buildBaseHtml } from "@/lib/templates/base";
-import { bankingRows, escapeHtml, formatDate, formatUsd, hasBankingDetails, lineRows, multiline } from "@/lib/templates/vendor-invoices/shared";
+import { buildVendorBankingPage, escapeHtml, formatDate, formatUsd, lineRows, multiline } from "@/lib/templates/vendor-invoices/shared";
 import type { VendorOutgoingInvoiceParams } from "@/lib/templates/vendor-invoices/types";
 
 export function buildChenlawInvoiceHtml(params: VendorOutgoingInvoiceParams): string {
-  const bankingHtml = hasBankingDetails(params.vendorBanking)
-    ? `<section class="banking no-break">
-        <h2>BANKING DETAILS</h2>
-        <div class="bank-grid">
-          ${bankingRows(params.vendorBanking)
-            .map(([label, value]) => `<div class="bank-label">${escapeHtml(label)}</div><div>${multiline(value)}</div>`)
-            .join("")}
-        </div>
-      </section>`
-    : "";
-
   const content = `
     <div class="law-banner">
       <div>
@@ -40,8 +29,8 @@ export function buildChenlawInvoiceHtml(params: VendorOutgoingInvoiceParams): st
     </table>
     <div class="total-box"><div>Total</div><strong>${formatUsd(params.totalUsd)}</strong></div>
     ${params.notes ? `<div class="notes"><strong>Notes:</strong><br />${multiline(params.notes)}</div>` : ""}
-    ${bankingHtml}
     <footer><div></div><p>Confidential - Prepared for Rock Hill Innovation Co., Ltd</p></footer>
+    ${buildVendorBankingPage(params)}
   `;
 
   return buildBaseHtml({
@@ -62,10 +51,6 @@ export function buildChenlawInvoiceHtml(params: VendorOutgoingInvoiceParams): st
       .vendor-lines td { border-bottom:1px solid #ccc; padding:8px 10px; }
       .vendor-lines .amount { text-align:right; width:1.6in; }
       .total-box { color:#1a2744; display:flex; font-weight:700; justify-content:space-between; margin:18px 0 28px auto; width:2.6in; }
-      .banking { border:1.5px solid #1a2744; margin-top:24px; padding:16px; }
-      .banking h2 { color:#1a2744; font-size:9pt; font-weight:700; letter-spacing:1.5px; margin:0 0 12px; }
-      .bank-grid { display:grid; grid-template-columns:1.3in 1fr; row-gap:6px; column-gap:10px; }
-      .bank-label { color:#666; }
       .notes { color:#555; margin:18px 0; }
       footer div { border-top:2px solid #C9A84C; margin-top:28px; }
       footer p { color:#777; font-size:8.5pt; margin-top:8px; text-align:center; }

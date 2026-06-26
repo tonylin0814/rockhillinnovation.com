@@ -1,19 +1,8 @@
 import { buildBaseHtml } from "@/lib/templates/base";
-import { bankingRows, escapeHtml, formatDate, formatUsd, hasBankingDetails, lineRows, multiline } from "@/lib/templates/vendor-invoices/shared";
+import { buildVendorBankingPage, escapeHtml, formatDate, formatUsd, lineRows, multiline } from "@/lib/templates/vendor-invoices/shared";
 import type { VendorOutgoingInvoiceParams } from "@/lib/templates/vendor-invoices/types";
 
 export function buildRhInvoiceHtml(params: VendorOutgoingInvoiceParams): string {
-  const bankingHtml = hasBankingDetails(params.vendorBanking)
-    ? `<section class="banking no-break">
-        <h2>Banking Details</h2>
-        <div class="bank-grid">
-          ${bankingRows(params.vendorBanking)
-            .map(([label, value]) => `<div class="bank-label">${escapeHtml(label)}</div><div>${multiline(value)}</div>`)
-            .join("")}
-        </div>
-      </section>`
-    : "";
-
   const content = `
     <div class="slate-banner">
       <div>${escapeHtml(params.vendorName)}</div>
@@ -37,8 +26,8 @@ export function buildRhInvoiceHtml(params: VendorOutgoingInvoiceParams): string 
     </table>
     <div class="total-box"><span>Total</span><strong>${formatUsd(params.totalUsd)}</strong></div>
     ${params.notes ? `<div class="notes"><strong>Notes:</strong><br />${multiline(params.notes)}</div>` : ""}
-    ${bankingHtml}
     <footer>${escapeHtml(params.vendorName)} - Services & Maintenance</footer>
+    ${buildVendorBankingPage(params)}
   `;
 
   return buildBaseHtml({
@@ -60,10 +49,6 @@ export function buildRhInvoiceHtml(params: VendorOutgoingInvoiceParams): string 
       .vendor-lines tbody tr:nth-child(even) td { background:#f8fafc; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
       .vendor-lines .amount { text-align:right; width:1.6in; }
       .total-box { background:#f1f5f9; color:#334155; display:flex; font-weight:700; justify-content:space-between; margin:18px 0 28px auto; padding:10px 14px; width:2.8in; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
-      .banking { border:1px solid #cbd5e1; border-radius:4px; margin-top:24px; overflow:hidden; }
-      .banking h2 { background:#475569; color:#fff; font-size:10pt; margin:0; padding:8px 16px; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
-      .bank-grid { display:grid; grid-template-columns:1.35in 1fr; padding:12px 16px; row-gap:6px; column-gap:10px; }
-      .bank-label { color:#64748b; }
       .notes { color:#555; margin:18px 0; }
       footer { color:#94a3b8; font-size:8.5pt; margin-top:30px; text-align:center; }
     `,
