@@ -49,6 +49,12 @@ const editableSupplierInvoiceLineSchema = z.object({
   unit_price_rmb: z.coerce.number().min(0, "Unit price cannot be negative"),
 });
 
+const supplierExtraLineSchema = z.object({
+  description_chinese: z.string().nullable().default(null),
+  description_english: z.string().trim().min(1, "Description is required"),
+  amount_rmb: z.coerce.number().positive("Amount must be greater than zero"),
+});
+
 const matchSchema = z.object({
   supplier_invoice_ref: z.string().trim().min(1, "Invoice reference is required").max(100),
   supplier_stated_amount_rmb: z.coerce
@@ -90,6 +96,25 @@ function parseEditableSupplierInvoiceLines(formData: FormData) {
   }
 }
 
+function parseSupplierExtraLines(formData: FormData): Array<{
+  description_chinese: string | null;
+  description_english: string;
+  amount_rmb: number;
+}> {
+  const raw = formData.get("extra_lines_json");
+
+  if (typeof raw !== "string" || !raw.trim()) {
+    return [];
+  }
+
+  try {
+    const result = z.array(supplierExtraLineSchema).safeParse(JSON.parse(raw));
+    return result.success ? result.data : [];
+  } catch {
+    return [];
+  }
+}
+
 export async function generateSupplierInvoiceOutgoing(
   tradeId: string,
   formData: FormData,
@@ -122,6 +147,7 @@ export async function generateSupplierInvoiceOutgoing(
     const rate = parseFloat(raw);
     return Number.isFinite(rate) && rate > 0 ? rate : null;
   })();
+  const supplierExtraLines = invoiceType === "deposit" ? parseSupplierExtraLines(formData) : [];
 
   const supabase = createServerSupabaseClient();
   const { data: trade, error: tradeError } = await supabase
@@ -311,8 +337,30 @@ export async function generateSupplierInvoiceOutgoing(
       },
     };
   });
+  const extraInvoiceLines = supplierExtraLines.map((line, index) => ({
+    dbLine: {
+      description_chinese: line.description_chinese,
+      description_english: line.description_english,
+      payment_category: "misc_expense" as PaymentCategory,
+      product_id: null,
+      quantity: 1,
+      sort_order: invoiceLines.length + index + 1,
+      source_quote_line_id: null,
+      unit_price_rmb: line.amount_rmb,
+    },
+    pdf: {
+      descriptionChinese: line.description_chinese,
+      descriptionEnglish: line.description_english,
+      paymentCategory: "misc_expense" as PaymentCategory,
+      paymentPct: 100,
+      quantity: 1,
+      totalRmb: line.amount_rmb,
+      unitPriceRmb: line.amount_rmb,
+    },
+  }));
+  const allInvoiceLines = [...invoiceLines, ...extraInvoiceLines];
 
-  const baseTotalRmb = roundMoney(invoiceLines.reduce((sum, line) => sum + line.pdf.totalRmb, 0));
+  const baseTotalRmb = roundMoney(allInvoiceLines.reduce((sum, line) => sum + line.pdf.totalRmb, 0));
   const totalRmb = baseTotalRmb;
   const totalUsd = exchangeRate ? roundMoney(totalRmb / exchangeRate) : null;
   const { data: existingInvoice, error: existingInvoiceError } = await supabase
@@ -336,7 +384,7 @@ export async function generateSupplierInvoiceOutgoing(
     invoiceDate: parsed.data.invoice.invoice_date,
     invoiceNumber: parsed.data.invoice.invoice_number,
     invoiceType,
-    lines: invoiceLines.map((line) => line.pdf),
+    lines: allInvoiceLines.map((line) => line.pdf),
     notes: parsed.data.invoice.notes,
     supplierAddress,
     supplierBanking,
@@ -384,7 +432,7 @@ export async function generateSupplierInvoiceOutgoing(
   }
 
   const { error: linesInsertError } = await supabase.from("supplier_invoice_outgoing_lines").insert(
-    invoiceLines.map((line) => ({
+    allInvoiceLines.map((line) => ({
       description_chinese: line.dbLine.description_chinese,
       description_english: line.dbLine.description_english,
       invoice_id: invoice.id,

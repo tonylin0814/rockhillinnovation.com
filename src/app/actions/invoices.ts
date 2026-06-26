@@ -598,6 +598,7 @@ export async function generateDepositInvoice(tradeId: string, formData: FormData
   const invoiceNumber = emptyToNull(formData.get("invoice_number"));
   const invoiceDate = emptyToNull(formData.get("invoice_date"));
   const notes = emptyToNull(formData.get("notes"));
+  const adjustmentLines = parseAdjustmentLines(formData);
 
   if (!invoiceNumber) {
     return { error: "Invoice number is required" };
@@ -621,11 +622,12 @@ export async function generateDepositInvoice(tradeId: string, formData: FormData
   }
 
   const depositPct = Math.min(100, Math.max(0, Number(source.client.deposit_pct) || 50));
-  const totalUsd = roundMoney((source.subtotal * depositPct) / 100);
+  const adjustmentsTotal = adjustmentLines.reduce((sum, adjustment) => sum + adjustment.amount_usd, 0);
+  const totalUsd = roundMoney((source.subtotal * depositPct) / 100 + adjustmentsTotal);
   const logoBase64 = loadLogoBase64();
 
   const html = buildProFormaHtml({
-    adjustmentLines: [],
+    adjustmentLines,
     bankingAccount: source.bankingAccount,
     billToAddress: source.client.address ?? null,
     billToName: source.client.name,
@@ -658,7 +660,7 @@ export async function generateDepositInvoice(tradeId: string, formData: FormData
   const { data: invoice, error: invoiceError } = await supabase
     .from("client_invoices")
     .insert({
-      adjustment_lines: [],
+      adjustment_lines: adjustmentLines,
       deposit_pct: depositPct,
       display_label: null,
       due_date: null,
