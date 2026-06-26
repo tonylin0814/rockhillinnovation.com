@@ -1,12 +1,3 @@
-function escapeHtml(value: string) {
-  return value
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#39;");
-}
-
 export function buildBaseHtml({
   companyInfo = null,
   content,
@@ -24,20 +15,16 @@ export function buildBaseHtml({
   } | null;
   styles?: string;
 }): string {
-  const footerContact = [
-    companyInfo?.email ?? "packaging@rockhill.com.tw",
-    companyInfo?.website ?? "www.rockhillinnovation.com",
-    companyInfo?.phone ?? "(+886)2-22452580",
-  ]
-    .filter(Boolean)
-    .map((value) => escapeHtml(value!))
-    .join(" &nbsp;|&nbsp; ");
-
   return `<!doctype html>
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <title>${escapeHtml(title)}</title>
+    <title>${title
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;")}</title>
     <style>
       * { box-sizing: border-box; }
       html, body { margin: 0; padding: 0; }
@@ -315,9 +302,6 @@ export function buildBaseHtml({
   </head>
   <body>
     ${content}
-    <div class="page-footer-contact">
-      ${footerContact}
-    </div>
     <div class="page-footer-bar"></div>
   </body>
 </html>`;
