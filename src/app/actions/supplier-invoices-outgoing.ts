@@ -14,10 +14,6 @@ import { buildSupplierInvoiceOutgoingHtml, type SupplierBanking } from "@/lib/te
 export type ActionResult = { success?: true; error?: string; invoiceId?: string; downloadUrl?: string };
 
 type InvoiceKind = "deposit" | "final" | "commercial";
-type FinalInvoiceLineInput = {
-  amount_rmb: number;
-  description: string;
-};
 
 function emptyToNull(value: FormDataEntryValue | null): string | null {
   if (typeof value !== "string") {
@@ -36,11 +32,6 @@ const invoiceSchema = z.object({
   invoice_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Invalid date"),
   invoice_number: z.string().trim().min(1, "Invoice number is required"),
   notes: z.string().trim().nullable(),
-});
-
-const finalLineSchema = z.object({
-  amount_rmb: z.coerce.number().min(0.01, "Amount must be greater than zero"),
-  description: z.string().trim().min(1, "Description is required"),
 });
 
 const editableSupplierInvoiceLineSchema = z.object({
@@ -73,35 +64,6 @@ async function requireManager() {
   }
 
   return access;
-}
-
-function parseFinalLines(formData: FormData, invoiceType: InvoiceKind) {
-  if (invoiceType !== "final") {
-    return { lines: [] as FinalInvoiceLineInput[] };
-  }
-
-  const raw = emptyToNull(formData.get("final_lines_json"));
-
-  if (!raw) {
-    return { error: "At least one invoice line is required" };
-  }
-
-  try {
-    const parsed = z.array(finalLineSchema).min(1, "At least one invoice line is required").safeParse(JSON.parse(raw));
-
-    if (!parsed.success) {
-      return { error: parsed.error.issues[0]?.message ?? "Invalid invoice lines" };
-    }
-
-    return {
-      lines: parsed.data.map((line) => ({
-        amount_rmb: roundMoney(line.amount_rmb),
-        description: line.description,
-      })),
-    };
-  } catch {
-    return { error: "Invalid invoice lines" };
-  }
 }
 
 function parseEditableSupplierInvoiceLines(formData: FormData) {
@@ -154,11 +116,12 @@ export async function generateSupplierInvoiceOutgoing(
     return { error: parsed.error.issues[0]?.message ?? "Invalid invoice" };
   }
 
-  const parsedFinalLines = parseFinalLines(formData, invoiceType);
-
-  if ("error" in parsedFinalLines) {
-    return { error: parsedFinalLines.error };
-  }
+  const exchangeRateOverride = (() => {
+    const raw = formData.get("exchange_rate");
+    if (typeof raw !== "string" || !raw.trim()) return null;
+    const rate = parseFloat(raw);
+    return Number.isFinite(rate) && rate > 0 ? rate : null;
+  })();
 
   const supabase = createServerSupabaseClient();
   const { data: trade, error: tradeError } = await supabase
@@ -222,9 +185,13 @@ export async function generateSupplierInvoiceOutgoing(
         .maybeSingle()
     : { data: null };
 
-  const exchangeRateId: string | null = rateRow?.id ?? null;
+  const exchangeRateId: string | null = exchangeRateOverride ? null : (rateRow?.id ?? null);
   const exchangeRate: number | null =
-    rateRow?.rate_rmb_per_usd ?? fallbackRateRow?.rate_rmb_per_usd ?? trade.working_exchange_rate ?? null;
+    exchangeRateOverride ??
+    rateRow?.rate_rmb_per_usd ??
+    fallbackRateRow?.rate_rmb_per_usd ??
+    trade.working_exchange_rate ??
+    null;
 
   type QuoteLine = (typeof rawLines)[number];
   type PaymentCategory = "outsourced" | "produced" | "misc_expense";
@@ -269,36 +236,9 @@ export async function generateSupplierInvoiceOutgoing(
     return 1;
   }
 
-  const includedLines = invoiceType === "final" ? nonSetLines : nonSetLines.filter(shouldInclude);
-  const consolidatedLines = Object.values(
-    includedLines.reduce<Record<string, QuoteLine>>((acc, line) => {
-      const product = Array.isArray(line.product) ? line.product[0] : line.product;
-      const key = product?.id ?? line.item_name_english ?? line.id;
+  const includedLines = nonSetLines.filter(shouldInclude);
 
-      if (acc[key]) {
-        const nextQuantity = Number(acc[key].quantity) + Number(line.quantity);
-        const nextTotal = Number(acc[key].total_price_rmb) + Number(line.total_price_rmb);
-
-        acc[key] = {
-          ...acc[key],
-          quantity: nextQuantity,
-          total_price_rmb: nextTotal,
-          unit_price_rmb:
-            Number(acc[key].unit_price_rmb) === Number(line.unit_price_rmb)
-              ? acc[key].unit_price_rmb
-              : nextQuantity > 0
-                ? nextTotal / nextQuantity
-                : acc[key].unit_price_rmb,
-        };
-      } else {
-        acc[key] = { ...line };
-      }
-
-      return acc;
-    }, {})
-  );
-
-  if (!consolidatedLines.length) {
+  if (!includedLines.length) {
     return { error: `No applicable lines for a ${invoiceType} invoice. Check payment categories on quote lines.` };
   }
 
@@ -308,7 +248,7 @@ export async function generateSupplierInvoiceOutgoing(
   let supplierAddress: string | null = null;
   let supplierBanking: SupplierBanking | null = null;
 
-  for (const line of consolidatedLines) {
+  for (const line of includedLines) {
     const product = Array.isArray(line.product) ? line.product[0] : line.product;
     const supplier = product
       ? Array.isArray(product.supplier)
@@ -338,62 +278,39 @@ export async function generateSupplierInvoiceOutgoing(
     }
   }
 
-  const invoiceLines =
-    invoiceType === "final"
-      ? parsedFinalLines.lines.map((line, index) => ({
-          dbLine: {
-            description_chinese: null,
-            description_english: line.description,
-            payment_category: "misc_expense" as const,
-            product_id: null,
-            quantity: 1,
-            sort_order: index,
-            source_quote_line_id: null,
-            unit_price_rmb: line.amount_rmb,
-          },
-          pdf: {
-            descriptionChinese: null,
-            descriptionEnglish: line.description,
-            paymentCategory: "misc_expense" as const,
-            paymentPct: 100,
-            quantity: 1,
-            totalRmb: line.amount_rmb,
-            unitPriceRmb: line.amount_rmb,
-          },
-        }))
-      : consolidatedLines.map((line, index) => {
-          const product = Array.isArray(line.product) ? line.product[0] : line.product;
-          const paymentCategory = invoiceType === "commercial" ? "produced" : paymentCategoryForLine(line);
-          const pct = pctForLine(line);
-          const quantity = Number(line.quantity);
-          const unitPriceFull = Number(line.unit_price_rmb);
-          const totalRmb = roundMoney(quantity * unitPriceFull * pct);
-          const paymentPct = Math.round(pct * 100);
-          const descriptionChinese = line.item_name_chinese ?? product?.name_chinese ?? null;
-          const descriptionEnglish = line.item_name_english ?? product?.name_english ?? "Item";
+  const invoiceLines = includedLines.map((line, index) => {
+    const product = Array.isArray(line.product) ? line.product[0] : line.product;
+    const paymentCategory = invoiceType === "commercial" ? "produced" : paymentCategoryForLine(line);
+    const pct = pctForLine(line);
+    const quantity = Number(line.quantity);
+    const unitPriceFull = Number(line.unit_price_rmb);
+    const totalRmb = roundMoney(quantity * unitPriceFull * pct);
+    const paymentPct = Math.round(pct * 100);
+    const descriptionChinese = line.item_name_chinese ?? product?.name_chinese ?? null;
+    const descriptionEnglish = line.item_name_english ?? product?.name_english ?? "Item";
 
-          return {
-            dbLine: {
-              description_chinese: descriptionChinese ?? null,
-              description_english: descriptionEnglish,
-              payment_category: paymentCategory as PaymentCategory,
-              product_id: product?.id ?? null,
-              quantity,
-              sort_order: Number(line.sort_order ?? index + 1),
-              source_quote_line_id: line.id,
-              unit_price_rmb: unitPriceFull,
-            },
-            pdf: {
-              descriptionChinese: descriptionChinese ?? null,
-              descriptionEnglish,
-              paymentCategory: paymentCategory as PaymentCategory,
-              paymentPct,
-              quantity,
-              totalRmb,
-              unitPriceRmb: unitPriceFull,
-            },
-          };
-        });
+    return {
+      dbLine: {
+        description_chinese: descriptionChinese ?? null,
+        description_english: descriptionEnglish,
+        payment_category: (paymentCategory ?? "produced") as PaymentCategory,
+        product_id: product?.id ?? null,
+        quantity,
+        sort_order: Number(line.sort_order ?? index + 1),
+        source_quote_line_id: line.id,
+        unit_price_rmb: unitPriceFull,
+      },
+      pdf: {
+        descriptionChinese: descriptionChinese ?? null,
+        descriptionEnglish,
+        paymentCategory: (paymentCategory ?? "produced") as PaymentCategory,
+        paymentPct,
+        quantity,
+        totalRmb,
+        unitPriceRmb: unitPriceFull,
+      },
+    };
+  });
 
   const baseTotalRmb = roundMoney(invoiceLines.reduce((sum, line) => sum + line.pdf.totalRmb, 0));
   const totalRmb = baseTotalRmb;

@@ -1009,10 +1009,12 @@ function GenerateSupplierInvoiceMenu({
   orderNumber,
   suppliers,
   tradeId,
+  workingExchangeRate,
 }: {
   orderNumber?: string | null;
   suppliers: SupplierOption[];
   tradeId: string;
+  workingExchangeRate?: number | null;
 }) {
   return (
     <div className="flex justify-end">
@@ -1036,10 +1038,22 @@ function GenerateSupplierInvoiceMenu({
           <GenerateSupplierCommercialInvoiceDialog orderNumber={orderNumber} suppliers={suppliers} tradeId={tradeId}>
             <DropdownMenuItem onSelect={(event) => event.preventDefault()}>Commercial Invoice</DropdownMenuItem>
           </GenerateSupplierCommercialInvoiceDialog>
-          <GenerateSupplierInvoiceDialog orderNumber={orderNumber} suppliers={suppliers} tradeId={tradeId} type="deposit">
+          <GenerateSupplierInvoiceDialog
+            orderNumber={orderNumber}
+            suppliers={suppliers}
+            tradeId={tradeId}
+            type="deposit"
+            workingExchangeRate={workingExchangeRate}
+          >
             <DropdownMenuItem onSelect={(event) => event.preventDefault()}>Deposit Invoice</DropdownMenuItem>
           </GenerateSupplierInvoiceDialog>
-          <GenerateSupplierInvoiceDialog orderNumber={orderNumber} suppliers={suppliers} tradeId={tradeId} type="final">
+          <GenerateSupplierInvoiceDialog
+            orderNumber={orderNumber}
+            suppliers={suppliers}
+            tradeId={tradeId}
+            type="final"
+            workingExchangeRate={workingExchangeRate}
+          >
             <DropdownMenuItem onSelect={(event) => event.preventDefault()}>Final Invoice</DropdownMenuItem>
           </GenerateSupplierInvoiceDialog>
         </DropdownMenuContent>
@@ -1101,6 +1115,7 @@ export function InvoicesTab({
   suppliers,
   tradeId,
   vendors,
+  workingExchangeRate,
 }: {
   tradeId: string;
   canManage: boolean;
@@ -1110,6 +1125,7 @@ export function InvoicesTab({
   orderNumber?: string | null;
   suppliers: SupplierOption[];
   vendors: VendorOption[];
+  workingExchangeRate?: number | null;
 }) {
   return (
     <div className="space-y-8">
@@ -1184,7 +1200,12 @@ export function InvoicesTab({
         <div className="flex items-center justify-between">
           <h2 className="text-base font-semibold text-[#0d1b34]">Supplier Invoices (Outgoing)</h2>
           {canManage ? (
-            <GenerateSupplierInvoiceMenu orderNumber={orderNumber} suppliers={suppliers} tradeId={tradeId} />
+            <GenerateSupplierInvoiceMenu
+              orderNumber={orderNumber}
+              suppliers={suppliers}
+              tradeId={tradeId}
+              workingExchangeRate={workingExchangeRate}
+            />
           ) : null}
         </div>
 

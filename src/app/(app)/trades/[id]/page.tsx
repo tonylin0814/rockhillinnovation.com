@@ -690,6 +690,7 @@ export default async function TradeWorkspacePage({ params }: { params: { id: str
             suppliers={activeSupplierOptions}
             tradeId={trade.id}
             vendors={activeVendorOptions}
+            workingExchangeRate={trade.working_exchange_rate ?? null}
           />
         </TabsContent>
         {canManage ? (
