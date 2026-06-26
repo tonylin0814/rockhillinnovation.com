@@ -67,13 +67,13 @@ export function GenerateDepositInvoiceDialog({
 
         <form className="space-y-5" onSubmit={handleSubmit}>
           <div className="space-y-2">
-            <Label htmlFor="deposit_invoice_number">Invoice Number</Label>
+            <Label htmlFor="invoice_number">Invoice Number</Label>
             <Input
-              defaultValue={orderNumber ?? ""}
+              defaultValue={orderNumber ? `${orderNumber}-DEP` : ""}
               disabled={isPending}
-              id="deposit_invoice_number"
+              id="invoice_number"
               name="invoice_number"
-              readOnly
+              placeholder="e.g. MLP-001-DEP"
               required
             />
           </div>

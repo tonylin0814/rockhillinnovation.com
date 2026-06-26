@@ -749,7 +749,7 @@ const finalInvoiceSchema = z.object({
 
 export async function getTradeRemainingBalance(
   tradeId: string
-): Promise<{ depositsPaid: number; remaining: number; subtotal: number } | { error: string }> {
+): Promise<{ depositsPaid: number; finalInvoiceCount: number; remaining: number; subtotal: number } | { error: string }> {
   const access = await requireInvoiceManager();
 
   if ("error" in access) {
@@ -773,10 +773,21 @@ export async function getTradeRemainingBalance(
     return { error: depositError.message };
   }
 
+  const { count: finalInvoiceCount, error: finalCountError } = await supabase
+    .from("client_invoices")
+    .select("id", { count: "exact", head: true })
+    .eq("trade_id", tradeId)
+    .eq("invoice_type", "final");
+
+  if (finalCountError) {
+    return { error: finalCountError.message };
+  }
+
   const depositsPaid = roundMoney((priorDeposits ?? []).reduce((sum, invoice) => sum + Number(invoice.total_usd), 0));
 
   return {
     depositsPaid,
+    finalInvoiceCount: finalInvoiceCount ?? 0,
     remaining: roundMoney(source.subtotal - depositsPaid),
     subtotal: source.subtotal,
   };

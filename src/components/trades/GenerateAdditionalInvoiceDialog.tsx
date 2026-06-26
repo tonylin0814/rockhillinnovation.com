@@ -21,7 +21,7 @@ import { Textarea } from "@/components/ui/textarea";
 import type { InvoiceAdjustmentLine } from "@/types";
 
 type AdjustmentRow = InvoiceAdjustmentLine & { _key: string };
-type BalanceState = { depositsPaid: number; remaining: number; subtotal: number } | null;
+type BalanceState = { depositsPaid: number; finalInvoiceCount: number; remaining: number; subtotal: number } | null;
 
 function todayInputValue() {
   return new Date().toISOString().slice(0, 10);
@@ -58,6 +58,7 @@ export function GenerateAdditionalInvoiceDialog({
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const [adjustments, setAdjustments] = useState<AdjustmentRow[]>([]);
+  const [invoiceNumber, setInvoiceNumber] = useState("");
 
   useEffect(() => {
     if (!open) return;
@@ -75,12 +76,14 @@ export function GenerateAdditionalInvoiceDialog({
       }
 
       setBalance(result);
+      const suffix = result.finalInvoiceCount === 0 ? "BAL" : `BAL-${result.finalInvoiceCount + 1}`;
+      setInvoiceNumber(orderNumber ? `${orderNumber}-${suffix}` : suffix);
     });
 
     return () => {
       cancelled = true;
     };
-  }, [open, tradeId]);
+  }, [open, orderNumber, tradeId]);
 
   function addAdjustment() {
     setAdjustments((previousAdjustments) => [...previousAdjustments, createAdjustmentRow()]);
@@ -106,6 +109,7 @@ export function GenerateAdditionalInvoiceDialog({
     if (!value) {
       setAdjustments([]);
       setError(null);
+      setInvoiceNumber("");
     }
   }
 
@@ -155,13 +159,15 @@ export function GenerateAdditionalInvoiceDialog({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="additional_invoice_number">Invoice Number</Label>
+            <Label htmlFor="invoice_number">Invoice Number</Label>
             <Input
-              defaultValue={orderNumber ? `${orderNumber}-F` : ""}
               disabled={isPending}
-              id="additional_invoice_number"
+              id="invoice_number"
               name="invoice_number"
+              onChange={(event) => setInvoiceNumber(event.target.value)}
+              placeholder="e.g. MLP-001-BAL"
               required
+              value={invoiceNumber}
             />
           </div>
 
