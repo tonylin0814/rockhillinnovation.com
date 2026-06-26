@@ -1,13 +1,24 @@
 "use client";
 
-import { ChevronDown, FileText, Mail, MoreHorizontal } from "lucide-react";
+import { ChevronDown, FileText, Mail, MoreHorizontal, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { Fragment, useTransition } from "react";
 import { toast } from "sonner";
 
-import { updateInvoiceStatus } from "@/app/actions/invoices";
+import { deleteClientInvoice, updateInvoiceStatus } from "@/app/actions/invoices";
 import { sendClientInvoice } from "@/app/actions/send-invoice";
 import { updateSupplierInvoiceStatus } from "@/app/actions/supplier-invoices-outgoing";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -161,6 +172,51 @@ function SendInvoiceButton({ invoice }: { invoice: ClientInvoice }) {
       <Mail className="h-4 w-4" />
       <span className="sr-only">Send via email</span>
     </Button>
+  );
+}
+
+function DeleteClientInvoiceButton({ invoice }: { invoice: ClientInvoice }) {
+  const router = useRouter();
+  const [isPending, startTransition] = useTransition();
+
+  function handleDelete() {
+    startTransition(async () => {
+      const result = await deleteClientInvoice(invoice.id);
+
+      if (result.error) {
+        toast.error(result.error);
+        return;
+      }
+
+      toast.success("Invoice deleted");
+      router.refresh();
+    });
+  }
+
+  return (
+    <AlertDialog>
+      <AlertDialogTrigger asChild>
+        <Button disabled={isPending} size="icon" title="Delete invoice" type="button" variant="ghost">
+          <Trash2 className="h-4 w-4 text-red-500" />
+          <span className="sr-only">Delete invoice</span>
+        </Button>
+      </AlertDialogTrigger>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Delete invoice {invoice.invoice_number}?</AlertDialogTitle>
+          <AlertDialogDescription>
+            This removes the invoice record and its line items from the system. The generated PDF file in OneDrive is not
+            deleted automatically.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel disabled={isPending}>Cancel</AlertDialogCancel>
+          <AlertDialogAction className="bg-red-600 hover:bg-red-700" disabled={isPending} onClick={handleDelete}>
+            Delete Invoice
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   );
 }
 
@@ -332,6 +388,7 @@ export function InvoicesTab({
                         <div className="flex items-center justify-end gap-1">
                           {canManage ? <SendInvoiceButton invoice={invoice} /> : null}
                           {canManage ? <ClientInvoiceStatusDropdown invoice={invoice} /> : null}
+                          {canManage ? <DeleteClientInvoiceButton invoice={invoice} /> : null}
                         </div>
                       </TableCell>
                     </TableRow>
