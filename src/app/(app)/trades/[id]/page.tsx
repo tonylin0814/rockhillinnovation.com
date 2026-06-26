@@ -547,9 +547,9 @@ export default async function TradeWorkspacePage({ params }: { params: { id: str
           <TabsTrigger value="development">Development</TabsTrigger>
           <TabsTrigger value="quotes">Quotes</TabsTrigger>
           <TabsTrigger value="quotations">Quotations</TabsTrigger>
+          <TabsTrigger value="invoices">Invoices</TabsTrigger>
           {canManage ? <TabsTrigger value="packing">Packing</TabsTrigger> : null}
           {canViewFinancials ? <TabsTrigger value="financial">Financial</TabsTrigger> : null}
-          <TabsTrigger value="invoices">Invoices</TabsTrigger>
           <TabsTrigger value="ledger">Ledger</TabsTrigger>
           <TabsTrigger value="documents">Documents</TabsTrigger>
           {canManage ? <TabsTrigger value="shareholders">Shareholders</TabsTrigger> : null}
@@ -668,6 +668,16 @@ export default async function TradeWorkspacePage({ params }: { params: { id: str
             workingExchangeRate={trade.working_exchange_rate}
           />
         </TabsContent>
+        <TabsContent value="invoices">
+          <InvoicesTab
+            canManage={canManage}
+            initialInvoices={clientInvoiceRows}
+            initialSupplierInvoices={supplierInvoiceOutgoingRows}
+            orderNumber={trade.order_number ?? trade.trade_id}
+            suppliers={activeSupplierOptions}
+            tradeId={trade.id}
+          />
+        </TabsContent>
         {canManage ? (
           <TabsContent value="packing">
             <PackingTab canManage={canManage} initialPlan={normalizedPackingPlan} tradeId={trade.id} />
@@ -688,16 +698,6 @@ export default async function TradeWorkspacePage({ params }: { params: { id: str
         ) : null}
         <TabsContent value="documents">
           <DocumentsTab initialDocuments={tradeDocumentRows} tradeCode={trade.trade_id} tradeId={trade.id} />
-        </TabsContent>
-        <TabsContent value="invoices">
-          <InvoicesTab
-            canManage={canManage}
-            initialInvoices={clientInvoiceRows}
-            initialSupplierInvoices={supplierInvoiceOutgoingRows}
-            orderNumber={trade.order_number ?? trade.trade_id}
-            suppliers={activeSupplierOptions}
-            tradeId={trade.id}
-          />
         </TabsContent>
         <TabsContent value="ledger">
           <LedgerTab
