@@ -202,7 +202,12 @@ export async function createOutlookDraft(params: {
     }
 
     const draft = await client.api(`/users/${userId}/messages`).post(message);
-    return { webLink: draft.webLink };
+
+    if (typeof draft.webLink === "string" && draft.webLink.length > 0) {
+      return { webLink: draft.webLink };
+    }
+
+    return { webLink: `https://outlook.office.com/mail/${encodeURIComponent(userId)}/drafts` };
   } catch (error) {
     return {
       error: error instanceof Error ? error.message : "Failed to create Outlook draft",

@@ -2,7 +2,7 @@
 
 import { ChevronDown, FileText, Loader2, Mail, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { FormEvent, Fragment, ReactNode, useState, useTransition } from "react";
+import { FormEvent, Fragment, useState, useTransition } from "react";
 import { toast } from "sonner";
 
 import { deleteClientInvoice, updateClientInvoice, updateInvoiceStatus } from "@/app/actions/invoices";
@@ -182,15 +182,6 @@ function dateInputValue(value: string | null) {
   return value ? value.slice(0, 10) : "";
 }
 
-function EditDialogButton({ children }: { children: ReactNode }) {
-  return (
-    <Button size="icon" title="Edit invoice" type="button" variant="ghost">
-      <Pencil className="h-4 w-4" />
-      <span className="sr-only">{children}</span>
-    </Button>
-  );
-}
-
 function EditClientInvoiceDialog({ invoice }: { invoice: ClientInvoice }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -219,7 +210,10 @@ function EditClientInvoiceDialog({ invoice }: { invoice: ClientInvoice }) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <EditDialogButton>Edit invoice</EditDialogButton>
+        <Button size="icon" title="Edit invoice" type="button" variant="ghost">
+          <Pencil className="h-4 w-4" />
+          <span className="sr-only">Edit invoice</span>
+        </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-xl">
         <DialogHeader>
@@ -514,7 +508,10 @@ function EditSupplierInvoiceDialog({ invoice }: { invoice: SupplierInvoiceOutgoi
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <EditDialogButton>Edit supplier invoice</EditDialogButton>
+        <Button size="icon" title="Edit supplier invoice" type="button" variant="ghost">
+          <Pencil className="h-4 w-4" />
+          <span className="sr-only">Edit supplier invoice</span>
+        </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-xl">
         <DialogHeader>
