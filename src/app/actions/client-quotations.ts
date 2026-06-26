@@ -110,6 +110,11 @@ function normalizeText(value: string | null | undefined) {
   return trimmed.length ? trimmed : null;
 }
 
+function getBaseCode(code: string | null): string | null {
+  if (!code) return null;
+  return code.replace(/-\d+$/, "");
+}
+
 function normalizeDate(value: string) {
   return new Intl.DateTimeFormat("en-US", {
     day: "numeric",
@@ -349,6 +354,11 @@ export async function generateQuotationPdf(
               };
             })
             .filter((component): component is { code: string | null; name: string; quantityPerSet: number } => Boolean(component))
+            .reduce<{ code: string | null; name: string; quantityPerSet: number }[]>((acc, comp) => {
+              const base = getBaseCode(comp.code);
+              if (acc.some((existing) => getBaseCode(existing.code) === base)) return acc;
+              return [...acc, { ...comp, code: base }];
+            }, [])
         : [];
 
     return {

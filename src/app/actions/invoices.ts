@@ -113,6 +113,11 @@ function loadLogoBase64(): string | null {
   }
 }
 
+function getBaseCode(code: string | null): string | null {
+  if (!code) return null;
+  return code.replace(/-\d+$/, "");
+}
+
 export async function generateCommercialInvoice(tradeId: string, formData: FormData): Promise<ActionResult> {
   const access = await requireInvoiceManager();
 
@@ -235,6 +240,11 @@ export async function generateCommercialInvoice(tradeId: string, formData: FormD
               };
             })
             .filter((component): component is { code: string | null; name: string; quantityPerSet: number } => Boolean(component))
+            .reduce<{ code: string | null; name: string; quantityPerSet: number }[]>((acc, comp) => {
+              const base = getBaseCode(comp.code);
+              if (acc.some((existing) => getBaseCode(existing.code) === base)) return acc;
+              return [...acc, { ...comp, code: base }];
+            }, [])
         : [];
     const quantity = Number(line.quantity);
     const unitPrice = Number(line.unit_price_usd);
