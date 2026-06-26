@@ -482,6 +482,70 @@ export async function updateSupplierInvoiceStatus(
   return { success: true };
 }
 
+export async function deleteSupplierInvoice(invoiceId: string): Promise<ActionResult> {
+  const access = await requireManager();
+
+  if ("error" in access) {
+    return { error: access.error };
+  }
+
+  const parsed = z.object({ invoiceId: z.string().uuid() }).safeParse({ invoiceId });
+
+  if (!parsed.success) {
+    return { error: "Invalid invoice" };
+  }
+
+  const supabase = createServerSupabaseClient();
+  const { data: invoice, error: invoiceError } = await supabase
+    .from("supplier_invoices_outgoing")
+    .select("id, invoice_number, trade_id, trade:trades(trade_id)")
+    .eq("id", invoiceId)
+    .maybeSingle();
+
+  if (invoiceError) {
+    return { error: invoiceError.message };
+  }
+
+  if (!invoice) {
+    return { error: "Invoice not found" };
+  }
+
+  const { error: linesError } = await supabase.from("supplier_invoice_outgoing_lines").delete().eq("invoice_id", invoiceId);
+
+  if (linesError) {
+    return { error: linesError.message };
+  }
+
+  const { error: adjustmentsError } = await supabase.from("supplier_invoice_adjustments").delete().eq("invoice_id", invoiceId);
+
+  if (adjustmentsError) {
+    return { error: adjustmentsError.message };
+  }
+
+  const { error: deleteError } = await supabase.from("supplier_invoices_outgoing").delete().eq("id", invoiceId);
+
+  if (deleteError) {
+    if (deleteError.code === "23503") {
+      return { error: "This supplier invoice is linked to another record and cannot be deleted yet." };
+    }
+
+    return { error: deleteError.message };
+  }
+
+  const trade = Array.isArray(invoice.trade) ? invoice.trade[0] : invoice.trade;
+
+  await notifyParticipants(
+    invoice.trade_id,
+    trade?.trade_id ?? "trade",
+    access.user.id,
+    access.user.name,
+    `Supplier invoice ${invoice.invoice_number} was deleted.`
+  );
+
+  revalidatePath(`/trades/${invoice.trade_id}`);
+  return { success: true };
+}
+
 export async function matchSupplierInvoice(invoiceId: string, formData: FormData): Promise<ActionResult> {
   const access = await requireManager();
 

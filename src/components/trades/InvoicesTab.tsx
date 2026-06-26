@@ -7,7 +7,7 @@ import { toast } from "sonner";
 
 import { deleteClientInvoice, updateInvoiceStatus } from "@/app/actions/invoices";
 import { sendClientInvoice } from "@/app/actions/send-invoice";
-import { updateSupplierInvoiceStatus } from "@/app/actions/supplier-invoices-outgoing";
+import { deleteSupplierInvoice, updateSupplierInvoiceStatus } from "@/app/actions/supplier-invoices-outgoing";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -281,6 +281,51 @@ function SupplierInvoiceStatusDropdown({ invoice }: { invoice: SupplierInvoiceOu
   );
 }
 
+function DeleteSupplierInvoiceButton({ invoice }: { invoice: SupplierInvoiceOutgoing }) {
+  const router = useRouter();
+  const [isPending, startTransition] = useTransition();
+
+  function handleDelete() {
+    startTransition(async () => {
+      const result = await deleteSupplierInvoice(invoice.id);
+
+      if (result.error) {
+        toast.error(result.error);
+        return;
+      }
+
+      toast.success("Supplier invoice deleted");
+      router.refresh();
+    });
+  }
+
+  return (
+    <AlertDialog>
+      <AlertDialogTrigger asChild>
+        <Button disabled={isPending} size="icon" title="Delete supplier invoice" type="button" variant="ghost">
+          <Trash2 className="h-4 w-4 text-red-500" />
+          <span className="sr-only">Delete supplier invoice</span>
+        </Button>
+      </AlertDialogTrigger>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Delete supplier invoice {invoice.invoice_number}?</AlertDialogTitle>
+          <AlertDialogDescription>
+            This removes the supplier invoice record and its line items from the system. The generated PDF file in
+            OneDrive is not deleted automatically.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel disabled={isPending}>Cancel</AlertDialogCancel>
+          <AlertDialogAction className="bg-red-600 hover:bg-red-700" disabled={isPending} onClick={handleDelete}>
+            Delete Invoice
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  );
+}
+
 function GenerateSupplierInvoiceMenu({
   orderNumber,
   suppliers,
@@ -463,8 +508,9 @@ export function InvoicesTab({
                             <SupplierInvoiceMatchDialog canManage={canManage} invoice={invoice} />
                           </TableCell>
                           <TableCell>
-                            <div className="flex justify-end">
+                            <div className="flex items-center justify-end gap-1">
                               {canManage ? <SupplierInvoiceStatusDropdown invoice={invoice} /> : null}
+                              {canManage ? <DeleteSupplierInvoiceButton invoice={invoice} /> : null}
                             </div>
                           </TableCell>
                         </TableRow>
