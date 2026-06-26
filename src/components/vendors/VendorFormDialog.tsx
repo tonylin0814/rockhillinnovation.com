@@ -147,6 +147,79 @@ export function VendorFormDialog({ mode, initialData, trigger }: VendorFormDialo
             <Textarea defaultValue={initialData?.notes ?? ""} disabled={isPending} id="notes" name="notes" />
           </div>
 
+          <div className="rounded-lg border border-slate-200 p-4">
+            <h3 className="mb-4 text-sm font-semibold text-[#0d1b34]">Banking Information</h3>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="bank_account_name">Account Name</Label>
+                <Input
+                  defaultValue={initialData?.bank_account_name ?? ""}
+                  disabled={isPending}
+                  id="bank_account_name"
+                  name="bank_account_name"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="bank_account_number">Account Number</Label>
+                <Input
+                  defaultValue={initialData?.bank_account_number ?? ""}
+                  disabled={isPending}
+                  id="bank_account_number"
+                  name="bank_account_number"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="bank_name">Bank Name</Label>
+                <Input defaultValue={initialData?.bank_name ?? ""} disabled={isPending} id="bank_name" name="bank_name" />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="bank_currency">Currency</Label>
+                <Input
+                  defaultValue={initialData?.bank_currency ?? ""}
+                  disabled={isPending}
+                  id="bank_currency"
+                  name="bank_currency"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="bank_swift_code">SWIFT / BIC</Label>
+                <Input
+                  defaultValue={initialData?.bank_swift_code ?? ""}
+                  disabled={isPending}
+                  id="bank_swift_code"
+                  name="bank_swift_code"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="bank_aba_routing">ABA Routing</Label>
+                <Input
+                  defaultValue={initialData?.bank_aba_routing ?? ""}
+                  disabled={isPending}
+                  id="bank_aba_routing"
+                  name="bank_aba_routing"
+                />
+              </div>
+            </div>
+            <div className="mt-4 space-y-2">
+              <Label htmlFor="bank_address">Bank Address</Label>
+              <Textarea
+                defaultValue={initialData?.bank_address ?? ""}
+                disabled={isPending}
+                id="bank_address"
+                name="bank_address"
+              />
+            </div>
+            <div className="mt-4 space-y-2">
+              <Label htmlFor="banking_instructions">Special Instructions</Label>
+              <Textarea
+                defaultValue={initialData?.banking_instructions ?? ""}
+                disabled={isPending}
+                id="banking_instructions"
+                name="banking_instructions"
+              />
+            </div>
+          </div>
+
           {error ? <p className="text-sm font-medium text-red-600">{error}</p> : null}
 
           <div className="flex justify-end gap-2">

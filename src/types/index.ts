@@ -172,6 +172,14 @@ export type ExpenseVendor = {
   notes: string | null;
   status: "active" | "inactive";
   created_at: string;
+  bank_account_name: string | null;
+  bank_account_number: string | null;
+  bank_name: string | null;
+  bank_address: string | null;
+  bank_swift_code: string | null;
+  bank_aba_routing: string | null;
+  bank_currency: string | null;
+  banking_instructions: string | null;
 };
 
 export type Product = {
@@ -515,6 +523,8 @@ export type ExpenseVendorInvoice = {
   pdf_onedrive_url: string | null;
   notes: string | null;
   created_at: string;
+  lines: Array<{ description: string; amount_usd: number }> | null;
+  vendor?: { id: string; name: string; code: string } | null;
 };
 
 export type TradeLedgerEntry = {

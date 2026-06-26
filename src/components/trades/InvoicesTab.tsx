@@ -12,6 +12,7 @@ import {
   updateSupplierInvoice,
   updateSupplierInvoiceStatus,
 } from "@/app/actions/supplier-invoices-outgoing";
+import { deleteVendorOutgoingInvoice } from "@/app/actions/vendor-invoices";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -59,13 +60,16 @@ import {
 } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
 import { buildDownloadUrl } from "@/lib/download";
-import type { ClientInvoice, SupplierInvoiceOutgoing } from "@/types";
+import type { ClientInvoice, ExpenseVendorInvoice, SupplierInvoiceOutgoing } from "@/types";
+import { EditVendorOutgoingInvoiceDialog } from "./EditVendorOutgoingInvoiceDialog";
 import { GenerateInvoiceDialog } from "./GenerateProFormaDialog";
 import { GenerateSupplierInvoiceDialog } from "./GenerateSupplierInvoiceDialog";
+import { GenerateVendorOutgoingInvoiceDialog } from "./GenerateVendorOutgoingInvoiceDialog";
 import { SupplierInvoiceMatchDialog } from "./SupplierInvoiceMatchDialog";
 
 const statusLabels = { draft: "Draft", paid: "Paid", sent: "Sent" } as const;
 type SupplierOption = { code: string; id: string; name: string };
+type VendorOption = { code: string; id: string; name: string };
 const statusClasses: Record<string, string> = {
   draft: "border-slate-200 bg-slate-100 text-slate-700",
   paid: "border-green-200 bg-green-50 text-green-700",
@@ -646,20 +650,69 @@ function GenerateSupplierInvoiceMenu({
   );
 }
 
+function DeleteVendorOutgoingInvoiceButton({ invoice }: { invoice: ExpenseVendorInvoice }) {
+  const router = useRouter();
+  const [isPending, startTransition] = useTransition();
+
+  function handleDelete() {
+    startTransition(async () => {
+      const result = await deleteVendorOutgoingInvoice(invoice.id);
+
+      if (result.error) {
+        toast.error(result.error);
+        return;
+      }
+
+      toast.success("Vendor invoice deleted");
+      router.refresh();
+    });
+  }
+
+  return (
+    <AlertDialog>
+      <AlertDialogTrigger asChild>
+        <Button disabled={isPending} size="icon" title="Delete vendor invoice" type="button" variant="ghost">
+          <Trash2 className="h-4 w-4 text-red-500" />
+          <span className="sr-only">Delete vendor invoice</span>
+        </Button>
+      </AlertDialogTrigger>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Delete vendor invoice {invoice.invoice_number ?? invoice.id}?</AlertDialogTitle>
+          <AlertDialogDescription>
+            This removes the vendor invoice record from the system. The generated PDF file in OneDrive is not deleted
+            automatically.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel disabled={isPending}>Cancel</AlertDialogCancel>
+          <AlertDialogAction className="bg-red-600 hover:bg-red-700" disabled={isPending} onClick={handleDelete}>
+            Delete Invoice
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  );
+}
+
 export function InvoicesTab({
   canManage,
   initialInvoices,
   initialSupplierInvoices,
+  initialVendorOutgoingInvoices,
   orderNumber,
   suppliers,
   tradeId,
+  vendors,
 }: {
   tradeId: string;
   canManage: boolean;
   initialInvoices: ClientInvoice[];
   initialSupplierInvoices: SupplierInvoiceOutgoing[];
+  initialVendorOutgoingInvoices: ExpenseVendorInvoice[];
   orderNumber?: string | null;
   suppliers: SupplierOption[];
+  vendors: VendorOption[];
 }) {
   return (
     <div className="space-y-8">
@@ -828,6 +881,71 @@ export function InvoicesTab({
         ) : (
           <Card className="border-slate-200 shadow-sm">
             <CardContent className="py-10 text-sm text-slate-500">No supplier invoices yet.</CardContent>
+          </Card>
+        )}
+      </div>
+
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <h2 className="text-base font-semibold text-[#0d1b34]">Vendor Invoices (Outgoing)</h2>
+          {canManage && vendors.length ? (
+            <GenerateVendorOutgoingInvoiceDialog tradeId={tradeId} vendors={vendors} />
+          ) : null}
+        </div>
+
+        {initialVendorOutgoingInvoices.length ? (
+          <Card className="border-slate-200 shadow-sm">
+            <CardContent className="p-0">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Invoice #</TableHead>
+                    <TableHead>Vendor</TableHead>
+                    <TableHead>Date</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Total (USD)</TableHead>
+                    <TableHead>PDF</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {initialVendorOutgoingInvoices.map((invoice) => (
+                    <TableRow key={invoice.id}>
+                      <TableCell className="font-mono text-xs">{invoice.invoice_number ?? "-"}</TableCell>
+                      <TableCell>{invoice.vendor?.name ?? "-"}</TableCell>
+                      <TableCell>{formatDate(invoice.invoice_date)}</TableCell>
+                      <TableCell>
+                        <StatusBadge status={invoice.status} />
+                      </TableCell>
+                      <TableCell>{formatUsd(invoice.amount_usd)}</TableCell>
+                      <TableCell>
+                        {invoice.pdf_onedrive_url ? (
+                          <a
+                            download
+                            className="font-medium text-[#0d1b34] underline-offset-4 hover:underline"
+                            href={buildDownloadUrl(invoice.pdf_onedrive_url, `vendor-invoice-${invoice.id}.pdf`)}
+                          >
+                            Download
+                          </a>
+                        ) : (
+                          "-"
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center justify-end gap-1">
+                          {canManage ? <EditVendorOutgoingInvoiceDialog invoice={invoice} /> : null}
+                          {canManage ? <DeleteVendorOutgoingInvoiceButton invoice={invoice} /> : null}
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        ) : (
+          <Card className="border-slate-200 shadow-sm">
+            <CardContent className="py-10 text-sm text-slate-500">No vendor invoices yet.</CardContent>
           </Card>
         )}
       </div>

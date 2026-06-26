@@ -144,6 +144,24 @@ export default async function VendorDetailPage({ params }: { params: { id: strin
 
           <Card className="border-slate-200 shadow-sm">
             <CardHeader>
+              <CardTitle>Banking Information</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid gap-x-6 sm:grid-cols-2">
+                <DetailRow label="Account Name" value={vendor.bank_account_name} />
+                <DetailRow label="Account Number" value={vendor.bank_account_number} />
+                <DetailRow label="Bank Name" value={vendor.bank_name} />
+                <DetailRow label="Currency" value={vendor.bank_currency} />
+                <DetailRow label="SWIFT / BIC" value={vendor.bank_swift_code} />
+                <DetailRow label="ABA Routing" value={vendor.bank_aba_routing} />
+              </div>
+              <DetailRow label="Bank Address" value={vendor.bank_address} />
+              <DetailRow label="Special Instructions" value={vendor.banking_instructions} />
+            </CardContent>
+          </Card>
+
+          <Card className="border-slate-200 shadow-sm">
+            <CardHeader>
               <CardTitle>Contacts</CardTitle>
             </CardHeader>
             <CardContent>

@@ -10,6 +10,7 @@ import { downloadFromOneDrive, uploadToOneDrive } from "@/lib/onedrive";
 import { generatePdf } from "@/lib/pdf";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { buildVendorInvoiceHtml } from "@/lib/templates/vendor-invoice";
+import { buildVendorOutgoingInvoiceHtml } from "@/lib/templates/vendor-invoices/dispatcher";
 
 export type ActionResult = { success?: true; error?: string; invoiceId?: string; downloadUrl?: string };
 
@@ -29,6 +30,19 @@ const invoiceSchema = z.object({
   invoice_number: z.string().trim().optional().nullable(),
   notes: z.string().trim().nullable(),
   shareholder_id: z.string().uuid("Shareholder is required"),
+});
+
+const outgoingLineSchema = z.object({
+  description: z.string().trim().min(1, "Description required"),
+  amount_usd: z.coerce.number().positive("Amount must be positive"),
+});
+
+const outgoingInvoiceSchema = z.object({
+  vendor_id: z.string().uuid("Vendor is required"),
+  invoice_number: z.string().trim().optional().nullable(),
+  invoice_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Invalid date"),
+  notes: z.string().trim().nullable(),
+  lines: z.array(outgoingLineSchema).min(1, "At least one line item required"),
 });
 
 async function requireManager() {
@@ -242,5 +256,315 @@ export async function updateVendorInvoiceStatus(
   }
 
   revalidatePath(`/trades/${invoice.trade_id}`);
+  return { success: true };
+}
+
+function parseOutgoingLines(value: FormDataEntryValue | null) {
+  if (typeof value !== "string" || !value.trim()) {
+    return [];
+  }
+
+  return JSON.parse(value);
+}
+
+function buildCompanyAddress(company: {
+  address_line1?: string | null;
+  address_line2?: string | null;
+  city_state?: string | null;
+  country?: string | null;
+} | null) {
+  return [
+    company?.address_line1,
+    company?.address_line2,
+    company?.city_state,
+    company?.country,
+  ]
+    .filter(Boolean)
+    .join("\n");
+}
+
+export async function generateVendorOutgoingInvoice(tradeId: string, formData: FormData): Promise<ActionResult> {
+  const access = await requireManager();
+
+  if ("error" in access) {
+    return { error: access.error };
+  }
+
+  let rawLines;
+
+  try {
+    rawLines = parseOutgoingLines(formData.get("lines"));
+  } catch {
+    return { error: "Line items must be valid JSON" };
+  }
+
+  const parsed = z
+    .object({ invoice: outgoingInvoiceSchema, tradeId: z.string().uuid() })
+    .safeParse({
+      invoice: {
+        vendor_id: formData.get("vendor_id"),
+        invoice_number: emptyToNull(formData.get("invoice_number")),
+        invoice_date: formData.get("invoice_date"),
+        notes: emptyToNull(formData.get("notes")),
+        lines: rawLines,
+      },
+      tradeId,
+    });
+
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "Invalid input" };
+  }
+
+  const supabase = createServerSupabaseClient();
+  const [{ data: trade, error: tradeError }, { data: vendor, error: vendorError }, { data: companySettings }] =
+    await Promise.all([
+      supabase.from("trades").select("id, trade_id").eq("id", tradeId).maybeSingle(),
+      supabase
+        .from("expense_vendors")
+        .select(
+          "id, code, name, address, status, bank_account_name, bank_account_number, bank_name, bank_address, bank_swift_code, bank_aba_routing, bank_currency, banking_instructions"
+        )
+        .eq("id", parsed.data.invoice.vendor_id)
+        .maybeSingle(),
+      supabase
+        .from("company_settings")
+        .select("company_name_full, company_name, address_line1, address_line2, city_state, country")
+        .limit(1)
+        .maybeSingle(),
+    ]);
+
+  if (tradeError) {
+    return { error: tradeError.message };
+  }
+
+  if (vendorError) {
+    return { error: vendorError.message };
+  }
+
+  if (!trade) {
+    return { error: "Trade not found" };
+  }
+
+  if (!vendor) {
+    return { error: "Vendor not found" };
+  }
+
+  if (vendor.status !== "active") {
+    return { error: "Vendor is inactive" };
+  }
+
+  const totalUsd = parsed.data.invoice.lines.reduce((sum, line) => sum + Number(line.amount_usd), 0);
+  const invoiceNumber = parsed.data.invoice.invoice_number ?? null;
+  const billToName =
+    companySettings?.company_name_full ?? companySettings?.company_name ?? "Rock Hill Innovation Co., Ltd";
+  const html = buildVendorOutgoingInvoiceHtml({
+    billToAddress: buildCompanyAddress(companySettings),
+    billToName,
+    invoiceDate: parsed.data.invoice.invoice_date,
+    invoiceNumber,
+    lines: parsed.data.invoice.lines.map((line) => ({
+      amountUsd: Number(line.amount_usd),
+      description: line.description,
+    })),
+    notes: parsed.data.invoice.notes,
+    totalUsd,
+    vendorAddress: vendor.address ?? null,
+    vendorBanking: {
+      abaRouting: vendor.bank_aba_routing ?? null,
+      accountName: vendor.bank_account_name ?? null,
+      accountNumber: vendor.bank_account_number ?? null,
+      bankAddress: vendor.bank_address ?? null,
+      bankName: vendor.bank_name ?? null,
+      bankingInstructions: vendor.banking_instructions ?? null,
+      currency: vendor.bank_currency ?? null,
+      swiftCode: vendor.bank_swift_code ?? null,
+    },
+    vendorCode: vendor.code,
+    vendorName: vendor.name,
+  });
+
+  const pdfBuffer = await generatePdf(html);
+  const safeInvoiceNum = invoiceNumber ?? `${vendor.code}-${parsed.data.invoice.invoice_date}`;
+  const fileName = `${safeInvoiceNum.replace(/[^\w\-.]/g, "-")}.pdf`;
+  const uploaded = await uploadToOneDrive({
+    category: "invoice",
+    fileBuffer: pdfBuffer,
+    fileName,
+    mimeType: "application/pdf",
+    tradeCode: trade.trade_id,
+  });
+
+  const { data: invoice, error: invoiceError } = await supabase
+    .from("expense_vendor_invoices")
+    .insert({
+      amount_usd: totalUsd,
+      description: null,
+      invoice_date: parsed.data.invoice.invoice_date,
+      invoice_number: invoiceNumber,
+      lines: parsed.data.invoice.lines,
+      notes: parsed.data.invoice.notes,
+      pdf_onedrive_url: uploaded.webUrl,
+      status: "draft",
+      trade_id: tradeId,
+      trade_shareholder_id: null,
+      vendor_id: vendor.id,
+    })
+    .select("id")
+    .single();
+
+  if (invoiceError) {
+    return { error: invoiceError.message };
+  }
+
+  const nextDocumentVersion = await getNextTradeDocumentVersion({
+    category: "invoice",
+    supabase,
+    tradeId,
+  });
+
+  const { error: documentError } = await supabase.from("trade_documents").insert({
+    document_category: "invoice",
+    document_type: "vendor",
+    file_name: fileName,
+    file_size_bytes: pdfBuffer.length,
+    notes: parsed.data.invoice.notes,
+    onedrive_file_id: uploaded.fileId,
+    onedrive_url: uploaded.webUrl,
+    related_party: "internal",
+    status: "draft",
+    trade_id: tradeId,
+    uploaded_by: access.user.id,
+    version: nextDocumentVersion,
+  });
+
+  if (documentError) {
+    return { error: documentError.message };
+  }
+
+  await notifyParticipants(
+    tradeId,
+    trade.trade_id,
+    access.user.id,
+    access.user.name,
+    `A vendor invoice was generated for trade ${trade.trade_id}.`
+  );
+  revalidatePath(`/trades/${tradeId}`);
+  return { success: true, downloadUrl: uploaded.webUrl, invoiceId: invoice.id };
+}
+
+export async function updateVendorOutgoingInvoice(invoiceId: string, formData: FormData): Promise<ActionResult> {
+  const access = await requireManager();
+
+  if ("error" in access) {
+    return { error: access.error };
+  }
+
+  const parsed = z
+    .object({
+      invoiceId: z.string().uuid(),
+      invoice_number: z.string().trim().transform((value) => (value.length ? value : null)).nullable(),
+      invoice_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Invalid date"),
+      notes: z.string().trim().transform((value) => (value.length ? value : null)).nullable(),
+      status: z.enum(["draft", "sent", "paid"]),
+    })
+    .safeParse({
+      invoiceId,
+      invoice_number: formData.get("invoice_number"),
+      invoice_date: formData.get("invoice_date"),
+      notes: formData.get("notes"),
+      status: formData.get("status"),
+    });
+
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "Invalid invoice" };
+  }
+
+  const supabase = createServerSupabaseClient();
+  const { data: invoice, error: invoiceError } = await supabase
+    .from("expense_vendor_invoices")
+    .select("id, trade_id")
+    .eq("id", invoiceId)
+    .maybeSingle();
+
+  if (invoiceError) {
+    return { error: invoiceError.message };
+  }
+
+  if (!invoice) {
+    return { error: "Invoice not found" };
+  }
+
+  const { error } = await supabase
+    .from("expense_vendor_invoices")
+    .update({
+      invoice_date: parsed.data.invoice_date,
+      invoice_number: parsed.data.invoice_number,
+      notes: parsed.data.notes,
+      status: parsed.data.status,
+    })
+    .eq("id", invoiceId);
+
+  if (error) {
+    return { error: error.message };
+  }
+
+  if (invoice.trade_id) {
+    revalidatePath(`/trades/${invoice.trade_id}`);
+  }
+
+  return { success: true };
+}
+
+export async function deleteVendorOutgoingInvoice(invoiceId: string): Promise<ActionResult> {
+  const access = await requireManager();
+
+  if ("error" in access) {
+    return { error: access.error };
+  }
+
+  const parsed = z.string().uuid().safeParse(invoiceId);
+
+  if (!parsed.success) {
+    return { error: "Invalid invoice" };
+  }
+
+  const supabase = createServerSupabaseClient();
+  const { data: invoice, error: invoiceError } = await supabase
+    .from("expense_vendor_invoices")
+    .select("id, invoice_number, trade_id, trade:trades(trade_id)")
+    .eq("id", invoiceId)
+    .maybeSingle();
+
+  if (invoiceError) {
+    return { error: invoiceError.message };
+  }
+
+  if (!invoice) {
+    return { error: "Invoice not found" };
+  }
+
+  const { error } = await supabase.from("expense_vendor_invoices").delete().eq("id", invoiceId);
+
+  if (error) {
+    if (error.code === "23503") {
+      return { error: "This vendor invoice is linked to another record and cannot be deleted yet." };
+    }
+
+    return { error: error.message };
+  }
+
+  const trade = Array.isArray(invoice.trade) ? invoice.trade[0] : invoice.trade;
+
+  if (invoice.trade_id) {
+    await notifyParticipants(
+      invoice.trade_id,
+      trade?.trade_id ?? "trade",
+      access.user.id,
+      access.user.name,
+      `Vendor invoice ${invoice.invoice_number ?? invoice.id} was deleted.`
+    );
+    revalidatePath(`/trades/${invoice.trade_id}`);
+  }
+
   return { success: true };
 }

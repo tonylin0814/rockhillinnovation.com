@@ -216,7 +216,7 @@ export default async function TradeWorkspacePage({ params }: { params: { id: str
       .order("created_at", { ascending: false }),
     supabase
       .from("expense_vendor_invoices")
-      .select("*")
+      .select("*, vendor:expense_vendors(id, name, code)")
       .eq("trade_id", params.id)
       .order("created_at", { ascending: false }),
     supabase.from("exchange_rates").select("*").eq("trade_id", params.id),
@@ -452,6 +452,8 @@ export default async function TradeWorkspacePage({ params }: { params: { id: str
   const clientInvoiceRows = (clientInvoices ?? []) as ClientInvoice[];
   const supplierInvoiceOutgoingRows = (supplierInvoicesOutgoing ?? []) as SupplierInvoiceOutgoing[];
   const vendorInvoiceRows = (vendorInvoices ?? []) as ExpenseVendorInvoice[];
+  const vendorOutgoingInvoiceRows = vendorInvoiceRows.filter((invoice) => invoice.trade_shareholder_id === null);
+  const shareholderVendorInvoiceRows = vendorInvoiceRows.filter((invoice) => invoice.trade_shareholder_id !== null);
   const exchangeRateRows = (exchangeRates ?? []) as ExchangeRate[];
   const ledgerEntryRows = (ledgerEntries ?? []) as TradeLedgerEntry[];
   const tradeMilestoneRows = (milestones ?? []) as TradeMilestone[];
@@ -683,9 +685,11 @@ export default async function TradeWorkspacePage({ params }: { params: { id: str
             canManage={canManage}
             initialInvoices={clientInvoiceRows}
             initialSupplierInvoices={supplierInvoiceOutgoingRows}
+            initialVendorOutgoingInvoices={vendorOutgoingInvoiceRows}
             orderNumber={trade.order_number ?? trade.trade_id}
             suppliers={activeSupplierOptions}
             tradeId={trade.id}
+            vendors={activeVendorOptions}
           />
         </TabsContent>
         {canManage ? (
@@ -766,7 +770,7 @@ export default async function TradeWorkspacePage({ params }: { params: { id: str
             />
             <VendorInvoicesCard
               canManage={canManage}
-              existingInvoices={vendorInvoiceRows}
+              existingInvoices={shareholderVendorInvoiceRows}
               shareholders={tradeShareholderRows}
               tradeId={trade.id}
             />
