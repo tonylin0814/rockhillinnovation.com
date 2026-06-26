@@ -155,7 +155,7 @@ export async function generateSupplierInvoiceOutgoing(
   const { data: rawLines, error: linesError } = await supabase
     .from("supplier_quote_lines")
     .select(
-      "id, item_name_chinese, item_name_english, quantity, unit_price_rmb, total_price_rmb, payment_category, sort_order, product:products(id, name_english, name_chinese, supplier_id, supplier:suppliers(id, name, address))"
+      "id, item_name_chinese, item_name_english, quantity, unit_price_rmb, total_price_rmb, payment_category, sort_order, product:products(id, name_english, name_chinese, product_type, supplier_id, supplier:suppliers(id, name, address))"
     )
     .eq("session_id", session.id)
     .order("sort_order", { ascending: true });
@@ -179,6 +179,10 @@ export async function generateSupplierInvoiceOutgoing(
   const exchangeRate: number | null = rateRow?.rate_rmb_per_usd ?? trade.working_exchange_rate ?? null;
 
   type QuoteLine = (typeof rawLines)[number];
+  const nonSetLines = rawLines.filter((line) => {
+    const product = Array.isArray(line.product) ? line.product[0] : line.product;
+    return product?.product_type !== "set";
+  });
 
   function shouldInclude(line: QuoteLine): boolean {
     const category = line.payment_category;
@@ -201,16 +205,38 @@ export async function generateSupplierInvoiceOutgoing(
     return 1;
   }
 
-  const includedLines = rawLines.filter(shouldInclude);
+  const includedLines = nonSetLines.filter(shouldInclude);
+  const consolidatedLines = Object.values(
+    includedLines.reduce<Record<string, QuoteLine>>((acc, line) => {
+      const product = Array.isArray(line.product) ? line.product[0] : line.product;
+      const key = product?.id ?? line.item_name_english ?? line.id;
 
-  if (!includedLines.length) {
+      if (acc[key]) {
+        const nextQuantity = Number(acc[key].quantity) + Number(line.quantity);
+        const nextTotal = Number(acc[key].total_price_rmb) + Number(line.total_price_rmb);
+
+        acc[key] = {
+          ...acc[key],
+          quantity: nextQuantity,
+          total_price_rmb: nextTotal,
+          unit_price_rmb: nextQuantity > 0 ? nextTotal / nextQuantity : acc[key].unit_price_rmb,
+        };
+      } else {
+        acc[key] = { ...line };
+      }
+
+      return acc;
+    }, {})
+  );
+
+  if (!consolidatedLines.length) {
     return { error: `No applicable lines for a ${invoiceType} invoice. Check payment categories on quote lines.` };
   }
 
   let supplierName: string | null = null;
   let supplierAddress: string | null = null;
 
-  for (const line of includedLines) {
+  for (const line of consolidatedLines) {
     const product = Array.isArray(line.product) ? line.product[0] : line.product;
     const supplier = product
       ? Array.isArray(product.supplier)
@@ -225,7 +251,7 @@ export async function generateSupplierInvoiceOutgoing(
     }
   }
 
-  const invoiceLines = includedLines.map((line, index) => {
+  const invoiceLines = consolidatedLines.map((line, index) => {
     const product = Array.isArray(line.product) ? line.product[0] : line.product;
     const pct = pctForLine(line);
     const quantity = Number(line.quantity);
