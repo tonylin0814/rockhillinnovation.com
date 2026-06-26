@@ -72,3 +72,41 @@ export async function updateDocumentStatus(
   revalidatePath(`/trades/${document.trade_id}`);
   return { success: true };
 }
+
+export async function deleteDocument(documentId: string): Promise<ActionResult> {
+  const user = await getCurrentUser();
+
+  if (!user) {
+    return { error: "Unauthorized" };
+  }
+
+  const parsed = z.string().uuid().safeParse(documentId);
+
+  if (!parsed.success) {
+    return { error: "Invalid document ID" };
+  }
+
+  const supabase = createServerSupabaseClient();
+  const { data: document, error: fetchError } = await supabase
+    .from("trade_documents")
+    .select("id, trade_id")
+    .eq("id", documentId)
+    .maybeSingle();
+
+  if (fetchError) {
+    return { error: fetchError.message };
+  }
+
+  if (!document) {
+    return { error: "Document not found" };
+  }
+
+  const { error } = await supabase.from("trade_documents").delete().eq("id", documentId);
+
+  if (error) {
+    return { error: error.message };
+  }
+
+  revalidatePath(`/trades/${document.trade_id}`);
+  return { success: true };
+}

@@ -1,11 +1,11 @@
 "use client";
 
-import { MoreHorizontal } from "lucide-react";
+import { MoreHorizontal, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useMemo, useTransition } from "react";
 import { toast } from "sonner";
 
-import { updateDocumentStatus } from "@/app/actions/documents";
+import { deleteDocument, updateDocumentStatus } from "@/app/actions/documents";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -13,6 +13,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
@@ -68,7 +69,8 @@ function formatDate(value: string) {
     month: "short",
     day: "numeric",
     year: "numeric",
-    timeZone: "UTC",
+    hour: "numeric",
+    minute: "2-digit",
   }).format(new Date(value));
 }
 
@@ -98,6 +100,22 @@ function DocumentStatusDropdown({ document }: { document: TradeDocument }) {
     });
   }
 
+  function handleDelete() {
+    if (!confirm("Delete this document? This cannot be undone.")) return;
+
+    startTransition(async () => {
+      const result = await deleteDocument(document.id);
+
+      if (result.error) {
+        toast.error(result.error);
+        return;
+      }
+
+      toast.success("Document deleted");
+      router.refresh();
+    });
+  }
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -112,6 +130,11 @@ function DocumentStatusDropdown({ document }: { document: TradeDocument }) {
             {statusLabels[status]}
           </DropdownMenuItem>
         ))}
+        <DropdownMenuSeparator />
+        <DropdownMenuItem className="text-red-600 focus:text-red-600" onClick={handleDelete}>
+          <Trash2 className="mr-2 h-4 w-4" />
+          Delete
+        </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   );

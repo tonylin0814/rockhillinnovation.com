@@ -6,6 +6,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
 import { requireManager } from "@/lib/auth";
+import { getNextTradeDocumentVersion } from "@/lib/document-version";
 import { notifyParticipants } from "@/lib/notifications";
 import { uploadToOneDrive } from "@/lib/onedrive";
 import { generatePdf } from "@/lib/pdf";
@@ -336,6 +337,12 @@ export async function generateCommercialInvoice(tradeId: string, formData: FormD
     return { error: linesError.message };
   }
 
+  const nextDocumentVersion = await getNextTradeDocumentVersion({
+    category: "invoice",
+    supabase,
+    tradeId,
+  });
+
   const { error: documentError } = await supabase.from("trade_documents").insert({
     document_category: "invoice",
     document_type: "commercial",
@@ -348,7 +355,7 @@ export async function generateCommercialInvoice(tradeId: string, formData: FormD
     status: "draft",
     trade_id: tradeId,
     uploaded_by: access.user.id,
-    version: 1,
+    version: nextDocumentVersion,
   });
 
   if (documentError) {

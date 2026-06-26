@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 
 import { getCurrentUser } from "@/lib/auth";
+import { getNextTradeDocumentVersion } from "@/lib/document-version";
 import { notifyParticipants } from "@/lib/notifications";
 import { uploadToOneDrive } from "@/lib/onedrive";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
@@ -79,6 +80,11 @@ export async function POST(request: Request) {
     mimeType: file.type || "application/octet-stream",
     tradeCode: trade.trade_id,
   });
+  const nextVersion = await getNextTradeDocumentVersion({
+    category: parsed.data.document_category,
+    supabase,
+    tradeId: parsed.data.trade_id,
+  });
 
   const { data, error } = await supabase
     .from("trade_documents")
@@ -87,7 +93,7 @@ export async function POST(request: Request) {
       document_category: parsed.data.document_category,
       document_type: parsed.data.document_type,
       file_name: file.name,
-      version: 1,
+      version: nextVersion,
       status: "draft",
       related_party: parsed.data.related_party,
       onedrive_url: webUrl,

@@ -7,6 +7,7 @@ import { z } from "zod";
 
 import { getCurrentUser } from "@/lib/auth";
 import { logActivity } from "@/lib/activity-log";
+import { getNextTradeDocumentVersion } from "@/lib/document-version";
 import { uploadToOneDrive } from "@/lib/onedrive";
 import { generatePdf } from "@/lib/pdf";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
@@ -400,6 +401,12 @@ export async function generateQuotationPdf(
       return { error: updateError.message };
     }
 
+    const nextVersion = await getNextTradeDocumentVersion({
+      category: "client_quotation",
+      supabase,
+      tradeId: session.trade_id,
+    });
+
     const { error: documentError } = await supabase.from("trade_documents").insert({
       document_category: "client_quotation",
       document_type: "quotation",
@@ -412,7 +419,7 @@ export async function generateQuotationPdf(
       status: "draft",
       trade_id: session.trade_id,
       uploaded_by: user.id,
-      version: 1,
+      version: nextVersion,
     });
 
     if (documentError) {
