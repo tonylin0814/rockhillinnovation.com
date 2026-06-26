@@ -40,7 +40,7 @@ function multiline(value: string | null) {
 }
 
 function formatComponentName(component: { code: string | null; name: string }) {
-  if (component.code === "MLP-ASSEMBLY-1" || component.code === "MLP-ASSEMBLY-2") {
+  if (component.code && /^MLP-ASSEMBLY(-\d+)?$/.test(component.code)) {
     return "MLP-ASSEMBLY - Assembly";
   }
 
@@ -158,6 +158,11 @@ export function buildClientQuotationHtml({
                 ${
                   line.components?.length
                     ? `<div class="item-note"><strong>Components:</strong><br />${line.components
+                        .reduce<typeof line.components>((acc, comp) => {
+                          const formatted = formatComponentName(comp);
+                          if (acc.some((existing) => formatComponentName(existing) === formatted)) return acc;
+                          return [...acc, comp];
+                        }, [])
                         .map(
                           (component) =>
                             `${escapeHtml(formatComponentName(component))} x ${formatQuantity(component.quantityPerSet)}`
