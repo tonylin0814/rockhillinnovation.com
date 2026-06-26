@@ -311,7 +311,7 @@ export async function generateSupplierInvoiceOutgoing(
         paymentPct,
         quantity,
         totalRmb,
-        unitPriceRmb: unitPriceInvoice,
+        unitPriceRmb: unitPriceFull,
       },
     };
   });
