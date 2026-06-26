@@ -223,6 +223,12 @@ export function QuoteLinesEditor({
     });
   }
 
+  function focusNextQuantityInput(index: number) {
+    const nextInput = document.querySelector<HTMLInputElement>(`[data-supplier-quote-qty-input-index="${index + 1}"]`);
+    nextInput?.focus();
+    nextInput?.select();
+  }
+
   function handleSave() {
     startTransition(async () => {
       const result = await saveQuoteLines(
@@ -352,8 +358,15 @@ export function QuoteLinesEditor({
                     {isEditing ? (
                       <Input
                         className="w-[101px]"
+                        data-supplier-quote-qty-input-index={index}
                         min="0.001"
                         onChange={(event) => updateRow(index, { quantity: event.currentTarget.value })}
+                        onKeyDown={(event) => {
+                          if (event.key === "Enter") {
+                            event.preventDefault();
+                            focusNextQuantityInput(index);
+                          }
+                        }}
                         step="0.001"
                         type="number"
                         value={row.quantity}
