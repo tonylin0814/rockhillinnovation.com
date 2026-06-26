@@ -86,6 +86,21 @@ export function GenerateSupplierInvoiceDialog({
   const finalTotal = finalLines.reduce((sum, line) => sum + (Number(line.amount_rmb) || 0), 0);
   const suffix = orderNumberSuffix(orderNumber);
   const generatedInvoiceNumber = supplierCode && suffix ? `${supplierCode}-${suffix}` : "";
+  const [invoiceNumber, setInvoiceNumber] = useState(generatedInvoiceNumber);
+
+  function handleOpenChange(value: boolean) {
+    setOpen(value);
+
+    if (value) {
+      setError(null);
+      setInvoiceNumber(generatedInvoiceNumber);
+    }
+  }
+
+  function handleSupplierChange(value: string) {
+    setSupplierCode(value);
+    setInvoiceNumber(value && suffix ? `${value}-${suffix}` : "");
+  }
 
   function addFinalLine() {
     setFinalLines((currentLines) => [
@@ -108,7 +123,6 @@ export function GenerateSupplierInvoiceDialog({
     event.preventDefault();
     setError(null);
     const formData = new FormData(event.currentTarget);
-    formData.set("invoice_number", generatedInvoiceNumber);
 
     if (type === "final") {
       const finalPayload = finalLines
@@ -133,7 +147,7 @@ export function GenerateSupplierInvoiceDialog({
   }
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>{children}</DialogTrigger>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
@@ -144,8 +158,8 @@ export function GenerateSupplierInvoiceDialog({
         <form className="space-y-5" onSubmit={handleSubmit}>
           <div className="space-y-2">
             <Label htmlFor={`sup_${type}_inv_num`}>Invoice Number</Label>
-            <div className="grid gap-2 sm:grid-cols-[1fr_auto_1fr]">
-              <Select disabled={isPending} onValueChange={setSupplierCode} value={supplierCode}>
+            <div className="grid gap-2 sm:grid-cols-[9rem_1fr]">
+              <Select disabled={isPending} onValueChange={handleSupplierChange} value={supplierCode}>
                 <SelectTrigger>
                   <SelectValue placeholder="Supplier" />
                 </SelectTrigger>
@@ -157,15 +171,16 @@ export function GenerateSupplierInvoiceDialog({
                   ))}
                 </SelectContent>
               </Select>
-              <div className="flex items-center justify-center text-sm text-slate-400">-</div>
               <Input
-                disabled
+                disabled={isPending}
                 id={`sup_${type}_inv_num`}
-                placeholder="Order number"
-                value={suffix}
+                name="invoice_number"
+                onChange={(event) => setInvoiceNumber(event.currentTarget.value)}
+                placeholder={generatedInvoiceNumber || "Invoice number"}
+                required
+                value={invoiceNumber}
               />
             </div>
-            <input name="invoice_number" type="hidden" value={generatedInvoiceNumber} />
           </div>
 
           <div className="space-y-2">
