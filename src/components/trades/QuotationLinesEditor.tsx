@@ -173,7 +173,7 @@ export function QuotationLinesEditor({
     () => new Set(rows.map((row) => row.product_id).filter((productId) => productId !== "none")),
     [rows]
   );
-  const canEdit = canManage && sessionStatus === "draft";
+  const canEdit = canManage && (sessionStatus === "draft" || sessionStatus === "sent");
   const hasExchangeRate = typeof workingExchangeRate === "number" && workingExchangeRate > 0;
   const runningCostTotal = rows.reduce((total, row) => {
     const product = row.product_id === "none" ? null : productById.get(row.product_id);
@@ -566,9 +566,11 @@ export function QuotationLinesEditor({
               <Plus className="mr-2 h-4 w-4" />
               Add Line
             </Button>
-            <Button disabled={isPending} onClick={importFromQuotes} type="button" variant="outline">
-              Import from Quotes
-            </Button>
+            {sessionStatus === "draft" ? (
+              <Button disabled={isPending} onClick={importFromQuotes} type="button" variant="outline">
+                Import from Quotes
+              </Button>
+            ) : null}
           </div>
           <div className="flex justify-end gap-2">
             <Button

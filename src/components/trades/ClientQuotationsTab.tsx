@@ -245,7 +245,7 @@ export function ClientQuotationsTab({
                           Download PDF
                         </a>
                       ) : null}
-                      {canManage && session.status === "draft" ? (
+                      {canManage && (session.status === "draft" || session.status === "sent") ? (
                         <Button disabled={loadingSessionId === session.id} onClick={() => editLines(session.id)} size="sm">
                           <PencilLine className="mr-1.5 h-3.5 w-3.5" />
                           Edit
