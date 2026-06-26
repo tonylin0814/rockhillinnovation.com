@@ -154,7 +154,7 @@ export async function generateVendorInvoice(tradeId: string, formData: FormData)
     vendorName: vendor.name,
   });
   const pdfBuffer = await generatePdf(html);
-  const safeInvoiceNum = invoiceNumber ?? `${vendor.name}-${parsed.data.invoice.invoice_date}`;
+  const safeInvoiceNum = `${vendor.name} - ${invoiceNumber ?? parsed.data.invoice.invoice_date}`;
   const fileName = `${safeInvoiceNum.replace(/[^\w\-.]/g, "-")}.pdf`;
   const uploaded = await uploadToOneDrive({
     category: "invoice",
@@ -403,7 +403,7 @@ export async function generateVendorOutgoingInvoice(tradeId: string, formData: F
   });
 
   const pdfBuffer = await generatePdf(html);
-  const safeInvoiceNum = invoiceNumber ?? `${vendor.code}-${parsed.data.invoice.invoice_date}`;
+  const safeInvoiceNum = `${vendor.name} - ${invoiceNumber ?? parsed.data.invoice.invoice_date}`;
   const fileName = `${safeInvoiceNum.replace(/[^\w\-.]/g, "-")}.pdf`;
   const uploaded = await uploadToOneDrive({
     category: "invoice",
