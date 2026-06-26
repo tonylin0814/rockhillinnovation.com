@@ -47,7 +47,7 @@ export function buildBaseHtml({
         font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
         font-size: 10.5pt;
         line-height: 1.45;
-        padding-bottom: 48px;
+        padding-bottom: 0;
       }
 
       p { margin: 0 0 8px; }
@@ -71,7 +71,7 @@ export function buildBaseHtml({
 
       .page-footer-bar {
         position: fixed;
-        bottom: 0;
+        bottom: -0.28in;
         left: -0.75in;
         right: -0.75in;
         height: 8px;
@@ -82,7 +82,7 @@ export function buildBaseHtml({
 
       .page-footer-contact {
         position: fixed;
-        bottom: 10px;
+        bottom: -0.2in;
         left: 0;
         right: 0;
         text-align: center;
