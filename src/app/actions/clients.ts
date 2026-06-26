@@ -21,6 +21,7 @@ const contactSchema = z.object({
   email: z.string().trim().default(""),
   phone: z.string().trim().default(""),
   cell_phone: z.string().trim().default(""),
+  is_primary: z.boolean().optional().default(false),
 });
 
 const clientSchema = z.object({

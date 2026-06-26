@@ -1,12 +1,12 @@
 "use client";
 
-import { ChevronDown, FileText, Mail, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
+import { ChevronDown, FileText, Loader2, Mail, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { FormEvent, Fragment, ReactNode, useState, useTransition } from "react";
 import { toast } from "sonner";
 
 import { deleteClientInvoice, updateClientInvoice, updateInvoiceStatus } from "@/app/actions/invoices";
-import { sendClientInvoice } from "@/app/actions/send-invoice";
+import { draftClientInvoiceEmail } from "@/app/actions/send-invoice";
 import {
   deleteSupplierInvoice,
   updateSupplierInvoice,
@@ -320,38 +320,40 @@ function EditClientInvoiceDialog({ invoice }: { invoice: ClientInvoice }) {
 }
 
 function SendInvoiceButton({ invoice }: { invoice: ClientInvoice }) {
-  const router = useRouter();
   const [isPending, startTransition] = useTransition();
 
-  if (!invoice.pdf_onedrive_url || invoice.status === "paid") {
+  if (!invoice.pdf_onedrive_url) {
     return null;
   }
 
-  function handleSend() {
+  function handleDraft() {
     startTransition(async () => {
-      const result = await sendClientInvoice(invoice.id);
+      const result = await draftClientInvoiceEmail(invoice.id);
 
       if (result.error) {
         toast.error(result.error);
         return;
       }
 
-      toast.success("Invoice emailed to client");
-      router.refresh();
+      if (result.draftUrl) {
+        window.open(result.draftUrl, "_blank", "noopener,noreferrer");
+      }
+
+      toast.success("Email draft opened in Outlook");
     });
   }
 
   return (
     <Button
       disabled={isPending}
-      onClick={handleSend}
+      onClick={handleDraft}
       size="icon"
-      title="Send invoice via email"
+      title="Draft email in Outlook"
       type="button"
       variant="ghost"
     >
-      <Mail className="h-4 w-4" />
-      <span className="sr-only">Send via email</span>
+      {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />}
+      <span className="sr-only">Draft email in Outlook</span>
     </Button>
   );
 }

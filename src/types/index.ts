@@ -22,6 +22,7 @@ export type CompanySettings = {
   sales_contact_name: string | null;
   sales_contact_email: string | null;
   sales_contact_phone: string | null;
+  invoice_bcc_email: string | null;
   updated_at: string;
 };
 
@@ -87,6 +88,7 @@ export type Contact = {
   email: string;
   phone: string;
   cell_phone: string;
+  is_primary?: boolean;
 };
 
 export type Client = {

@@ -26,6 +26,7 @@ const emptyContact: Contact = {
   email: "",
   phone: "",
   cell_phone: "",
+  is_primary: false,
 };
 
 type ContactRow = Contact & { _key: string };
@@ -49,6 +50,7 @@ function stripContactKey(contact: ContactRow): Contact {
   const { _key, ...cleanContact } = contact;
   return {
     ...cleanContact,
+    is_primary: Boolean(cleanContact.is_primary),
     name: [cleanContact.first_name, cleanContact.last_name].filter(Boolean).join(" "),
   };
 }
@@ -68,6 +70,15 @@ export function ContactsEditor({ clientId, initialContacts }: { clientId: string
   function updateContact(index: number, field: keyof Contact, value: string) {
     setContacts((current) =>
       current.map((contact, contactIndex) => (contactIndex === index ? { ...contact, [field]: value } : contact))
+    );
+  }
+
+  function setPrimaryContact(index: number) {
+    setContacts((current) =>
+      current.map((contact, contactIndex) => ({
+        ...contact,
+        is_primary: contactIndex === index,
+      }))
     );
   }
 
@@ -135,6 +146,7 @@ export function ContactsEditor({ clientId, initialContacts }: { clientId: string
             <TableHead>Email</TableHead>
             <TableHead>Phone</TableHead>
             <TableHead>Cell Phone</TableHead>
+            <TableHead className="w-24">Primary</TableHead>
             {isEditing ? <TableHead className="w-12" /> : null}
           </TableRow>
         </TableHeader>
@@ -156,6 +168,23 @@ export function ContactsEditor({ clientId, initialContacts }: { clientId: string
                     )}
                   </TableCell>
                 ))}
+                <TableCell>
+                  {isEditing ? (
+                    <input
+                      aria-label="Primary contact"
+                      checked={Boolean(contact.is_primary)}
+                      className="h-4 w-4 accent-[#0d1b34]"
+                      disabled={isPending}
+                      name="primary_contact"
+                      onChange={() => setPrimaryContact(index)}
+                      type="radio"
+                    />
+                  ) : contact.is_primary ? (
+                    "Yes"
+                  ) : (
+                    "-"
+                  )}
+                </TableCell>
                 {isEditing ? (
                   <TableCell>
                     <Button
@@ -174,7 +203,7 @@ export function ContactsEditor({ clientId, initialContacts }: { clientId: string
             ))
           ) : (
             <TableRow>
-              <TableCell className="text-slate-500" colSpan={isEditing ? 7 : 6}>
+              <TableCell className="text-slate-500" colSpan={isEditing ? 8 : 7}>
                 No contacts yet.
               </TableCell>
             </TableRow>

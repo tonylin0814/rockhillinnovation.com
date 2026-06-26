@@ -107,6 +107,18 @@ export function CompanyInfoForm({ settings }: { settings: CompanySettings | null
         />
       </div>
 
+      <div className="space-y-1.5">
+        <Label htmlFor="invoice_bcc_email">Invoice BCC Email</Label>
+        <Input
+          defaultValue={s?.invoice_bcc_email ?? ""}
+          disabled={isPending}
+          id="invoice_bcc_email"
+          name="invoice_bcc_email"
+          placeholder="tonylin0814@gmail.com"
+          type="email"
+        />
+      </div>
+
       <p className="pt-2 text-xs font-semibold uppercase tracking-wide text-slate-500">Sales contact</p>
 
       <div className="grid gap-4 sm:grid-cols-3">

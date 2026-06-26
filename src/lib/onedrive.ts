@@ -2,6 +2,17 @@ import { ClientSecretCredential } from "@azure/identity";
 import { Client } from "@microsoft/microsoft-graph-client";
 import { TokenCredentialAuthenticationProvider } from "@microsoft/microsoft-graph-client/authProviders/azureTokenCredentials";
 
+/**
+ * Required Azure AD application permissions for this service principal:
+ * - Files.ReadWrite.All  (OneDrive upload/download)
+ * - Mail.ReadWrite       (Outlook draft creation via createOutlookDraft)
+ *
+ * Required env vars:
+ * - ONEDRIVE_TENANT_ID, ONEDRIVE_CLIENT_ID, ONEDRIVE_CLIENT_SECRET
+ * - ONEDRIVE_DRIVE_ID
+ * - OUTLOOK_USER_ID   (UPN or object ID of the mailbox, e.g. tony@company.com)
+ */
+
 type UploadParams = {
   tradeCode: string;
   category: string;
@@ -145,5 +156,56 @@ export async function downloadFromOneDrive(webUrl: string): Promise<{ buffer: Bu
     return { buffer: Buffer.from(arrayBuffer), mimeType };
   } catch {
     return null;
+  }
+}
+
+export async function createOutlookDraft(params: {
+  to: Array<{ name: string; email: string }>;
+  bcc?: Array<{ name: string; email: string }>;
+  subject: string;
+  bodyHtml: string;
+  attachmentBuffer?: Buffer;
+  attachmentFileName?: string;
+}): Promise<{ webLink: string } | { error: string }> {
+  const userId = process.env.OUTLOOK_USER_ID;
+
+  if (!userId) {
+    return { error: "OUTLOOK_USER_ID is not configured" };
+  }
+
+  try {
+    const client = await getGraphClient();
+
+    const message: Record<string, unknown> = {
+      bccRecipients: (params.bcc ?? []).map((contact) => ({
+        emailAddress: { address: contact.email, name: contact.name },
+      })),
+      body: {
+        content: params.bodyHtml,
+        contentType: "HTML",
+      },
+      subject: params.subject,
+      toRecipients: params.to.map((contact) => ({
+        emailAddress: { address: contact.email, name: contact.name },
+      })),
+    };
+
+    if (params.attachmentBuffer && params.attachmentFileName) {
+      message.attachments = [
+        {
+          "@odata.type": "#microsoft.graph.fileAttachment",
+          contentBytes: params.attachmentBuffer.toString("base64"),
+          contentType: "application/pdf",
+          name: params.attachmentFileName,
+        },
+      ];
+    }
+
+    const draft = await client.api(`/users/${userId}/messages`).post(message);
+    return { webLink: draft.webLink };
+  } catch (error) {
+    return {
+      error: error instanceof Error ? error.message : "Failed to create Outlook draft",
+    };
   }
 }
