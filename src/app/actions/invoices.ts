@@ -164,6 +164,22 @@ export async function generateCommercialInvoice(tradeId: string, formData: FormD
     return { error: "No client linked to this trade" };
   }
 
+  const { data: existingInvoice, error: existingInvoiceError } = await supabase
+    .from("client_invoices")
+    .select("id")
+    .eq("invoice_number", invoiceNumber)
+    .maybeSingle();
+
+  if (existingInvoiceError) {
+    return { error: existingInvoiceError.message };
+  }
+
+  if (existingInvoice) {
+    return {
+      error: `Invoice ${invoiceNumber} already exists. Use the existing invoice in the Invoices list, or delete it before regenerating.`,
+    };
+  }
+
   const [{ data: companySettings }, { data: bankingAccounts }, { data: quotationSession, error: quotationError }] =
     await Promise.all([
       supabase.from("company_settings").select("*").limit(1).maybeSingle(),
@@ -297,6 +313,12 @@ export async function generateCommercialInvoice(tradeId: string, formData: FormD
     .single();
 
   if (invoiceError) {
+    if (invoiceError.code === "23505") {
+      return {
+        error: `Invoice ${invoiceNumber} already exists. Use the existing invoice in the Invoices list, or delete it before regenerating.`,
+      };
+    }
+
     return { error: invoiceError.message };
   }
 
