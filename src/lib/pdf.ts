@@ -30,7 +30,7 @@ export async function generatePdf(html: string): Promise<Buffer> {
       `,
       format: "Letter",
       headerTemplate: "<span></span>",
-      margin: { bottom: "0.9in", left: "0.75in", right: "0.75in", top: "0.75in" },
+      margin: { bottom: "0.9in", left: "0.75in", right: "0.75in", top: "0.9in" },
       printBackground: true,
     });
 

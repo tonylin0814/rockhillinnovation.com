@@ -81,6 +81,7 @@ export function buildBaseHtml({
         display: flex;
         justify-content: space-between;
         align-items: flex-start;
+        padding-top: 6px;
         padding-bottom: 14px;
         border-bottom: 3px solid #0d1b34;
         margin-bottom: 16px;
@@ -163,7 +164,7 @@ export function buildBaseHtml({
         color: #fff;
         font-size: 8.5pt;
         font-weight: 600;
-        padding: 8px 10px;
+        padding: 12px 10px 8px;
         text-align: left;
         -webkit-print-color-adjust: exact;
         print-color-adjust: exact;
