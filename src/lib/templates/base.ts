@@ -56,26 +56,8 @@ export function buildBaseHtml({
         text-align: right;
       }
 
-      .page-footer-bar {
-        position: fixed;
-        bottom: -0.28in;
-        left: -0.75in;
-        right: -0.75in;
-        height: 8px;
-        background: #0d1b34;
-        -webkit-print-color-adjust: exact;
-        print-color-adjust: exact;
-      }
-
-      .page-footer-contact {
-        position: fixed;
-        bottom: -0.2in;
-        left: 0;
-        right: 0;
-        text-align: center;
-        font-size: 8pt;
-        color: #5a6270;
-      }
+      .page-footer-bar { display: none; }
+      .page-footer-contact { display: none; }
 
       .doc-header {
         display: flex;
