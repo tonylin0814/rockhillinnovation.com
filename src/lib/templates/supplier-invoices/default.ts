@@ -24,6 +24,13 @@ function formatRmb(value: number): string {
   }).format(value)}`;
 }
 
+function formatUnitRmb(value: number): string {
+  return `¥${new Intl.NumberFormat("en-US", {
+    maximumFractionDigits: 4,
+    minimumFractionDigits: 4,
+  }).format(value)}`;
+}
+
 function formatUsd(value: number): string {
   return new Intl.NumberFormat("en-US", {
     currency: "USD",
@@ -99,6 +106,7 @@ export function buildDefaultSupplierInvoiceHtml({
             <span class="def-pct ${line.paymentPct < 100 ? "def-pct-dep" : "def-pct-full"}">${line.paymentPct}%</span>
           </td>
           <td class="def-td def-td-right">${formatQuantity(line.quantity)}</td>
+          <td class="def-td def-td-right">${formatUnitRmb(line.unitPriceRmb)}</td>
           <td class="def-td def-td-right def-td-amount">${formatRmb(line.totalRmb)}</td>
         </tr>`
     )
@@ -149,6 +157,7 @@ export function buildDefaultSupplierInvoiceHtml({
               <th class="def-th">Category</th>
               <th class="def-th def-th-center">Payment</th>
               <th class="def-th def-th-right def-th-narrow">Qty</th>
+              <th class="def-th def-th-right def-th-unit">Unit Price</th>
               <th class="def-th def-th-right def-th-amount">Amount (RMB)</th>
             </tr>
           </thead>
@@ -205,6 +214,7 @@ export function buildDefaultSupplierInvoiceHtml({
       .def-th { background: #f3f4f6; border-bottom: 2px solid #d1d5db; border-top: 2px solid #d1d5db; color: #374151; font-size: 8.5pt; font-weight: 700; padding: 9px 10px; text-align: left; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
       .def-th-wide { width: 40%; }
       .def-th-narrow { width: 0.65in; }
+      .def-th-unit { width: 1in; }
       .def-th-amount { width: 1.15in; }
       .def-th-center { text-align: center; }
       .def-th-right { text-align: right; }

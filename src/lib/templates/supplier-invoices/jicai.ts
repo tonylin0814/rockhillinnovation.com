@@ -23,6 +23,13 @@ function formatRmb(value: number): string {
   }).format(value)}`;
 }
 
+function formatUnitRmb(value: number): string {
+  return `¥${new Intl.NumberFormat("en-US", {
+    maximumFractionDigits: 4,
+    minimumFractionDigits: 4,
+  }).format(value)}`;
+}
+
 function formatUsd(value: number): string {
   return new Intl.NumberFormat("en-US", {
     currency: "USD",
@@ -69,6 +76,7 @@ export function buildJicaiInvoiceHtml({
             <span class="si-pct-badge ${line.paymentPct < 100 ? "si-pct-deposit" : "si-pct-full"}">${line.paymentPct}%</span>
           </td>
           <td class="si-td si-td-right">${formatQuantity(line.quantity)}</td>
+          <td class="si-td si-td-right">${formatUnitRmb(line.unitPriceRmb)}</td>
           <td class="si-td si-td-right si-td-amount">${formatRmb(line.totalRmb)}</td>
         </tr>`
     )
@@ -144,6 +152,7 @@ export function buildJicaiInvoiceHtml({
       .si-th { background: #f3f4f6; border-bottom: 2px solid #d1d5db; border-top: 2px solid #d1d5db; color: #374151; font-size: 8.5pt; font-weight: 700; padding: 9px 10px; text-align: left; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
       .si-th-chinese { width: 40%; }
       .si-th-narrow { width: 0.65in; }
+      .si-th-unit { width: 1in; }
       .si-th-amount { width: 1.15in; }
       .si-th-center { text-align: center; }
       .si-th-right { text-align: right; }
@@ -227,6 +236,7 @@ export function buildJicaiInvoiceHtml({
             <th class="si-th">类别</th>
             <th class="si-th si-th-center">付款比例</th>
             <th class="si-th si-th-right si-th-narrow">数量</th>
+            <th class="si-th si-th-right si-th-unit">单价</th>
             <th class="si-th si-th-right si-th-amount">金额（人民币）</th>
           </tr>
         </thead>

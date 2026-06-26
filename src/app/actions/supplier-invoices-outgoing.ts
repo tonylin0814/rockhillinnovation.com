@@ -282,9 +282,12 @@ export async function generateSupplierInvoiceOutgoing(
     const paymentCategory = paymentCategoryForLine(line);
     const pct = pctForLine(line);
     const quantity = Number(line.quantity);
-    const unitPriceFull = Number(line.unit_price_rmb);
+    const sourceTotalRmb = Number(line.total_price_rmb);
+    const unitPriceFull = quantity > 0 && Number.isFinite(sourceTotalRmb)
+      ? sourceTotalRmb / quantity
+      : Number(line.unit_price_rmb);
     const unitPriceInvoice = roundMoney(unitPriceFull * pct);
-    const totalRmb = roundMoney(quantity * unitPriceInvoice);
+    const totalRmb = roundMoney(sourceTotalRmb * pct);
     const paymentPct = Math.round(pct * 100);
     const descriptionChinese = line.item_name_chinese ?? product?.name_chinese ?? null;
     const descriptionEnglish = line.item_name_english ?? product?.name_english ?? "Item";
@@ -307,7 +310,7 @@ export async function generateSupplierInvoiceOutgoing(
         paymentPct,
         quantity,
         totalRmb,
-        unitPriceRmb: unitPriceInvoice,
+        unitPriceRmb: unitPriceFull,
       },
     };
   });
