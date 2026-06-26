@@ -2,6 +2,11 @@ import { buildBaseHtml } from "@/lib/templates/base";
 import type { CompanyBankingAccount, CompanySettings, InvoiceAdjustmentLine } from "@/types";
 
 type InvoiceLine = {
+  components?: {
+    code: string | null;
+    name: string;
+    quantityPerSet: number;
+  }[];
   itemCode?: string | null;
   description: string;
   quantity: number;
@@ -306,11 +311,11 @@ export function buildProFormaHtml({
     <table class="line-items">
       <thead>
         <tr>
-          <th style="width:11%;">Item #</th>
+          <th style="width:22%;">Item #</th>
           <th>Description</th>
-          <th class="amount" style="width:10%;">Qty</th>
-          <th class="amount" style="width:13%;">Unit Price</th>
-          <th class="amount" style="width:13%;">Amount</th>
+          <th class="amount" style="width:9%;">Qty</th>
+          <th class="amount" style="width:12%;">Unit Price</th>
+          <th class="amount" style="width:12%;">Amount</th>
         </tr>
       </thead>
       <tbody>
@@ -318,7 +323,21 @@ export function buildProFormaHtml({
           .map(
             (line) => `<tr class="no-break">
               <td class="item-code">${escapeHtml(line.itemCode ?? "")}</td>
-              <td>${escapeHtml(line.description)}</td>
+              <td>
+                ${escapeHtml(line.description)}
+                ${
+                  line.components?.length
+                    ? `<div class="item-note"><strong>Components:</strong><br />${line.components
+                        .map(
+                          (component) =>
+                            `${escapeHtml(component.code ? `${component.code} - ` : "")}${escapeHtml(component.name)} x ${formatQuantity(
+                              component.quantityPerSet
+                            )}`
+                        )
+                        .join("<br />")}</div>`
+                    : ""
+                }
+              </td>
               <td class="amount">${formatQuantity(line.quantity)}</td>
               <td class="amount">${formatUsd(line.unitPrice)}</td>
               <td class="amount" style="font-weight:700;color:#0d1b34;">${formatUsd(line.total)}</td>

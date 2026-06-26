@@ -20,6 +20,28 @@ type ActionResult = {
   error?: string;
 };
 
+type InvoicePdfProduct = {
+  code: string | null;
+  components?:
+    | {
+        quantity_per_set: number | string;
+        component:
+          | {
+              code: string | null;
+              name_english: string | null;
+            }
+          | {
+              code: string | null;
+              name_english: string | null;
+            }[]
+          | null;
+      }[]
+    | null;
+  id: string;
+  name_english: string | null;
+  product_type: "part" | "set";
+};
+
 const invoiceStatusSchema = z.enum(["draft", "sent", "paid"]);
 
 async function requireInvoiceManager() {
@@ -123,9 +145,7 @@ export async function generateCommercialInvoice(tradeId: string, formData: FormD
     .from("trades")
     .select(
       `id, trade_id,
-       client:clients(id, name, address, currency, shipping_address),
-       order_lines(id, original_item_name, quantity, unit_price_usd, total_price_usd, sort_order,
-                   product:products(id, code, name_english))`
+       client:clients(id, name, address, currency, shipping_address)`
     )
     .eq("id", tradeId)
     .maybeSingle();
@@ -144,35 +164,82 @@ export async function generateCommercialInvoice(tradeId: string, formData: FormD
     return { error: "No client linked to this trade" };
   }
 
-  const [{ data: companySettings }, { data: bankingAccounts }] = await Promise.all([
-    supabase.from("company_settings").select("*").limit(1).maybeSingle(),
-    supabase.from("company_banking_accounts").select("*").eq("is_active", true).order("sort_order").limit(1),
-  ]);
+  const [{ data: companySettings }, { data: bankingAccounts }, { data: quotationSession, error: quotationError }] =
+    await Promise.all([
+      supabase.from("company_settings").select("*").limit(1).maybeSingle(),
+      supabase.from("company_banking_accounts").select("*").eq("is_active", true).order("sort_order").limit(1),
+      supabase
+        .from("client_quotation_sessions")
+        .select(
+          `id, session_number,
+           client_quotation_lines(id, item_description, quantity, unit_price_usd,
+                                  product:products(
+                                    id, code, name_english, product_type,
+                                    components:product_components!product_components_set_product_id_fkey(
+                                      quantity_per_set,
+                                      component:products!product_components_component_product_id_fkey(code, name_english)
+                                    )
+                                  ))`
+        )
+        .eq("trade_id", tradeId)
+        .in("status", ["accepted", "sent"])
+        .order("session_number", { ascending: false })
+        .limit(1)
+        .maybeSingle(),
+    ]);
+
+  if (quotationError) {
+    return { error: quotationError.message };
+  }
+
   const bankingAccount = Array.isArray(bankingAccounts) ? (bankingAccounts[0] ?? null) : (bankingAccounts ?? null);
 
-  const rawLines = Array.isArray(trade.order_lines) ? trade.order_lines : [];
-  const invoiceLines = rawLines
-    .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
-    .map((line) => {
-      const product = Array.isArray(line.product) ? line.product[0] : line.product;
-      const quantity = Number(line.quantity);
-      const unitPrice = Number(line.unit_price_usd);
-      const total = roundMoney(quantity * unitPrice);
+  const rawLines = Array.isArray(quotationSession?.client_quotation_lines)
+    ? quotationSession.client_quotation_lines
+    : [];
+  const invoiceLines = rawLines.map((line, index) => {
+    const product = (Array.isArray(line.product) ? line.product[0] : line.product) as InvoicePdfProduct | null;
+    const components =
+      product?.product_type === "set"
+        ? (product.components ?? [])
+            .map((componentRow) => {
+              const component = Array.isArray(componentRow.component)
+                ? componentRow.component[0]
+                : componentRow.component;
 
-      return {
-        dbQuantity: quantity,
-        description: line.original_item_name ?? product?.name_english ?? "Item",
-        itemCode: product?.code ?? null,
-        orderLineId: line.id,
-        quantity,
-        sortOrder: Number(line.sort_order ?? 0),
-        total,
-        unitPrice,
-      };
-    });
+              if (!component?.name_english) {
+                return null;
+              }
+
+              return {
+                code: component.code ?? null,
+                name: component.name_english,
+                quantityPerSet: Number(componentRow.quantity_per_set),
+              };
+            })
+            .filter((component): component is { code: string | null; name: string; quantityPerSet: number } => Boolean(component))
+        : [];
+    const quantity = Number(line.quantity);
+    const unitPrice = Number(line.unit_price_usd);
+    const total = roundMoney(quantity * unitPrice);
+
+    return {
+      components,
+      dbQuantity: quantity,
+      description: line.item_description ?? product?.name_english ?? "Item",
+      itemCode: product?.code ?? null,
+      quantity,
+      sortOrder: index,
+      total,
+      unitPrice,
+    };
+  });
 
   if (!invoiceLines.length) {
-    return { error: "Add order lines before generating an invoice" };
+    return {
+      error:
+        "No accepted or sent client quotation found for this trade. Please create and accept a client quotation first.",
+    };
   }
 
   const subtotal = roundMoney(invoiceLines.reduce((sum, line) => sum + line.total, 0));
@@ -237,7 +304,6 @@ export async function generateCommercialInvoice(tradeId: string, formData: FormD
     invoiceLines.map((line) => ({
       description: line.description,
       invoice_id: invoice.id,
-      order_line_id: line.orderLineId,
       quantity: line.dbQuantity,
       sort_order: line.sortOrder,
       unit_price_usd: line.unitPrice,
