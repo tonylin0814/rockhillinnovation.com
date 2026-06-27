@@ -299,8 +299,12 @@ export async function updateTradeParticipants(tradeId: string, partnerIds: strin
       return { error: usersError.message };
     }
 
-    const partnerUserIds = new Set((existingUsers ?? []).filter((user) => user.role === "partner").map((user) => user.id));
-    existingNonPartnerIds.push(...existingParticipantIds.filter((userId) => !partnerUserIds.has(userId)));
+    const assignableUserIds = new Set(
+      (existingUsers ?? [])
+        .filter((user) => user.role === "partner" || user.role === "manager")
+        .map((user) => user.id)
+    );
+    existingNonPartnerIds.push(...existingParticipantIds.filter((userId) => !assignableUserIds.has(userId)));
   }
 
   const { error: deleteError } = await supabase.from("trade_participants").delete().eq("trade_id", tradeId);

@@ -164,7 +164,7 @@ export default async function TradeWorkspacePage({ params }: { params: { id: str
       ? supabase
           .from("users")
           .select("id, name, email")
-          .eq("role", "partner")
+          .in("role", ["partner", "manager"])
           .eq("is_active", true)
           .order("name", { ascending: true })
       : Promise.resolve({ data: [], error: null }),
