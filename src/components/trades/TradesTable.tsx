@@ -21,6 +21,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { useLanguage } from "@/context/LanguageContext";
 import type { Trade } from "@/types";
 
 type StatusFilter = "all" | Trade["status"];
@@ -33,9 +34,11 @@ const statusClasses: Record<Trade["status"], string> = {
 };
 
 function StatusBadge({ status }: { status: Trade["status"] }) {
+  const { t } = useLanguage();
+
   return (
     <Badge className={statusClasses[status]} variant="outline">
-      {status}
+      {t.status[status] ?? status}
     </Badge>
   );
 }
@@ -54,6 +57,7 @@ function formatRate(rate: number | null) {
 }
 
 export function TradesTable({ trades }: { trades: Trade[] }) {
+  const { t } = useLanguage();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
 
@@ -78,19 +82,19 @@ export function TradesTable({ trades }: { trades: Trade[] }) {
         <Input
           className="sm:max-w-sm"
           onChange={(event) => setSearch(event.target.value)}
-          placeholder="Search trade ID or order..."
+          placeholder={t.trades.searchPlaceholder}
           value={search}
         />
         <Select onValueChange={(value: StatusFilter) => setStatusFilter(value)} value={statusFilter}>
           <SelectTrigger className="sm:w-56">
-            <SelectValue placeholder="Status" />
+            <SelectValue placeholder={t.trades.status} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All</SelectItem>
-            <SelectItem value="draft">Draft</SelectItem>
-            <SelectItem value="active">Active</SelectItem>
-            <SelectItem value="settled">Settled</SelectItem>
-            <SelectItem value="archived">Archived</SelectItem>
+            <SelectItem value="all">{t.common.all}</SelectItem>
+            <SelectItem value="draft">{t.status.draft}</SelectItem>
+            <SelectItem value="active">{t.status.active}</SelectItem>
+            <SelectItem value="settled">{t.status.settled}</SelectItem>
+            <SelectItem value="archived">{t.status.archived}</SelectItem>
           </SelectContent>
         </Select>
       </div>
@@ -98,13 +102,13 @@ export function TradesTable({ trades }: { trades: Trade[] }) {
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>Trade ID</TableHead>
-            <TableHead>Client</TableHead>
-            <TableHead>Order Number</TableHead>
-            <TableHead>Date</TableHead>
-            <TableHead>Status</TableHead>
-            <TableHead>Rate</TableHead>
-            <TableHead className="text-right">Actions</TableHead>
+            <TableHead>{t.trades.tradeId}</TableHead>
+            <TableHead>{t.trades.client}</TableHead>
+            <TableHead>{t.trades.orderNumber}</TableHead>
+            <TableHead>{t.table.date}</TableHead>
+            <TableHead>{t.trades.status}</TableHead>
+            <TableHead>{t.trades.rate}</TableHead>
+            <TableHead className="text-right">{t.table.actions}</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -136,7 +140,7 @@ export function TradesTable({ trades }: { trades: Trade[] }) {
                 <TableCell>{formatRate(trade.working_exchange_rate)}</TableCell>
                 <TableCell className="text-right">
                   <Button asChild size="sm" variant="outline">
-                    <Link href={`/trades/${trade.id}`}>Open</Link>
+                    <Link href={`/trades/${trade.id}`}>{t.trades.open}</Link>
                   </Button>
                 </TableCell>
               </TableRow>
@@ -144,7 +148,7 @@ export function TradesTable({ trades }: { trades: Trade[] }) {
           ) : (
             <TableRow>
               <TableCell className="text-slate-500" colSpan={7}>
-                No trades yet.
+                {t.trades.noTrades}
               </TableCell>
             </TableRow>
           )}

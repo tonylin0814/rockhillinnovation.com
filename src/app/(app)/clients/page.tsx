@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { T } from "@/components/i18n/T";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -25,7 +26,7 @@ function StatusBadge({ status }: { status: Client["status"] }) {
       }
       variant="outline"
     >
-      {status}
+      <T k={`status.${status}`} fallback={status} />
     </Badge>
   );
 }
@@ -37,8 +38,12 @@ export default async function ClientsPage() {
     return (
       <div className="flex min-h-[calc(100vh-8rem)] items-center justify-center">
         <div className="text-center">
-          <h1 className="text-2xl font-semibold text-[#0d1b34]">Access denied</h1>
-          <p className="mt-2 text-sm text-slate-500">Client profiles are available to admins and managers only.</p>
+          <h1 className="text-2xl font-semibold text-[#0d1b34]">
+            <T k="common.accessDenied" fallback="Access denied" />
+          </h1>
+          <p className="mt-2 text-sm text-slate-500">
+            <T k="clients.accessDeniedHelp" fallback="Client profiles are available to admins and managers only." />
+          </p>
         </div>
       </div>
     );
@@ -59,25 +64,31 @@ export default async function ClientsPage() {
     <section className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Companies</p>
-          <h1 className="mt-2 text-3xl font-semibold text-[#0d1b34]">Clients</h1>
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+            <T k="clients.companies" fallback="Companies" />
+          </p>
+          <h1 className="mt-2 text-3xl font-semibold text-[#0d1b34]">
+            <T k="clients.title" fallback="Clients" />
+          </h1>
         </div>
         <ClientFormDialog mode="create" />
       </div>
 
       <Card className="border-slate-200 shadow-sm">
         <CardHeader>
-          <CardTitle>Client Profiles</CardTitle>
+          <CardTitle>
+            <T k="clients.profiles" fallback="Client Profiles" />
+          </CardTitle>
         </CardHeader>
         <CardContent>
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Code</TableHead>
-                <TableHead>Country</TableHead>
-                <TableHead>Currency</TableHead>
-                <TableHead>Payment Terms</TableHead>
-                <TableHead>Status</TableHead>
+                <TableHead><T k="clients.code" fallback="Code" /></TableHead>
+                <TableHead><T k="table.country" fallback="Country" /></TableHead>
+                <TableHead><T k="table.currency" fallback="Currency" /></TableHead>
+                <TableHead><T k="table.paymentTerms" fallback="Payment Terms" /></TableHead>
+                <TableHead><T k="table.status" fallback="Status" /></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -102,7 +113,7 @@ export default async function ClientsPage() {
               ) : (
                 <TableRow>
                   <TableCell className="text-slate-500" colSpan={5}>
-                    No clients yet.
+                    <T k="clients.noClients" fallback="No clients found." />
                   </TableCell>
                 </TableRow>
               )}

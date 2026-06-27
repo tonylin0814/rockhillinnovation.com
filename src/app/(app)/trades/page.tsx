@@ -1,5 +1,6 @@
 import { NewTradeDialog, type TradeClientOption, type TradePartnerOption } from "@/components/trades/NewTradeDialog";
 import { TradesTable } from "@/components/trades/TradesTable";
+import { T } from "@/components/i18n/T";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { getCurrentUser } from "@/lib/auth";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
@@ -62,8 +63,12 @@ export default async function TradesPage() {
     <section className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Operations</p>
-          <h1 className="mt-2 text-3xl font-semibold text-[#0d1b34]">Trades</h1>
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+            <T k="trades.operations" fallback="Operations" />
+          </p>
+          <h1 className="mt-2 text-3xl font-semibold text-[#0d1b34]">
+            <T k="trades.title" fallback="Trades" />
+          </h1>
         </div>
         {canCreateTrades ? (
           <NewTradeDialog
@@ -75,7 +80,9 @@ export default async function TradesPage() {
 
       <Card className="border-slate-200 shadow-sm">
         <CardHeader>
-          <CardTitle>Trade List</CardTitle>
+          <CardTitle>
+            <T k="trades.tradeList" fallback="Trade List" />
+          </CardTitle>
         </CardHeader>
         <CardContent>
           <TradesTable trades={(trades ?? []) as Trade[]} />

@@ -21,6 +21,7 @@ import { TradePnlCard } from "@/components/trades/TradePnlCard";
 import { TradeStatusDropdown } from "@/components/trades/TradeStatusDropdown";
 import { VendorInvoicesCard } from "@/components/trades/VendorInvoicesCard";
 import type { TradeClientOption, TradePartnerOption } from "@/components/trades/NewTradeDialog";
+import { T } from "@/components/i18n/T";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -61,7 +62,7 @@ const statusClasses: Record<Trade["status"], string> = {
 function StatusBadge({ status }: { status: Trade["status"] }) {
   return (
     <Badge className={statusClasses[status]} variant="outline">
-      {status}
+      <T k={`status.${status}`} fallback={status} />
     </Badge>
   );
 }
@@ -94,7 +95,7 @@ function formatTaxPercent(value: number | undefined | null) {
   return typeof value === "number" ? `${Math.round(value * 100)}%` : "-";
 }
 
-function DetailRow({ label, value }: { label: string; value: string | number | null }) {
+function DetailRow({ label, value }: { label: React.ReactNode; value: string | number | null }) {
   return (
     <div className="border-b border-slate-100 py-3 last:border-0">
       <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{label}</p>
@@ -118,7 +119,7 @@ export default async function TradeWorkspacePage({ params }: { params: { id: str
   const user = await getCurrentUser();
   const currentRole: UserRole = user?.role ?? "partner";
   const canManage = currentRole === "admin" || currentRole === "manager";
-  const canViewFinancials = canManage;
+  const canViewFinancials = canManage || currentRole === "partner";
   const supabase = createServerSupabaseClient();
 
   const [
@@ -164,7 +165,7 @@ export default async function TradeWorkspacePage({ params }: { params: { id: str
       ? supabase
           .from("users")
           .select("id, name, email")
-          .in("role", ["partner", "manager"])
+          .in("role", ["admin", "partner", "manager"])
           .eq("is_active", true)
           .order("name", { ascending: true })
       : Promise.resolve({ data: [], error: null }),
@@ -531,15 +532,15 @@ export default async function TradeWorkspacePage({ params }: { params: { id: str
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div>
           <Link className="text-sm font-medium text-slate-500 transition-colors hover:text-[#0d1b34]" href="/trades">
-            Back to Trades
+            <T k="trades.backToTrades" fallback="Back to Trades" />
           </Link>
           <div className="mt-4 flex flex-wrap items-center gap-3">
             <h1 className="font-mono text-3xl font-semibold text-[#0d1b34]">{trade.trade_id}</h1>
             <StatusBadge status={trade.status} />
           </div>
           <p className="mt-2 text-sm text-slate-500">
-            {trade.client?.name ?? "No client"}
-            {trade.order_number ? ` - Order ${trade.order_number}` : ""}
+            {trade.client?.name ?? <T k="trades.noClient" fallback="No client" />}
+            {trade.order_number ? <> - <T k="trades.order" fallback="Order" /> {trade.order_number}</> : ""}
             {` - ${formatDate(trade.trade_date)}`}
           </p>
         </div>
@@ -555,26 +556,26 @@ export default async function TradeWorkspacePage({ params }: { params: { id: str
 
       <Tabs className="space-y-4" defaultValue="summary">
         <TabsList className="flex h-auto flex-wrap justify-start">
-          <TabsTrigger value="summary">Summary</TabsTrigger>
-          <TabsTrigger value="development">Development</TabsTrigger>
-          <TabsTrigger value="quotes">Quotes</TabsTrigger>
-          <TabsTrigger value="quotations">Quotations</TabsTrigger>
-          <TabsTrigger value="invoices">Invoices</TabsTrigger>
-          {canManage ? <TabsTrigger value="packing">Packing</TabsTrigger> : null}
-          <TabsTrigger value="ledger">Bookkeeping</TabsTrigger>
-          {canViewFinancials ? <TabsTrigger value="financial">Financial</TabsTrigger> : null}
-          <TabsTrigger value="documents">Documents</TabsTrigger>
-          {canManage ? <TabsTrigger value="shareholders">Shareholders</TabsTrigger> : null}
-          {canManage ? <TabsTrigger value="diary">Diary</TabsTrigger> : null}
-          {canManage ? <TabsTrigger value="activity">Activity</TabsTrigger> : null}
-          <TabsTrigger value="judy">Judy AI</TabsTrigger>
+          <TabsTrigger value="summary"><T k="trades.summary" fallback="Summary" /></TabsTrigger>
+          <TabsTrigger value="development"><T k="tabs.development" fallback="Development" /></TabsTrigger>
+          <TabsTrigger value="quotes"><T k="tabs.quotes" fallback="Quotes" /></TabsTrigger>
+          <TabsTrigger value="quotations"><T k="tabs.quotations" fallback="Quotations" /></TabsTrigger>
+          <TabsTrigger value="invoices"><T k="tabs.invoices" fallback="Invoices" /></TabsTrigger>
+          {canManage ? <TabsTrigger value="packing"><T k="tabs.packing" fallback="Packing" /></TabsTrigger> : null}
+          <TabsTrigger value="ledger"><T k="trades.bookkeeping" fallback="Bookkeeping" /></TabsTrigger>
+          {canViewFinancials ? <TabsTrigger value="financial"><T k="tabs.financial" fallback="Financial" /></TabsTrigger> : null}
+          {canManage ? <TabsTrigger value="documents"><T k="tabs.documents" fallback="Documents" /></TabsTrigger> : null}
+          {canManage ? <TabsTrigger value="shareholders"><T k="trades.shareholders" fallback="Shareholders" /></TabsTrigger> : null}
+          {canManage ? <TabsTrigger value="diary"><T k="tabs.diary" fallback="Diary" /></TabsTrigger> : null}
+          {canManage ? <TabsTrigger value="activity"><T k="nav.activity" fallback="Activity" /></TabsTrigger> : null}
+          <TabsTrigger value="judy"><T k="trades.judyAi" fallback="Judy AI" /></TabsTrigger>
         </TabsList>
 
         <TabsContent value="summary">
           <div className="space-y-6">
             <Card className="border-slate-200 shadow-sm">
               <CardHeader>
-                <CardTitle className="text-base">Trade Milestones</CardTitle>
+                <CardTitle className="text-base"><T k="trades.tradeMilestones" fallback="Trade Milestones" /></CardTitle>
               </CardHeader>
               <CardContent>
                 <TradeMilestoneChecklist canManage={canManage} milestones={tradeMilestoneRows} tradeId={trade.id} />
@@ -584,14 +585,14 @@ export default async function TradeWorkspacePage({ params }: { params: { id: str
             <div className="grid gap-6 lg:grid-cols-2">
             <Card className="border-slate-200 shadow-sm">
               <CardHeader className="flex flex-row items-center justify-between">
-                <CardTitle>Trade Details</CardTitle>
+                <CardTitle><T k="trades.tradeDetails" fallback="Trade Details" /></CardTitle>
                 {canEdit ? (
                   <TradeEditDialog
                     clients={clientOptions}
                     trade={trade}
                     trigger={
                       <Button size="sm" variant="outline">
-                        Edit
+                        <T k="common.edit" fallback="Edit" />
                       </Button>
                     }
                   />
@@ -599,29 +600,29 @@ export default async function TradeWorkspacePage({ params }: { params: { id: str
               </CardHeader>
               <CardContent>
                 <div className="grid gap-x-6 sm:grid-cols-2">
-                  <DetailRow label="Trade ID" value={trade.trade_id} />
-                  <DetailRow label="Order Number" value={trade.order_number} />
-                  <DetailRow label="Trade Date" value={formatDate(trade.trade_date)} />
+                  <DetailRow label={<T k="trades.tradeId" fallback="Trade ID" />} value={trade.trade_id} />
+                  <DetailRow label={<T k="trades.orderNumber" fallback="Order Number" />} value={trade.order_number} />
+                  <DetailRow label={<T k="trades.tradeDate" fallback="Trade Date" />} value={formatDate(trade.trade_date)} />
                   <DetailRow
-                    label="Client"
+                    label={<T k="trades.client" fallback="Client" />}
                     value={trade.client?.code ?? null}
                   />
-                  <DetailRow label="Working Exchange Rate" value={formatRate(trade.working_exchange_rate)} />
-                  <DetailRow label="Corporate Tax Rate" value={formatTaxPercent(trade.corporate_tax_rate)} />
+                  <DetailRow label={<T k="finance.exchangeRate" fallback="Exchange Rate" />} value={formatRate(trade.working_exchange_rate)} />
+                  <DetailRow label={<T k="financial.corporateTax" fallback="Corporate Tax" />} value={formatTaxPercent(trade.corporate_tax_rate)} />
                 </div>
-                <DetailRow label="Notes" value={trade.notes} />
+                <DetailRow label={<T k="table.notes" fallback="Notes" />} value={trade.notes} />
               </CardContent>
             </Card>
 
             <Card className="border-slate-200 shadow-sm">
               <CardHeader>
-                <CardTitle>Client Payment Terms</CardTitle>
+                <CardTitle><T k="trades.clientPaymentTerms" fallback="Client Payment Terms" /></CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="grid gap-4 sm:grid-cols-3">
-                  <DetailRow label="Deposit" value={formatPercent(trade.client?.deposit_pct)} />
-                  <DetailRow label="Final" value={formatPercent(trade.client?.final_pct)} />
-                  <DetailRow label="Currency" value={trade.client?.currency ?? null} />
+                  <DetailRow label={<T k="invoices.depositPct" fallback="Deposit %" />} value={formatPercent(trade.client?.deposit_pct)} />
+                  <DetailRow label={<T k="clients.finalPct" fallback="Final %" />} value={formatPercent(trade.client?.final_pct)} />
+                  <DetailRow label={<T k="table.currency" fallback="Currency" />} value={trade.client?.currency ?? null} />
                 </div>
               </CardContent>
             </Card>
@@ -711,9 +712,11 @@ export default async function TradeWorkspacePage({ params }: { params: { id: str
             />
           </TabsContent>
         ) : null}
-        <TabsContent value="documents">
-          <DocumentsTab initialDocuments={tradeDocumentRows} tradeCode={trade.trade_id} tradeId={trade.id} />
-        </TabsContent>
+        {canManage ? (
+          <TabsContent value="documents">
+            <DocumentsTab initialDocuments={tradeDocumentRows} tradeCode={trade.trade_id} tradeId={trade.id} />
+          </TabsContent>
+        ) : null}
         <TabsContent value="ledger">
           <LedgerTab
             canManage={canManage}
@@ -730,14 +733,14 @@ export default async function TradeWorkspacePage({ params }: { params: { id: str
           <TabsContent value="shareholders">
             <Card className="border-slate-200 shadow-sm">
               <CardHeader className="flex flex-row items-center justify-between">
-                <CardTitle>Project Partners</CardTitle>
+                <CardTitle><T k="trades.projectPartners" fallback="Project Partners" /></CardTitle>
                 <ManagePartnersDialog
                   initialPartnerIds={participantPartnerIds}
                   partners={partnerOptions}
                   tradeId={trade.id}
                   trigger={
                     <Button size="sm" variant="outline">
-                      Manage Partners
+                      <T k="trades.managePartners" fallback="Manage Partners" />
                     </Button>
                   }
                 />
@@ -759,7 +762,7 @@ export default async function TradeWorkspacePage({ params }: { params: { id: str
                     ))}
                   </div>
                 ) : (
-                  <p className="text-sm text-slate-500">No partners assigned yet.</p>
+                  <p className="text-sm text-slate-500"><T k="trades.noPartnersAssigned" fallback="No partners assigned yet." /></p>
                 )}
               </CardContent>
             </Card>

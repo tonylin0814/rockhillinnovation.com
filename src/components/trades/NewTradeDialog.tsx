@@ -25,6 +25,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { useLanguage } from "@/context/LanguageContext";
 
 export type TradeClientOption = {
   id: string;
@@ -49,6 +50,7 @@ export function NewTradeDialog({
   clients: TradeClientOption[];
   partners: TradePartnerOption[];
 }) {
+  const { t } = useLanguage();
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [clientId, setClientId] = useState("");
@@ -70,7 +72,7 @@ export function NewTradeDialog({
         return;
       }
 
-      toast.success("Trade created successfully");
+      toast.success(t.trades.createTrade);
       setOpen(false);
 
       if (result.id) {
@@ -86,26 +88,26 @@ export function NewTradeDialog({
       <DialogTrigger asChild>
         <Button className="bg-[#0d1b34] hover:bg-[#13294d]">
           <Plus className="mr-2 h-4 w-4" />
-          New Trade
+          {t.trades.newTrade}
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-2xl">
         <DialogHeader>
-          <DialogTitle>New Trade</DialogTitle>
-          <DialogDescription>Create a trade and assign project partners.</DialogDescription>
+          <DialogTitle>{t.trades.newTrade}</DialogTitle>
+          <DialogDescription>{t.trades.assignPartnersHelp}</DialogDescription>
         </DialogHeader>
 
         <form className="space-y-5" onSubmit={handleSubmit}>
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
-              <Label htmlFor="trade_id">Trade ID</Label>
+              <Label htmlFor="trade_id">{t.trades.tradeId}</Label>
               <Input disabled={isPending} id="trade_id" name="trade_id" placeholder="MLP-2026-06-02" required />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="client_id">Client</Label>
+              <Label htmlFor="client_id">{t.trades.client}</Label>
               <Select disabled={isPending} onValueChange={setClientId} value={clientId}>
                 <SelectTrigger id="client_id">
-                  <SelectValue placeholder="Select client" />
+                  <SelectValue placeholder={t.trades.client} />
                 </SelectTrigger>
                 <SelectContent>
                   {clients.map((client) => (
@@ -117,11 +119,11 @@ export function NewTradeDialog({
               </Select>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="order_number">Order Number</Label>
+              <Label htmlFor="order_number">{t.trades.orderNumber}</Label>
               <Input disabled={isPending} id="order_number" name="order_number" />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="trade_date">Trade Date</Label>
+              <Label htmlFor="trade_date">{t.trades.tradeDate}</Label>
               <Input
                 defaultValue={todayInputValue()}
                 disabled={isPending}
@@ -132,7 +134,7 @@ export function NewTradeDialog({
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="working_exchange_rate">Working Exchange Rate</Label>
+              <Label htmlFor="working_exchange_rate">{t.finance.exchangeRate}</Label>
               <Input
                 disabled={isPending}
                 id="working_exchange_rate"
@@ -144,7 +146,7 @@ export function NewTradeDialog({
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="corporate_tax_rate">Corporate Tax Rate (%)</Label>
+              <Label htmlFor="corporate_tax_rate">{t.financial.corporateTax} (%)</Label>
               <Input
                 defaultValue="12"
                 disabled={isPending}
@@ -158,14 +160,14 @@ export function NewTradeDialog({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="notes">Notes</Label>
+            <Label htmlFor="notes">{t.table.notes}</Label>
             <Textarea disabled={isPending} id="notes" name="notes" />
           </div>
 
           <div className="space-y-3 rounded-lg border border-slate-200 p-4">
             <div>
-              <p className="text-sm font-semibold text-[#0d1b34]">Assign Partners</p>
-              <p className="text-xs text-slate-500">Selected partners can view this trade.</p>
+              <p className="text-sm font-semibold text-[#0d1b34]">{t.trades.assignPartners}</p>
+              <p className="text-xs text-slate-500">{t.trades.assignPartnersHelp}</p>
             </div>
             {partners.length ? (
               <div className="grid gap-2 sm:grid-cols-2">
@@ -189,7 +191,7 @@ export function NewTradeDialog({
                 ))}
               </div>
             ) : (
-              <p className="text-sm text-slate-500">No project partners added yet.</p>
+              <p className="text-sm text-slate-500">{t.trades.noPartners}</p>
             )}
           </div>
 
@@ -197,11 +199,11 @@ export function NewTradeDialog({
 
           <div className="flex justify-end gap-2">
             <Button disabled={isPending} onClick={() => setOpen(false)} type="button" variant="outline">
-              Cancel
+              {t.actions.cancel}
             </Button>
             <Button className="bg-[#0d1b34] hover:bg-[#13294d]" disabled={isPending || !clientId} type="submit">
               {isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-              Create Trade
+              {t.trades.createTrade}
             </Button>
           </div>
         </form>

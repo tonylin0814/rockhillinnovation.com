@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { VendorFormDialog } from "@/components/vendors/VendorFormDialog";
+import { T } from "@/components/i18n/T";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -22,6 +23,13 @@ const vendorTypeLabels: Record<ExpenseVendor["vendor_type"], string> = {
   related_company: "Related Company",
 };
 
+const vendorTypeTranslationKeys: Record<ExpenseVendor["vendor_type"], string> = {
+  legal: "vendors.legal",
+  consulting: "vendors.consulting",
+  maintenance: "vendors.maintenance",
+  related_company: "vendors.relatedCompany",
+};
+
 const vendorTypeClasses: Record<ExpenseVendor["vendor_type"], string> = {
   legal: "border-amber-200 bg-amber-50 text-amber-700",
   consulting: "border-violet-200 bg-violet-50 text-violet-700",
@@ -39,7 +47,7 @@ function StatusBadge({ status }: { status: ExpenseVendor["status"] }) {
       }
       variant="outline"
     >
-      {status}
+      <T k={`status.${status}`} fallback={status} />
     </Badge>
   );
 }
@@ -47,7 +55,7 @@ function StatusBadge({ status }: { status: ExpenseVendor["status"] }) {
 function VendorTypeBadge({ type }: { type: ExpenseVendor["vendor_type"] }) {
   return (
     <Badge className={vendorTypeClasses[type]} variant="outline">
-      {vendorTypeLabels[type]}
+      <T k={vendorTypeTranslationKeys[type]} fallback={vendorTypeLabels[type]} />
     </Badge>
   );
 }
@@ -59,8 +67,12 @@ export default async function VendorsPage() {
     return (
       <div className="flex min-h-[calc(100vh-8rem)] items-center justify-center">
         <div className="text-center">
-          <h1 className="text-2xl font-semibold text-[#0d1b34]">Access denied</h1>
-          <p className="mt-2 text-sm text-slate-500">Expense vendors are available to admins and managers only.</p>
+          <h1 className="text-2xl font-semibold text-[#0d1b34]">
+            <T k="common.accessDenied" fallback="Access denied" />
+          </h1>
+          <p className="mt-2 text-sm text-slate-500">
+            <T k="vendors.accessDeniedHelp" fallback="Expense vendors are available to admins and managers only." />
+          </p>
         </div>
       </div>
     );
@@ -84,25 +96,31 @@ export default async function VendorsPage() {
     <section className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Companies</p>
-          <h1 className="mt-2 text-3xl font-semibold text-[#0d1b34]">Vendors</h1>
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+            <T k="vendors.companies" fallback="Companies" />
+          </p>
+          <h1 className="mt-2 text-3xl font-semibold text-[#0d1b34]">
+            <T k="vendors.title" fallback="Vendors" />
+          </h1>
         </div>
         <VendorFormDialog mode="create" />
       </div>
 
       <Card className="border-slate-200 shadow-sm">
         <CardHeader>
-          <CardTitle>Expense Vendors</CardTitle>
+          <CardTitle>
+            <T k="vendors.profiles" fallback="Expense Vendors" />
+          </CardTitle>
         </CardHeader>
         <CardContent>
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Code</TableHead>
-                <TableHead>Type</TableHead>
-                <TableHead>Country</TableHead>
-                <TableHead>Letterhead</TableHead>
-                <TableHead>Status</TableHead>
+                <TableHead><T k="vendors.code" fallback="Code" /></TableHead>
+                <TableHead><T k="table.type" fallback="Type" /></TableHead>
+                <TableHead><T k="table.country" fallback="Country" /></TableHead>
+                <TableHead><T k="vendors.letterhead" fallback="Letterhead" /></TableHead>
+                <TableHead><T k="table.status" fallback="Status" /></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -120,7 +138,9 @@ export default async function VendorsPage() {
                     <TableCell>{vendor.country ?? "—"}</TableCell>
                     <TableCell>
                       {vendor.letterhead_onedrive_url ? (
-                        <span className="text-sm font-medium text-green-700">Linked</span>
+                        <span className="text-sm font-medium text-green-700">
+                          <T k="vendors.linked" fallback="Linked" />
+                        </span>
                       ) : (
                         "—"
                       )}
@@ -133,7 +153,7 @@ export default async function VendorsPage() {
               ) : (
                 <TableRow>
                   <TableCell className="text-slate-500" colSpan={5}>
-                    No vendors yet.
+                    <T k="vendors.noVendors" fallback="No vendors found." />
                   </TableCell>
                 </TableRow>
               )}
