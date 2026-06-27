@@ -51,7 +51,7 @@ const editableSupplierInvoiceLineSchema = z.object({
 
 const supplierExtraLineSchema = z.object({
   description_chinese: z.string().nullable().default(null),
-  description_english: z.string().trim().min(1, "Description is required"),
+  description_english: z.string().nullable().default(null),
   amount_rmb: z.coerce.number().positive("Amount must be greater than zero"),
 });
 
@@ -98,7 +98,7 @@ function parseEditableSupplierInvoiceLines(formData: FormData) {
 
 function parseSupplierExtraLines(formData: FormData): Array<{
   description_chinese: string | null;
-  description_english: string;
+  description_english: string | null;
   amount_rmb: number;
 }> {
   const raw = formData.get("extra_lines_json");
@@ -147,8 +147,7 @@ export async function generateSupplierInvoiceOutgoing(
     const rate = parseFloat(raw);
     return Number.isFinite(rate) && rate > 0 ? rate : null;
   })();
-  const supplierExtraLines =
-    invoiceType === "deposit" || invoiceType === "commercial" ? parseSupplierExtraLines(formData) : [];
+  const supplierExtraLines = parseSupplierExtraLines(formData);
 
   const supabase = createServerSupabaseClient();
   const { data: trade, error: tradeError } = await supabase

@@ -31,7 +31,6 @@ type SupplierOption = { code: string; id: string; name: string };
 type SupplierExtraLine = {
   _key: string;
   description_chinese: string;
-  description_english: string;
   amount_rmb: string;
 };
 
@@ -40,7 +39,6 @@ function createSupplierExtraLine(): SupplierExtraLine {
     _key: crypto.randomUUID(),
     amount_rmb: "",
     description_chinese: "",
-    description_english: "",
   };
 }
 
@@ -126,13 +124,13 @@ export function GenerateSupplierInvoiceDialog({
     setError(null);
     const formData = new FormData(event.currentTarget);
 
-    if (type === "deposit" && extraLines.length > 0) {
+    if ((type === "deposit" || type === "final") && extraLines.length > 0) {
       const payload = extraLines
-        .filter((line) => line.description_english.trim() && Number(line.amount_rmb) > 0)
+        .filter((line) => line.description_chinese.trim() && Number(line.amount_rmb) > 0)
         .map((line) => ({
           amount_rmb: Number(line.amount_rmb),
           description_chinese: line.description_chinese.trim() || null,
-          description_english: line.description_english.trim(),
+          description_english: null,
         }));
       formData.set("extra_lines_json", JSON.stringify(payload));
     }
@@ -221,7 +219,7 @@ export function GenerateSupplierInvoiceDialog({
             <Textarea disabled={isPending} id={`sup_${type}_notes`} name="notes" />
           </div>
 
-          {type === "deposit" ? (
+          {type === "deposit" || type === "final" ? (
             <div className="space-y-3 rounded-lg border border-slate-200 bg-slate-50 p-4">
               <div className="flex items-center justify-between gap-3">
                 <div>
@@ -237,17 +235,11 @@ export function GenerateSupplierInvoiceDialog({
               {extraLines.length > 0 ? (
                 <div className="space-y-2">
                   {extraLines.map((line, index) => (
-                    <div className="grid gap-2 sm:grid-cols-[1fr_1fr_9rem_auto]" key={line._key}>
-                      <Input
-                        disabled={isPending}
-                        onChange={(event) => updateExtraLine(index, "description_english", event.target.value)}
-                        placeholder="Description (English)"
-                        value={line.description_english}
-                      />
+                    <div className="grid gap-2 sm:grid-cols-[1fr_9rem_auto]" key={line._key}>
                       <Input
                         disabled={isPending}
                         onChange={(event) => updateExtraLine(index, "description_chinese", event.target.value)}
-                        placeholder="Description (Chinese, optional)"
+                        placeholder="描述"
                         value={line.description_chinese}
                       />
                       <Input
