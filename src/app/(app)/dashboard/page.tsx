@@ -147,7 +147,6 @@ export default async function DashboardPage({
       vendorInvoiceResult,
       tradeExpenseResult,
       confirmedBookResult,
-      dividendLineResult,
     ] = await Promise.all([
       supabase
         .from("trades")
@@ -158,13 +157,7 @@ export default async function DashboardPage({
       supabase.from("supplier_invoices_outgoing").select("total_usd").in("trade_id", tradeIds),
       supabase.from("expense_vendor_invoices").select("amount_usd").in("trade_id", tradeIds),
       supabase.from("trade_expenses").select("amount_usd").in("trade_id", tradeIds),
-      supabase.from("shareholder_book").select("net_profit_usd, corporate_tax_usd").in("trade_id", tradeIds).eq("status", "confirmed"),
-      supabase
-        .from("shareholder_book_lines")
-        .select("net_share_usd, book:shareholder_book!inner(trade_id, status)")
-        .eq("book.status", "confirmed")
-        .in("book.trade_id", tradeIds)
-        .eq("person_name", user.name),
+      supabase.from("shareholder_book").select("id, net_profit_usd, corporate_tax_usd").in("trade_id", tradeIds).eq("status", "confirmed"),
     ]);
 
     const firstError =
@@ -173,8 +166,7 @@ export default async function DashboardPage({
       supplierInvoiceResult.error ??
       vendorInvoiceResult.error ??
       tradeExpenseResult.error ??
-      confirmedBookResult.error ??
-      dividendLineResult.error;
+      confirmedBookResult.error;
 
     if (firstError) {
       return <ErrorMessage message={firstError.message} />;
@@ -186,7 +178,37 @@ export default async function DashboardPage({
     vendorInvoices = (vendorInvoiceResult.data ?? []) as Array<Record<string, unknown>>;
     tradeExpenses = (tradeExpenseResult.data ?? []) as Array<Record<string, unknown>>;
     confirmedBooks = (confirmedBookResult.data ?? []) as Array<Record<string, unknown>>;
-    dividendLines = (dividendLineResult.data ?? []) as Array<Record<string, unknown>>;
+
+    // Step 2: fetch dividend lines using confirmed book IDs and the shareholder user link.
+    const confirmedBookIds = (confirmedBookResult.data ?? []).map((b) => (b as { id: string }).id).filter(Boolean);
+
+    if (confirmedBookIds.length) {
+      const { data: shareholderRows, error: shareholderError } = await supabase
+        .from("trade_shareholders")
+        .select("id")
+        .eq("user_id", user.id)
+        .in("trade_id", tradeIds);
+
+      if (shareholderError) {
+        return <ErrorMessage message={shareholderError.message} />;
+      }
+
+      const shareholderIds = (shareholderRows ?? []).map((row) => row.id).filter(Boolean);
+
+      if (shareholderIds.length) {
+        const { data: dividendData, error: dividendError } = await supabase
+          .from("shareholder_book_lines")
+          .select("net_share_usd")
+          .in("book_id", confirmedBookIds)
+          .in("trade_shareholder_id", shareholderIds);
+
+        if (dividendError) {
+          return <ErrorMessage message={dividendError.message} />;
+        }
+
+        dividendLines = (dividendData ?? []) as Array<Record<string, unknown>>;
+      }
+    }
   }
 
   const totalTrades = tradeIds.length;

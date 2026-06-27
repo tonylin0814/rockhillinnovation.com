@@ -343,6 +343,7 @@ export type ComponentDemand = {
 export type TradeShareholder = {
   id: string;
   trade_id: string;
+  user_id: string | null;
   person_name: string;
   split_pct: number;
   invoices_through_entity: boolean;

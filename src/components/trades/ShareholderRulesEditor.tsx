@@ -33,8 +33,15 @@ type VendorOption = {
   code: string;
 };
 
+type UserOption = {
+  id: string;
+  name: string;
+  email: string;
+};
+
 type EditableShareholder = {
   id?: string;
+  user_id: string;
   person_name: string;
   split_pct: string;
   invoices_through_entity: boolean;
@@ -44,6 +51,7 @@ type EditableShareholder = {
 function rowsFromShareholders(shareholders: TradeShareholder[]): EditableShareholder[] {
   return shareholders.map((shareholder) => ({
     id: shareholder.id,
+    user_id: shareholder.user_id ?? "none",
     person_name: shareholder.person_name,
     split_pct: String(shareholder.split_pct),
     invoices_through_entity: shareholder.invoices_through_entity,
@@ -60,6 +68,7 @@ function totalClass(total: number) {
 }
 
 export function ShareholderRulesEditor({
+  availableUsers,
   availableVendors,
   canManage,
   initialShareholders,
@@ -67,6 +76,7 @@ export function ShareholderRulesEditor({
 }: {
   tradeId: string;
   initialShareholders: TradeShareholder[];
+  availableUsers: UserOption[];
   availableVendors: VendorOption[];
   canManage: boolean;
 }) {
@@ -79,6 +89,7 @@ export function ShareholderRulesEditor({
     () => new Map(availableVendors.map((vendor) => [vendor.id, vendor])),
     [availableVendors]
   );
+  const userById = useMemo(() => new Map(availableUsers.map((user) => [user.id, user])), [availableUsers]);
   const total = totalSplit(rows);
   const isTotalValid = Math.abs(total - 100) <= 0.01;
 
@@ -90,6 +101,7 @@ export function ShareholderRulesEditor({
     setRows((currentRows) => [
       ...currentRows,
       {
+        user_id: "none",
         person_name: "",
         split_pct: "0",
         invoices_through_entity: false,
@@ -116,6 +128,7 @@ export function ShareholderRulesEditor({
         tradeId,
         rows.map((row) => ({
           id: row.id,
+          user_id: row.user_id !== "none" ? row.user_id : null,
           person_name: row.person_name,
           split_pct: Number(row.split_pct) || 0,
           invoices_through_entity: row.invoices_through_entity,
@@ -165,10 +178,35 @@ export function ShareholderRulesEditor({
                   <TableRow key={row.id ?? `new-${index}`}>
                     <TableCell>
                       {isEditing ? (
-                        <Input
-                          onChange={(event) => updateRow(index, { person_name: event.currentTarget.value })}
-                          value={row.person_name}
-                        />
+                        <div className="grid gap-2">
+                          <Select
+                            onValueChange={(value) => {
+                              const selectedUser = value === "none" ? null : userById.get(value);
+                              updateRow(index, {
+                                user_id: value,
+                                person_name: selectedUser?.name ?? row.person_name,
+                              });
+                            }}
+                            value={row.user_id}
+                          >
+                            <SelectTrigger className="min-w-56">
+                              <SelectValue placeholder="Select user" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="none">Use text name</SelectItem>
+                              {availableUsers.map((availableUser) => (
+                                <SelectItem key={availableUser.id} value={availableUser.id}>
+                                  {availableUser.name} ({availableUser.email})
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <Input
+                            onChange={(event) => updateRow(index, { person_name: event.currentTarget.value })}
+                            placeholder="Person name"
+                            value={row.person_name}
+                          />
+                        </div>
                       ) : (
                         row.person_name
                       )}

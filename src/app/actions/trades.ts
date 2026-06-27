@@ -17,6 +17,7 @@ type ActionResult = {
 
 type ShareholderInput = {
   id?: string;
+  user_id?: string | null;
   person_name: string;
   split_pct: number;
   invoices_through_entity: boolean;
@@ -39,6 +40,7 @@ const tradeSchema = tradeFieldsSchema.extend({
 
 const shareholderInputSchema = z.object({
   id: z.string().uuid().optional(),
+  user_id: z.string().uuid().nullable().optional(),
   person_name: z.string().trim().min(1, "Person name is required"),
   split_pct: z.coerce.number().positive("Split percentage must be greater than 0").max(100),
   invoices_through_entity: z.boolean(),
@@ -381,6 +383,7 @@ export async function saveTradeShareholders(
   if (parsed.data.shareholders.length) {
     const rows = parsed.data.shareholders.map((shareholder) => ({
       trade_id: tradeId,
+      user_id: shareholder.user_id ?? null,
       person_name: shareholder.person_name,
       split_pct: shareholder.split_pct,
       invoices_through_entity: shareholder.invoices_through_entity,

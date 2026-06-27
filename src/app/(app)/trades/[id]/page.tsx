@@ -764,6 +764,7 @@ export default async function TradeWorkspacePage({ params }: { params: { id: str
               </CardContent>
             </Card>
             <ShareholderRulesEditor
+              availableUsers={partnerOptions}
               availableVendors={activeVendorOptions}
               canManage={canManage}
               initialShareholders={tradeShareholderRows}
