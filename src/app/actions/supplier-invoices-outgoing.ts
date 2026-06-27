@@ -46,7 +46,7 @@ const editableSupplierInvoiceLineSchema = z.object({
   quantity: z.coerce.number().min(0, "Quantity cannot be negative"),
   sort_order: z.coerce.number().int().min(0).default(0),
   source_quote_line_id: z.string().uuid().nullable(),
-  unit_price_rmb: z.coerce.number().min(0, "Unit price cannot be negative"),
+  unit_price_rmb: z.coerce.number(),
 });
 
 const supplierExtraLineSchema = z.object({

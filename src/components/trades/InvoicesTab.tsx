@@ -913,9 +913,8 @@ function EditSupplierInvoiceDialog({ invoice }: { invoice: SupplierInvoiceOutgoi
                         <TableCell>
                           <Input
                             disabled={isPending}
-                            min="0"
                             onChange={(event) => updateLine(index, "unit_price_rmb", event.currentTarget.value)}
-                            step="0.0001"
+                            step="any"
                             type="number"
                             value={line.unit_price_rmb}
                           />
