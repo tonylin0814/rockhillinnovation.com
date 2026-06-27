@@ -191,15 +191,18 @@ export function GenerateSupplierCommercialInvoiceDialog({
                   <div className="grid gap-2 sm:grid-cols-[1fr_9rem_auto]" key={line._key}>
                     <Input
                       disabled={isPending}
+                      lang="zh"
                       onChange={(event) => updateExtraLine(index, "description_chinese", event.target.value)}
                       placeholder="描述"
+                      style={{ fontFamily: "'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', sans-serif" }}
+                      type="text"
                       value={line.description_chinese}
                     />
                     <Input
                       disabled={isPending}
                       onChange={(event) => updateExtraLine(index, "amount_rmb", event.target.value)}
-                      placeholder="¥ Amount"
-                      step="0.01"
+                      placeholder="¥ Amount (negative for discount)"
+                      step="any"
                       type="number"
                       value={line.amount_rmb}
                     />

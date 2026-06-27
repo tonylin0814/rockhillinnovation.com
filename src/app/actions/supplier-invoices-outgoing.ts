@@ -54,7 +54,7 @@ const supplierExtraLineSchema = z.object({
   description_english: z.string().nullable().default(null),
   amount_rmb: z.coerce
     .number()
-    .refine((value) => value !== 0, "Amount cannot be zero"),
+    .refine((value) => value !== 0, { message: "Amount cannot be zero" }),
 });
 
 const matchSchema = z.object({
