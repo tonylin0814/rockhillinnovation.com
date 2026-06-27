@@ -333,10 +333,12 @@ function CostHistoryDialog({
 }
 
 export function CostHistoryTable({
+  canManage = true,
   costRows,
   products,
   suppliers,
 }: {
+  canManage?: boolean;
   costRows: CostHistoryRow[];
   products: ProductOption[];
   suppliers: SupplierOption[];
@@ -404,12 +406,14 @@ export function CostHistoryTable({
     <div className="rounded-lg border border-slate-200 bg-white shadow-sm">
       <div className="flex items-center justify-between gap-3 border-b border-slate-200 p-4">
         <h2 className="text-lg font-semibold text-[#0d1b34]">Cost History</h2>
-        <CostHistoryDialog products={products} suppliers={suppliers}>
-          <Button className="bg-[#0d1b34] hover:bg-[#13294d]" size="sm">
-            <Plus className="mr-2 h-4 w-4" />
-            Add Cost
-          </Button>
-        </CostHistoryDialog>
+        {canManage ? (
+          <CostHistoryDialog products={products} suppliers={suppliers}>
+            <Button className="bg-[#0d1b34] hover:bg-[#13294d]" size="sm">
+              <Plus className="mr-2 h-4 w-4" />
+              Add Cost
+            </Button>
+          </CostHistoryDialog>
+        ) : null}
       </div>
       <div className="grid gap-3 border-b border-slate-200 p-4 md:grid-cols-[minmax(16rem,1fr)_14rem]">
         <Input
@@ -481,7 +485,7 @@ export function CostHistoryTable({
             <SortHeader activeKey={costSortKey} columnKey="source" direction={costSortDirection} onSort={handleCostSort}>
               Source
             </SortHeader>
-            <TableHead className="text-right">Actions</TableHead>
+            {canManage ? <TableHead className="text-right">Actions</TableHead> : null}
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -496,21 +500,23 @@ export function CostHistoryTable({
                 <TableCell>{row.quality ?? "-"}</TableCell>
                 <TableCell>{row.carton_box_packaging ? "Yes" : "No"}</TableCell>
                 <TableCell>{row.source}</TableCell>
-                <TableCell className="text-right">
-                  <div className="flex justify-end gap-1">
-                    <CostHistoryDialog cost={row} products={products} suppliers={suppliers}>
-                      <Button size="icon" variant="ghost">
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                    </CostHistoryDialog>
-                    <DeleteButton action={() => deleteCostHistory(row.id, row.product_id)} label="cost history" />
-                  </div>
-                </TableCell>
+                {canManage ? (
+                  <TableCell className="text-right">
+                    <div className="flex justify-end gap-1">
+                      <CostHistoryDialog cost={row} products={products} suppliers={suppliers}>
+                        <Button size="icon" variant="ghost">
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                      </CostHistoryDialog>
+                      <DeleteButton action={() => deleteCostHistory(row.id, row.product_id)} label="cost history" />
+                    </div>
+                  </TableCell>
+                ) : null}
               </TableRow>
             ))
           ) : (
             <TableRow>
-              <TableCell className="text-slate-500" colSpan={9}>
+              <TableCell className="text-slate-500" colSpan={canManage ? 9 : 8}>
                 No cost history matches these filters.
               </TableCell>
             </TableRow>

@@ -245,6 +245,19 @@ export default async function ProductDetailPage({
 
   const product = data as Product;
   const canManage = user.role === "admin" || user.role === "manager";
+  const isPartner = user.role === "partner";
+
+  if (isPartner && !product.code.toUpperCase().startsWith("MLP-")) {
+    return (
+      <div className="flex min-h-[calc(100vh-8rem)] items-center justify-center">
+        <div className="text-center">
+          <h1 className="text-2xl font-semibold text-[#0d1b34]">Access denied</h1>
+          <p className="mt-2 text-sm text-slate-500">This product is outside your access scope.</p>
+        </div>
+      </div>
+    );
+  }
+
   const backHref = searchParams?.from?.startsWith("/products") ? searchParams.from : "/products?tab=products";
   const supplierOptions = (suppliers ?? []) as ProductSupplierOption[];
   const availableProductOptions = (availableProducts ?? []) as Product[];
@@ -380,6 +393,7 @@ export default async function ProductDetailPage({
                 <CardContent>
                   <SetComponentsEditor
                     availableProducts={availableProductOptions}
+                    canManage={canManage}
                     initialComponents={setComponents}
                     setProductId={product.id}
                   />

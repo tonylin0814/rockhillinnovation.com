@@ -11,21 +11,23 @@ export const revalidate = 0;
 export default async function QuoteHistoryPage() {
   const user = await getCurrentUser();
 
-  if (!user || user.role === "partner" || user.role === "user") {
+  if (!user || user.role === "user") {
     return (
       <div className="flex min-h-[calc(100vh-8rem)] items-center justify-center">
         <div className="text-center">
           <h1 className="text-2xl font-semibold text-[#0d1b34]">Access denied</h1>
-          <p className="mt-2 text-sm text-slate-500">History is available to admins and managers only.</p>
+          <p className="mt-2 text-sm text-slate-500">History is not available to your account.</p>
         </div>
       </div>
     );
   }
 
+  const isPartner = user.role === "partner";
   const supabase = createServerSupabaseClient();
   const { data: quoteRows, error: quoteError } = await supabase
     .from("quotation_history")
     .select("*")
+    .ilike("rock_hill_code", isPartner ? "MLP-%" : "%")
     .order("quote_date", { ascending: false })
     .order("created_at", { ascending: false })
     .limit(500);
@@ -46,7 +48,7 @@ export default async function QuoteHistoryPage() {
       </div>
 
       <Suspense fallback={<div className="py-4 text-sm text-slate-500">Loading...</div>}>
-        <QuoteHistoryTable quoteRows={(quoteRows ?? []) as QuotationHistory[]} />
+        <QuoteHistoryTable canManage={!isPartner} quoteRows={(quoteRows ?? []) as QuotationHistory[]} />
       </Suspense>
     </section>
   );

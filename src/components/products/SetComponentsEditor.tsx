@@ -50,12 +50,14 @@ function rowsFromComponents(components: ProductComponent[]): EditableComponent[]
 
 export function SetComponentsEditor({
   availableProducts,
+  canManage = true,
   initialComponents,
   setProductId,
 }: {
   setProductId: string;
   initialComponents: ProductComponent[];
   availableProducts: Product[];
+  canManage?: boolean;
 }) {
   const router = useRouter();
   const [isEditing, setIsEditing] = useState(false);
@@ -160,11 +162,11 @@ export function SetComponentsEditor({
   return (
     <div className="space-y-4">
       <div className="flex justify-end">
-        {isEditing ? null : (
+        {canManage && !isEditing ? (
           <Button onClick={() => setIsEditing(true)} size="sm" variant="outline">
             Edit Components
           </Button>
-        )}
+        ) : null}
       </div>
 
       <Table>

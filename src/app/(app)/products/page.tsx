@@ -42,13 +42,16 @@ export default async function ProductsPage({
     );
   }
 
-  const allProducts = (products ?? []) as Product[];
   const canManage = user.role === "admin" || user.role === "manager";
+  const isPartner = user.role === "partner";
+  const allProducts = ((products ?? []) as Product[]).filter((product) =>
+    isPartner ? product.code.toUpperCase().startsWith("MLP-") : true
+  );
   const activeProducts = allProducts.filter((product) => product.status === "active");
   const standardProducts = activeProducts.filter((product) => product.product_type === "part");
   const setProducts = activeProducts.filter((product) => product.product_type === "set");
   const inactiveProducts = allProducts.filter((product) => product.status === "inactive");
-  const supplierOptions = (suppliers ?? []) as ProductSupplierOption[];
+  const supplierOptions = canManage ? ((suppliers ?? []) as ProductSupplierOption[]) : [];
   const activeTab = ["products", "sets", "inactive"].includes(searchParams?.tab ?? "")
     ? searchParams?.tab
     : "products";

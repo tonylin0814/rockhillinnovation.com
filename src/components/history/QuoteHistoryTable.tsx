@@ -264,7 +264,13 @@ function QuoteHistoryDialog({ children, quote }: { children: ReactNode; quote?: 
   );
 }
 
-export function QuoteHistoryTable({ quoteRows }: { quoteRows: QuotationHistory[] }) {
+export function QuoteHistoryTable({
+  canManage = true,
+  quoteRows,
+}: {
+  canManage?: boolean;
+  quoteRows: QuotationHistory[];
+}) {
   const [quoteSearch, setQuoteSearch] = useState("");
   const [quoteSortKey, setQuoteSortKey] = useState<QuoteSortKey>("date");
   const [quoteSortDirection, setQuoteSortDirection] = useState<SortDirection>("desc");
@@ -319,12 +325,14 @@ export function QuoteHistoryTable({ quoteRows }: { quoteRows: QuotationHistory[]
     <div className="rounded-lg border border-slate-200 bg-white shadow-sm">
       <div className="flex items-center justify-between gap-3 border-b border-slate-200 p-4">
         <h2 className="text-lg font-semibold text-[#0d1b34]">Quote History</h2>
-        <QuoteHistoryDialog>
-          <Button className="bg-[#0d1b34] hover:bg-[#13294d]" size="sm">
-            <Plus className="mr-2 h-4 w-4" />
-            Add Quote
-          </Button>
-        </QuoteHistoryDialog>
+        {canManage ? (
+          <QuoteHistoryDialog>
+            <Button className="bg-[#0d1b34] hover:bg-[#13294d]" size="sm">
+              <Plus className="mr-2 h-4 w-4" />
+              Add Quote
+            </Button>
+          </QuoteHistoryDialog>
+        ) : null}
       </div>
       <div className="grid gap-3 border-b border-slate-200 p-4 md:grid-cols-[minmax(16rem,1fr)]">
         <Input
@@ -375,7 +383,7 @@ export function QuoteHistoryTable({ quoteRows }: { quoteRows: QuotationHistory[]
             >
               Created
             </SortHeader>
-            <TableHead className="text-right">Actions</TableHead>
+            {canManage ? <TableHead className="text-right">Actions</TableHead> : null}
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -390,21 +398,23 @@ export function QuoteHistoryTable({ quoteRows }: { quoteRows: QuotationHistory[]
                 <TableCell className="text-right">{formatUsd(row.quoted_usd)}</TableCell>
                 <TableCell>{row.notes ?? "-"}</TableCell>
                 <TableCell>{formatDate(row.created_at)}</TableCell>
-                <TableCell className="text-right">
-                  <div className="flex justify-end gap-1">
-                    <QuoteHistoryDialog quote={row}>
-                      <Button size="icon" variant="ghost">
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                    </QuoteHistoryDialog>
-                    <DeleteButton action={() => deleteQuoteHistory(row.id)} label="quote history" />
-                  </div>
-                </TableCell>
+                {canManage ? (
+                  <TableCell className="text-right">
+                    <div className="flex justify-end gap-1">
+                      <QuoteHistoryDialog quote={row}>
+                        <Button size="icon" variant="ghost">
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                      </QuoteHistoryDialog>
+                      <DeleteButton action={() => deleteQuoteHistory(row.id)} label="quote history" />
+                    </div>
+                  </TableCell>
+                ) : null}
               </TableRow>
             ))
           ) : (
             <TableRow>
-              <TableCell className="text-slate-500" colSpan={9}>
+              <TableCell className="text-slate-500" colSpan={canManage ? 9 : 8}>
                 No quote history matches these filters.
               </TableCell>
             </TableRow>

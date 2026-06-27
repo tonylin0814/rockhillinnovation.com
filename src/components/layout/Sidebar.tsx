@@ -117,7 +117,7 @@ export function Sidebar({ currentUser }: { currentUser: SidebarUser }) {
           <NavLink href={item.href} icon={item.icon} key={item.href} label={item.label} />
         ))}
 
-        {isAdminOrManager ? (
+        {isAdminOrManager || isPartner ? (
           <>
             <div
               className={cn(
