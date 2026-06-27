@@ -2,9 +2,12 @@
 
 import { useRouter, useSearchParams } from "next/navigation";
 
+import { useLanguage } from "@/context/LanguageContext";
+
 export function PeriodToggle() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { t } = useLanguage();
   const period = searchParams.get("period") ?? "year";
 
   function setPeriod(value: "year" | "all") {
@@ -22,7 +25,7 @@ export function PeriodToggle() {
         onClick={() => setPeriod("year")}
         type="button"
       >
-        Year
+        {t.dashboard.year}
       </button>
       <button
         className={`rounded-md px-4 py-1.5 text-sm font-medium transition-colors ${
@@ -31,7 +34,7 @@ export function PeriodToggle() {
         onClick={() => setPeriod("all")}
         type="button"
       >
-        All Time
+        {t.dashboard.allTime}
       </button>
     </div>
   );
