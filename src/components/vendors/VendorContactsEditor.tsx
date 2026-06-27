@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { updateVendor } from "@/app/actions/vendors";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { useLanguage } from "@/context/LanguageContext";
 import {
   Table,
   TableBody,
@@ -48,9 +49,38 @@ export function VendorContactsEditor({
   vendorId: string;
 }) {
   const router = useRouter();
+  const { language } = useLanguage();
   const [isEditing, setIsEditing] = useState(false);
   const [contacts, setContacts] = useState<VendorContactRow[]>(() => initialContacts.map(createContactRow));
   const [isPending, startTransition] = useTransition();
+  const text =
+    language === "zh"
+      ? {
+          addContact: "新增聯絡人",
+          cancel: "取消",
+          editContacts: "編輯聯絡人",
+          email: "電子郵件",
+          name: "姓名",
+          noContacts: "尚無聯絡人。",
+          phone: "電話",
+          removeContact: "移除聯絡人",
+          role: "職稱",
+          saveContacts: "儲存聯絡人",
+          saved: "聯絡人已儲存",
+        }
+      : {
+          addContact: "Add Contact",
+          cancel: "Cancel",
+          editContacts: "Edit Contacts",
+          email: "Email",
+          name: "Name",
+          noContacts: "No contacts yet.",
+          phone: "Phone",
+          removeContact: "Remove contact",
+          role: "Role",
+          saveContacts: "Save Contacts",
+          saved: "Contacts saved",
+        };
 
   function updateContact(index: number, field: keyof VendorContact, value: string) {
     setContacts((current) =>
@@ -83,7 +113,7 @@ export function VendorContactsEditor({
         return;
       }
 
-      toast.success("Contacts saved");
+      toast.success(text.saved);
       setIsEditing(false);
       router.refresh();
     });
@@ -96,19 +126,19 @@ export function VendorContactsEditor({
           <>
             <Button disabled={isPending} onClick={addContact} type="button" variant="outline">
               <Plus className="mr-2 h-4 w-4" />
-              Add Contact
+              {text.addContact}
             </Button>
             <Button disabled={isPending} onClick={cancelEdit} type="button" variant="outline">
-              Cancel
+              {text.cancel}
             </Button>
             <Button className="bg-[#0d1b34] hover:bg-[#13294d]" disabled={isPending} onClick={saveContacts}>
               {isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-              Save Contacts
+              {text.saveContacts}
             </Button>
           </>
         ) : (
           <Button onClick={() => setIsEditing(true)} type="button" variant="outline">
-            Edit Contacts
+            {text.editContacts}
           </Button>
         )}
       </div>
@@ -116,10 +146,10 @@ export function VendorContactsEditor({
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>Name</TableHead>
-            <TableHead>Role</TableHead>
-            <TableHead>Email</TableHead>
-            <TableHead>Phone</TableHead>
+            <TableHead>{text.name}</TableHead>
+            <TableHead>{text.role}</TableHead>
+            <TableHead>{text.email}</TableHead>
+            <TableHead>{text.phone}</TableHead>
             {isEditing ? <TableHead className="w-12" /> : null}
           </TableRow>
         </TableHeader>
@@ -144,7 +174,7 @@ export function VendorContactsEditor({
                 {isEditing ? (
                   <TableCell>
                     <Button
-                      aria-label="Remove contact"
+                      aria-label={text.removeContact}
                       disabled={isPending}
                       onClick={() => removeContact(index)}
                       size="icon"
@@ -160,7 +190,7 @@ export function VendorContactsEditor({
           ) : (
             <TableRow>
               <TableCell className="text-slate-500" colSpan={isEditing ? 5 : 4}>
-                No contacts yet.
+                {text.noContacts}
               </TableCell>
             </TableRow>
           )}

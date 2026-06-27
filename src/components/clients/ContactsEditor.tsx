@@ -6,6 +6,7 @@ import { useEffect, useState, useTransition } from "react";
 import { toast } from "sonner";
 
 import { updateClient } from "@/app/actions/clients";
+import { useLanguage } from "@/context/LanguageContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -57,9 +58,48 @@ function stripContactKey(contact: ContactRow): Contact {
 
 export function ContactsEditor({ clientId, initialContacts }: { clientId: string; initialContacts: Contact[] }) {
   const router = useRouter();
+  const { language } = useLanguage();
   const [isEditing, setIsEditing] = useState(false);
   const [contacts, setContacts] = useState<ContactRow[]>(() => initialContacts.map(createContactRow));
   const [isPending, startTransition] = useTransition();
+  const text =
+    language === "zh"
+      ? {
+          addContact: "新增聯絡人",
+          cancel: "取消",
+          editContacts: "編輯聯絡人",
+          email: "電子郵件",
+          firstName: "名",
+          lastName: "姓",
+          noContacts: "尚無聯絡人。",
+          phone: "電話",
+          cellPhone: "手機",
+          primary: "主要聯絡人",
+          primaryContact: "主要聯絡人",
+          removeContact: "移除聯絡人",
+          role: "職稱",
+          saveContacts: "儲存聯絡人",
+          saved: "聯絡人已儲存",
+          yes: "是",
+        }
+      : {
+          addContact: "Add Contact",
+          cancel: "Cancel",
+          editContacts: "Edit Contacts",
+          email: "Email",
+          firstName: "First Name",
+          lastName: "Last Name",
+          noContacts: "No contacts yet.",
+          phone: "Phone",
+          cellPhone: "Cell Phone",
+          primary: "Primary",
+          primaryContact: "Primary contact",
+          removeContact: "Remove contact",
+          role: "Role",
+          saveContacts: "Save Contacts",
+          saved: "Contacts saved",
+          yes: "Yes",
+        };
 
   useEffect(() => {
     if (!isEditing) {
@@ -107,7 +147,7 @@ export function ContactsEditor({ clientId, initialContacts }: { clientId: string
         return;
       }
 
-      toast.success("Contacts saved");
+      toast.success(text.saved);
       setIsEditing(false);
       router.refresh();
     });
@@ -120,19 +160,19 @@ export function ContactsEditor({ clientId, initialContacts }: { clientId: string
           <>
             <Button disabled={isPending} onClick={addContact} type="button" variant="outline">
               <Plus className="mr-2 h-4 w-4" />
-              Add Contact
+              {text.addContact}
             </Button>
             <Button disabled={isPending} onClick={cancelEdit} type="button" variant="outline">
-              Cancel
+              {text.cancel}
             </Button>
             <Button className="bg-[#0d1b34] hover:bg-[#13294d]" disabled={isPending} onClick={saveContacts}>
               {isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-              Save Contacts
+              {text.saveContacts}
             </Button>
           </>
         ) : (
           <Button onClick={() => setIsEditing(true)} type="button" variant="outline">
-            Edit Contacts
+            {text.editContacts}
           </Button>
         )}
       </div>
@@ -140,13 +180,13 @@ export function ContactsEditor({ clientId, initialContacts }: { clientId: string
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>First Name</TableHead>
-            <TableHead>Last Name</TableHead>
-            <TableHead>Role</TableHead>
-            <TableHead>Email</TableHead>
-            <TableHead>Phone</TableHead>
-            <TableHead>Cell Phone</TableHead>
-            <TableHead className="w-24">Primary</TableHead>
+            <TableHead>{text.firstName}</TableHead>
+            <TableHead>{text.lastName}</TableHead>
+            <TableHead>{text.role}</TableHead>
+            <TableHead>{text.email}</TableHead>
+            <TableHead>{text.phone}</TableHead>
+            <TableHead>{text.cellPhone}</TableHead>
+            <TableHead className="w-24">{text.primary}</TableHead>
             {isEditing ? <TableHead className="w-12" /> : null}
           </TableRow>
         </TableHeader>
@@ -171,7 +211,7 @@ export function ContactsEditor({ clientId, initialContacts }: { clientId: string
                 <TableCell>
                   {isEditing ? (
                     <input
-                      aria-label="Primary contact"
+                      aria-label={text.primaryContact}
                       checked={Boolean(contact.is_primary)}
                       className="h-4 w-4 accent-[#0d1b34]"
                       disabled={isPending}
@@ -180,7 +220,7 @@ export function ContactsEditor({ clientId, initialContacts }: { clientId: string
                       type="radio"
                     />
                   ) : contact.is_primary ? (
-                    "Yes"
+                    text.yes
                   ) : (
                     "-"
                   )}
@@ -188,7 +228,7 @@ export function ContactsEditor({ clientId, initialContacts }: { clientId: string
                 {isEditing ? (
                   <TableCell>
                     <Button
-                      aria-label="Remove contact"
+                      aria-label={text.removeContact}
                       disabled={isPending}
                       onClick={() => removeContact(index)}
                       size="icon"
@@ -204,7 +244,7 @@ export function ContactsEditor({ clientId, initialContacts }: { clientId: string
           ) : (
             <TableRow>
               <TableCell className="text-slate-500" colSpan={isEditing ? 8 : 7}>
-                No contacts yet.
+                {text.noContacts}
               </TableCell>
             </TableRow>
           )}

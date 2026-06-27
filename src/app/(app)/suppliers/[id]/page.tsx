@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { SupplierContactsEditor } from "@/components/suppliers/SupplierContactsEditor";
 import { SupplierFormDialog } from "@/components/suppliers/SupplierFormDialog";
 import { SupplierStatusButton } from "@/components/suppliers/SupplierStatusButton";
+import { T } from "@/components/i18n/T";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -153,7 +154,9 @@ export default async function SupplierDetailPage({ params }: { params: { id: str
 
           <Card className="border-slate-200 shadow-sm">
             <CardHeader>
-              <CardTitle>Contacts</CardTitle>
+              <CardTitle>
+                <T k="common.contacts" fallback="Contacts" />
+              </CardTitle>
             </CardHeader>
             <CardContent>
               <SupplierContactsEditor initialContacts={supplier.contacts ?? []} supplierId={supplier.id} />
