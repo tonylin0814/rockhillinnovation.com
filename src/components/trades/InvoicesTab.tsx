@@ -712,7 +712,11 @@ function EditSupplierInvoiceDialog({ invoice }: { invoice: SupplierInvoiceOutgoi
     }
   }
 
-  function updateLine(index: number, field: "description_english" | "quantity" | "unit_price_rmb", value: string) {
+  function updateLine(
+    index: number,
+    field: "description_chinese" | "description_english" | "quantity" | "unit_price_rmb",
+    value: string
+  ) {
     setLines((currentLines) =>
       currentLines.map((line, lineIndex) => (lineIndex === index ? { ...line, [field]: value } : line))
     );
@@ -891,11 +895,25 @@ function EditSupplierInvoiceDialog({ invoice }: { invoice: SupplierInvoiceOutgoi
                     return (
                       <TableRow key={line._key}>
                         <TableCell>
-                          <Input
-                            disabled={isPending}
-                            onChange={(event) => updateLine(index, "description_english", event.currentTarget.value)}
-                            value={line.description_english}
-                          />
+                          {(() => {
+                            const usesChinese = !line.description_english && !!line.description_chinese;
+                            const field = usesChinese ? "description_chinese" : "description_english";
+                            const displayValue = usesChinese ? line.description_chinese : line.description_english;
+
+                            return (
+                              <Input
+                                disabled={isPending}
+                                lang={usesChinese ? "zh" : undefined}
+                                onChange={(event) => updateLine(index, field, event.currentTarget.value)}
+                                style={
+                                  usesChinese
+                                    ? { fontFamily: "'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', sans-serif" }
+                                    : undefined
+                                }
+                                value={displayValue}
+                              />
+                            );
+                          })()}
                         </TableCell>
                         <TableCell>
                           <Input

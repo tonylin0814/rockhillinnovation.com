@@ -129,7 +129,7 @@ export function EditVendorOutgoingInvoiceDialog({ invoice }: { invoice: ExpenseV
           <span className="sr-only">Edit vendor invoice</span>
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-3xl">
+      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-3xl" onInteractOutside={(e) => e.preventDefault()}>
         <DialogHeader>
           <DialogTitle>Edit Vendor Invoice</DialogTitle>
           <DialogDescription>Update invoice details. This does not regenerate the PDF file.</DialogDescription>

@@ -97,7 +97,7 @@ export function GenerateVendorOutgoingInvoiceDialog({
           Generate Vendor Invoice
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-2xl">
+      <DialogContent className="sm:max-w-2xl" onInteractOutside={(e) => e.preventDefault()}>
         <DialogHeader>
           <DialogTitle>Generate Vendor Invoice</DialogTitle>
           <DialogDescription>Create a vendor invoice with one or more USD line items.</DialogDescription>

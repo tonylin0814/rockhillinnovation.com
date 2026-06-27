@@ -64,7 +64,7 @@ export function GenerateVendorInvoiceDialog({
           Generate Invoice
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent className="sm:max-w-lg" onInteractOutside={(e) => e.preventDefault()}>
         <DialogHeader>
           <DialogTitle>Generate Vendor Invoice</DialogTitle>
           <DialogDescription>

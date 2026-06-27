@@ -128,7 +128,7 @@ export function GenerateSupplierCommercialInvoiceDialog({
       }}
     >
       <DialogTrigger asChild>{children}</DialogTrigger>
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent className="sm:max-w-lg" onInteractOutside={(e) => e.preventDefault()}>
         <DialogHeader>
           <DialogTitle>Generate Supplier Commercial Invoice</DialogTitle>
           <DialogDescription>Includes all non-set supplier quote items at 100%.</DialogDescription>

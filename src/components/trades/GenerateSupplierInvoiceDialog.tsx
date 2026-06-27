@@ -155,7 +155,7 @@ export function GenerateSupplierInvoiceDialog({
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>{children}</DialogTrigger>
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent className="sm:max-w-lg" onInteractOutside={(e) => e.preventDefault()}>
         <DialogHeader>
           <DialogTitle>Generate {label} Invoice</DialogTitle>
           <DialogDescription>{descriptions[type]}</DialogDescription>

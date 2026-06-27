@@ -92,7 +92,7 @@ export function GenerateDepositInvoiceDialog({
       }}
     >
       <DialogTrigger asChild>{children}</DialogTrigger>
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent className="sm:max-w-lg" onInteractOutside={(e) => e.preventDefault()}>
         <DialogHeader>
           <DialogTitle>Generate Deposit Invoice</DialogTitle>
           <DialogDescription>Creates a deposit invoice using the client&apos;s deposit percentage.</DialogDescription>
