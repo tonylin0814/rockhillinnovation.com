@@ -246,7 +246,7 @@ export default async function TradeWorkspacePage({ params }: { params: { id: str
       .order("created_at", { ascending: true }),
     supabase
       .from("trade_diary_entries")
-      .select("*")
+      .select("id, trade_id, milestone_key, content, attachments, author_id, author_name, created_at, updated_at")
       .eq("trade_id", params.id)
       .order("created_at", { ascending: false }),
     canManage
@@ -578,7 +578,12 @@ export default async function TradeWorkspacePage({ params }: { params: { id: str
                 <CardTitle className="text-base"><T k="trades.tradeMilestones" fallback="Trade Milestones" /></CardTitle>
               </CardHeader>
               <CardContent>
-                <TradeMilestoneChecklist canManage={canManage} milestones={tradeMilestoneRows} tradeId={trade.id} />
+                <TradeMilestoneChecklist
+                  canManage={canManage}
+                  diaryEntries={diaryEntryRows}
+                  milestones={tradeMilestoneRows}
+                  tradeId={trade.id}
+                />
               </CardContent>
             </Card>
 

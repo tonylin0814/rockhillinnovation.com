@@ -6,6 +6,7 @@ import { FormEvent, useState, useTransition } from "react";
 import { toast } from "sonner";
 
 import { addDiaryEntry, deleteDiaryEntry, updateDiaryEntry } from "@/app/actions/trade-diary";
+import { formatMilestoneLabel } from "@/components/trades/TradeMilestoneChecklist";
 import { useLanguage } from "@/context/LanguageContext";
 import {
   AlertDialog,
@@ -29,7 +30,7 @@ import {
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { buildDownloadUrl } from "@/lib/download";
-import type { TradeDiaryEntry } from "@/types";
+import type { MilestoneKey, TradeDiaryEntry } from "@/types";
 
 export function DiaryTab({
   canManage,
@@ -59,7 +60,7 @@ export function DiaryTab({
         note: "內容",
         placeholder: "寫下此交易的備註...",
         save: "儲存",
-        upToFive: "最多 5 個",
+        upToFive: "最多 10 個",
       }
     : {
         addEntry: "Add Entry",
@@ -78,7 +79,7 @@ export function DiaryTab({
         note: "Note",
         placeholder: "Write a note about this trade...",
         save: "Save",
-        upToFive: "up to 5",
+        upToFive: "up to 10",
       };
   const router = useRouter();
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -171,6 +172,11 @@ export function DiaryTab({
                     })}
                     {entry.updated_at !== entry.created_at ? text.edited : ""}
                   </p>
+                  {entry.milestone_key ? (
+                    <span className="mt-2 inline-flex rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-600">
+                      {formatMilestoneLabel(entry.milestone_key as MilestoneKey, language)}
+                    </span>
+                  ) : null}
                   <p className="mt-2 whitespace-pre-wrap text-sm text-[#0d1b34]">{entry.content}</p>
                   {entry.attachments.length ? (
                     <div className="mt-3 flex flex-wrap gap-2">
@@ -273,7 +279,7 @@ export function DiaryTab({
             <div className="space-y-2">
               <Label>{editingEntry ? text.addMoreFiles : text.attachments} ({text.upToFive})</Label>
               <div className="space-y-1">
-                {Array.from({ length: 5 }).map((_, index) => (
+                {Array.from({ length: 10 }).map((_, index) => (
                   <input
                     accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.xlsx,.xls"
                     className="block w-full text-xs text-slate-500 file:mr-3 file:rounded file:border-0 file:bg-slate-100 file:px-3 file:py-1 file:text-xs file:font-medium"

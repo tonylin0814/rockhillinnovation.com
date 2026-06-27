@@ -8,11 +8,29 @@ import { createServerSupabaseClient } from "@/lib/supabase/server";
 import type { MilestoneKey } from "@/types";
 
 const MILESTONE_KEYS: MilestoneKey[] = [
+  "dev_sample_design",
+  "dev_sample_shipping",
+  "dev_first_estimate",
+  "dev_product_accepted",
+  "inquiry_received",
+  "quote_received",
+  "quotation_sent",
+  "deposit_invoice_sent",
   "deposit_received",
   "deposit_sent",
-  "goods_shipped",
-  "balance_received",
-  "balance_sent",
+  "production_ongoing",
+  "packing_strategy",
+  "final_invoice_sent",
+  "final_payment_received",
+  "qc_arrangement",
+  "qc_complete",
+  "freight_arrangement",
+  "final_supplier_invoice",
+  "freight_starts",
+  "vendor_payment",
+  "client_received",
+  "feedback",
+  "accounting",
 ];
 
 export type ActionResult = { success?: true; error?: string };
@@ -63,22 +81,23 @@ export async function completeMilestone(
 
   const parsed = z
     .object({
-      milestone: z.enum(["deposit_received", "deposit_sent", "goods_shipped", "balance_received", "balance_sent"]),
+      milestone: z.string().min(1),
       notes: z.string().trim().nullable().optional(),
       tradeId: z.string().uuid(),
     })
     .safeParse({ milestone, notes, tradeId });
 
-  if (!parsed.success) {
+  if (!parsed.success || !MILESTONE_KEYS.includes(parsed.data.milestone as MilestoneKey)) {
     return { error: "Invalid input" };
   }
 
+  const milestoneKey = parsed.data.milestone as MilestoneKey;
   const supabase = createServerSupabaseClient();
   const { error } = await supabase.from("trade_milestones").upsert(
     {
       completed_at: new Date().toISOString(),
-      completed_by: access.user.id,
-      milestone: parsed.data.milestone,
+      completed_by: access.user.name,
+      milestone: milestoneKey,
       notes: parsed.data.notes ?? null,
       trade_id: parsed.data.tradeId,
     },
@@ -102,21 +121,22 @@ export async function uncompleteMilestone(tradeId: string, milestone: MilestoneK
 
   const parsed = z
     .object({
-      milestone: z.enum(["deposit_received", "deposit_sent", "goods_shipped", "balance_received", "balance_sent"]),
+      milestone: z.string().min(1),
       tradeId: z.string().uuid(),
     })
     .safeParse({ milestone, tradeId });
 
-  if (!parsed.success) {
+  if (!parsed.success || !MILESTONE_KEYS.includes(parsed.data.milestone as MilestoneKey)) {
     return { error: "Invalid input" };
   }
 
+  const milestoneKey = parsed.data.milestone as MilestoneKey;
   const supabase = createServerSupabaseClient();
   const { error } = await supabase
     .from("trade_milestones")
     .update({ completed_at: null, completed_by: null, notes: null })
     .eq("trade_id", parsed.data.tradeId)
-    .eq("milestone", parsed.data.milestone);
+    .eq("milestone", milestoneKey);
 
   if (error) {
     return { error: error.message };

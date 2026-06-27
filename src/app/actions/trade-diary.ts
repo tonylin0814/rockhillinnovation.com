@@ -26,28 +26,42 @@ async function requireManager() {
   return { user };
 }
 
-async function uploadAttachments(formData: FormData, tradeCode: string, prefix: string): Promise<DiaryAttachment[]> {
+function buildAttachmentName(tradeCode: string, milestoneKey: string | null, originalName: string) {
+  const timestamp = new Date().toISOString().slice(0, 19).replace("T", "-").replace(/:/g, "");
+  const safeOriginalName = originalName.replace(/[\\/:*?"<>|]/g, "-");
+  const milestonePart = milestoneKey ? `_${milestoneKey}` : "";
+
+  return `${tradeCode}${milestonePart}_${timestamp}_${safeOriginalName}`;
+}
+
+async function uploadAttachments(
+  formData: FormData,
+  tradeCode: string,
+  prefix: string,
+  milestoneKey: string | null = null
+): Promise<DiaryAttachment[]> {
   const attachments: DiaryAttachment[] = [];
 
-  for (let index = 0; index < 5; index += 1) {
+  for (let index = 0; index < 10; index += 1) {
     const file = formData.get(`${prefix}_${index}`);
 
     if (!(file instanceof File) || file.size === 0) {
       continue;
     }
 
+    const fileName = buildAttachmentName(tradeCode, milestoneKey, file.name);
     const fileBuffer = Buffer.from(await file.arrayBuffer());
     const uploaded = await uploadToOneDrive({
       category: "diary",
       fileBuffer,
-      fileName: file.name,
+      fileName,
       mimeType: file.type || "application/octet-stream",
       tradeCode,
     });
 
     attachments.push({
       file_size_bytes: file.size,
-      name: file.name,
+      name: fileName,
       onedrive_url: uploaded.webUrl,
     });
   }
@@ -74,6 +88,9 @@ export async function addDiaryEntry(tradeId: string, formData: FormData): Promis
     return { error: "Content is required" };
   }
 
+  const milestoneKeyRaw = formData.get("milestone_key");
+  const milestoneKey = typeof milestoneKeyRaw === "string" && milestoneKeyRaw.trim() ? milestoneKeyRaw.trim() : null;
+
   const supabase = createServerSupabaseClient();
   const { data: tradeRow, error: tradeError } = await supabase
     .from("trades")
@@ -85,7 +102,7 @@ export async function addDiaryEntry(tradeId: string, formData: FormData): Promis
     return { error: tradeError.message };
   }
 
-  const attachments = await uploadAttachments(formData, tradeRow?.trade_id ?? "unknown", "attachment");
+  const attachments = await uploadAttachments(formData, tradeRow?.trade_id ?? "unknown", "attachment", milestoneKey);
   const { data: entry, error } = await supabase
     .from("trade_diary_entries")
     .insert({
@@ -93,6 +110,7 @@ export async function addDiaryEntry(tradeId: string, formData: FormData): Promis
       author_id: access.user.id,
       author_name: access.user.name,
       content: content.trim(),
+      milestone_key: milestoneKey,
       trade_id: tradeId,
     })
     .select("id")
@@ -137,7 +155,7 @@ export async function updateDiaryEntry(id: string, tradeId: string, formData: Fo
   const supabase = createServerSupabaseClient();
   const { data: existing, error: existingError } = await supabase
     .from("trade_diary_entries")
-    .select("attachments")
+    .select("attachments, milestone_key")
     .eq("id", id)
     .eq("trade_id", tradeId)
     .maybeSingle();
@@ -171,7 +189,12 @@ export async function updateDiaryEntry(id: string, tradeId: string, formData: Fo
 
   attachments = [
     ...attachments,
-    ...(await uploadAttachments(formData, tradeRow?.trade_id ?? "unknown", "new_attachment")),
+    ...(await uploadAttachments(
+      formData,
+      tradeRow?.trade_id ?? "unknown",
+      "new_attachment",
+      existing?.milestone_key ?? null
+    )),
   ];
 
   const { error } = await supabase

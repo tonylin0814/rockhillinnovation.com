@@ -581,11 +581,29 @@ export type TradeLedgerEntry = {
 };
 
 export type MilestoneKey =
+  | "dev_sample_design"
+  | "dev_sample_shipping"
+  | "dev_first_estimate"
+  | "dev_product_accepted"
+  | "inquiry_received"
+  | "quote_received"
+  | "quotation_sent"
+  | "deposit_invoice_sent"
   | "deposit_received"
   | "deposit_sent"
-  | "goods_shipped"
-  | "balance_received"
-  | "balance_sent";
+  | "production_ongoing"
+  | "packing_strategy"
+  | "final_invoice_sent"
+  | "final_payment_received"
+  | "qc_arrangement"
+  | "qc_complete"
+  | "freight_arrangement"
+  | "final_supplier_invoice"
+  | "freight_starts"
+  | "vendor_payment"
+  | "client_received"
+  | "feedback"
+  | "accounting";
 
 export type TradeMilestone = {
   trade_id: string;
@@ -598,6 +616,7 @@ export type TradeMilestone = {
 export type TradeDiaryEntry = {
   id: string;
   trade_id: string;
+  milestone_key: string | null;
   content: string;
   attachments: { name: string; onedrive_url: string; file_size_bytes: number }[];
   author_id: string | null;
