@@ -6,6 +6,7 @@ import { FormEvent, ReactNode, useMemo, useState, useTransition } from "react";
 import { toast } from "sonner";
 
 import { addLedgerEntry, deleteLedgerEntry, updateLedgerEntry } from "@/app/actions/trade-ledger";
+import { useLanguage } from "@/context/LanguageContext";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -53,6 +54,15 @@ const ENTRY_TYPE_LABELS: Record<EntryType, string> = {
   supplier_payment_sent: "Supplier Payment",
 };
 
+const ENTRY_TYPE_LABELS_ZH: Record<EntryType, string> = {
+  bank_fee: "銀行手續費",
+  client_payment_received: "客戶收款",
+  expense_vendor_payment: "費用廠商付款",
+  misc: "其他",
+  reimbursement: "報銷",
+  supplier_payment_sent: "供應商付款",
+};
+
 const FORCED_DIRECTION: Partial<Record<EntryType, "in" | "out">> = {
   bank_fee: "out",
   client_payment_received: "in",
@@ -70,6 +80,112 @@ const DIRECTION_CLASSES = {
   in: "border-green-200 bg-green-50 text-green-700",
   out: "border-red-200 bg-red-50 text-red-700",
 };
+
+function getLedgerText(language: "en" | "zh") {
+  return language === "zh"
+    ? {
+        addTransaction: "新增交易",
+        amountRmb: "金額（人民幣）",
+        amountUsd: "金額（美元）",
+        bankFee: "銀行手續費",
+        bankFeeFormula: "銀行手續費 = |預期 - 實際| =",
+        cancel: "取消",
+        currentProof: "目前憑證",
+        date: "日期",
+        delete: "刪除",
+        deleteEntry: "刪除交易",
+        deleteTitle: "刪除交易？",
+        deleteDescription: "這會永久移除此交易紀錄。此動作無法復原。",
+        deleting: "刪除中...",
+        direction: "方向",
+        dir: "方向",
+        editEntry: "編輯交易",
+        entryDate: "交易日期",
+        entryType: "交易類型",
+        expected: "預期金額",
+        expectedUsd: "預期金額（美元）",
+        expense: "支出",
+        fee: "費用",
+        income: "收入",
+        in: "入",
+        inReceived: "入（已收到）",
+        invoice: "發票",
+        linkClientInvoice: "連結客戶發票",
+        linkSupplierInvoice: "連結供應商發票",
+        linkVendorInvoice: "連結費用廠商發票",
+        netUsd: "淨額（美元）",
+        noEntries: "尚無紀錄。新增第一筆現金流。",
+        none: "無",
+        notes: "備註",
+        optional: "可選",
+        out: "出",
+        outSent: "出（已支付）",
+        proof: "憑證",
+        proofOfPayment: "付款憑證",
+        recordDescription: "記錄此交易的收入或支出。",
+        ref: "參照號碼",
+        referenceNumber: "參照號碼",
+        saveEntry: "儲存紀錄",
+        saving: "儲存中...",
+        selectInvoice: "選擇發票",
+        selectRate: "選擇鎖定匯率",
+        title: "交易紀錄",
+        transactions: "交易紀錄",
+        type: "類型",
+        wireRef: "匯款 / TT 參照",
+      }
+    : {
+        addTransaction: "Add Transaction",
+        amountRmb: "Amount RMB",
+        amountUsd: "Amount USD",
+        bankFee: "Bank Fees",
+        bankFeeFormula: "Bank fee = |expected - actual| =",
+        cancel: "Cancel",
+        currentProof: "Current proof",
+        date: "Date",
+        delete: "Delete",
+        deleteEntry: "Delete entry",
+        deleteTitle: "Delete transaction?",
+        deleteDescription: "This will permanently remove this transaction. This action cannot be undone.",
+        deleting: "Deleting...",
+        direction: "Direction",
+        dir: "Dir",
+        editEntry: "Edit Transaction",
+        entryDate: "Entry Date",
+        entryType: "Entry Type",
+        expected: "Expected",
+        expectedUsd: "Expected Amount (USD)",
+        expense: "Expenses",
+        fee: "Fee",
+        income: "Income",
+        in: "In",
+        inReceived: "In (received)",
+        invoice: "Invoice",
+        linkClientInvoice: "Link to Client Invoice",
+        linkSupplierInvoice: "Link to Supplier Invoice",
+        linkVendorInvoice: "Link to Vendor Invoice",
+        netUsd: "Net (USD)",
+        noEntries: "No entries yet. Add the first cash movement.",
+        none: "None",
+        notes: "Notes",
+        optional: "optional",
+        out: "Out",
+        outSent: "Out (sent)",
+        proof: "Proof",
+        proofOfPayment: "Proof of Payment",
+        recordDescription: "Record an income or expense for this trade.",
+        ref: "Ref #",
+        referenceNumber: "Reference Number",
+        saveEntry: "Save Entry",
+        saving: "Saving...",
+        selectInvoice: "Select invoice",
+        selectRate: "Select locked rate",
+        title: "Add Transaction",
+        transactions: "Transactions",
+        type: "Type",
+        wireRef: "Wire / TT ref",
+      };
+}
 
 function formatDate(value: string) {
   return new Intl.DateTimeFormat("en-US", {
@@ -115,7 +231,7 @@ function linkedInvoiceLabel(entry: TradeLedgerEntry): string | null {
   return clientInvoice?.invoice_number ?? supplierInvoice?.invoice_number ?? vendorInvoice?.invoice_number ?? null;
 }
 
-function LedgerSummary({ entries }: { entries: TradeLedgerEntry[] }) {
+function LedgerSummary({ entries, text }: { entries: TradeLedgerEntry[]; text: ReturnType<typeof getLedgerText> }) {
   const totalIn = roundMoney(
     entries
       .filter((entry) => entry.direction === "in" && entry.amount_usd != null)
@@ -129,10 +245,10 @@ function LedgerSummary({ entries }: { entries: TradeLedgerEntry[] }) {
   const totalFees = roundMoney(entries.reduce((sum, entry) => sum + Number(entry.bank_fee_usd ?? 0), 0));
   const net = roundMoney(totalIn - totalOut - totalFees);
   const stats = [
-    { color: "text-green-700", label: "Income", value: formatUsd(totalIn) },
-    { color: "text-red-700", label: "Expenses", value: formatUsd(totalOut) },
-    { color: "text-slate-600", label: "Bank Fees", value: formatUsd(totalFees) },
-    { color: net >= 0 ? "text-green-700" : "text-red-700", label: "Net (USD)", value: formatUsd(net) },
+    { color: "text-green-700", label: text.income, value: formatUsd(totalIn) },
+    { color: "text-red-700", label: text.expense, value: formatUsd(totalOut) },
+    { color: "text-slate-600", label: text.bankFee, value: formatUsd(totalFees) },
+    { color: net >= 0 ? "text-green-700" : "text-red-700", label: text.netUsd, value: formatUsd(net) },
   ];
 
   return (
@@ -155,6 +271,8 @@ function LedgerEntryDialog({
   entry,
   exchangeRates,
   supplierInvoices,
+  language,
+  text,
   tradeId,
   vendorInvoices,
 }: {
@@ -163,6 +281,8 @@ function LedgerEntryDialog({
   entry?: TradeLedgerEntry;
   clientInvoices: ClientInvoice[];
   supplierInvoices: SupplierInvoiceOutgoing[];
+  language: "en" | "zh";
+  text: ReturnType<typeof getLedgerText>;
   vendorInvoices: ExpenseVendorInvoice[];
   exchangeRates: ExchangeRate[];
 }) {
@@ -212,13 +332,13 @@ function LedgerEntryDialog({
       <DialogTrigger asChild>{children}</DialogTrigger>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>{entry ? "Edit Transaction" : "Add Transaction"}</DialogTitle>
-          <DialogDescription>Record an income or expense for this trade.</DialogDescription>
+          <DialogTitle>{entry ? text.editEntry : text.addTransaction}</DialogTitle>
+          <DialogDescription>{text.recordDescription}</DialogDescription>
         </DialogHeader>
 
         <form className="space-y-4" onSubmit={handleSubmit}>
           <div className="space-y-2">
-            <Label>Entry Type</Label>
+            <Label>{text.entryType}</Label>
             <Select name="entry_type" onValueChange={(value) => setEntryType(value as EntryType)} value={entryType}>
               <SelectTrigger>
                 <SelectValue />
@@ -226,7 +346,7 @@ function LedgerEntryDialog({
               <SelectContent>
                 {(Object.keys(ENTRY_TYPE_LABELS) as EntryType[]).map((type) => (
                   <SelectItem key={type} value={type}>
-                    {ENTRY_TYPE_LABELS[type]}
+                    {(language === "zh" ? ENTRY_TYPE_LABELS_ZH : ENTRY_TYPE_LABELS)[type]}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -237,14 +357,14 @@ function LedgerEntryDialog({
             <input name="direction" type="hidden" value={forcedDirection} />
           ) : (
             <div className="space-y-2">
-              <Label>Direction</Label>
+              <Label>{text.direction}</Label>
               <Select defaultValue={entry?.direction ?? "in"} name="direction">
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="in">In (received)</SelectItem>
-                  <SelectItem value="out">Out (sent)</SelectItem>
+                  <SelectItem value="in">{text.inReceived}</SelectItem>
+                  <SelectItem value="out">{text.outSent}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -252,7 +372,7 @@ function LedgerEntryDialog({
 
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
-              <Label htmlFor={`le_date_${entry?.id ?? "new"}`}>Entry Date</Label>
+              <Label htmlFor={`le_date_${entry?.id ?? "new"}`}>{text.entryDate}</Label>
               <Input
                 defaultValue={entry?.entry_date ?? todayInputValue()}
                 disabled={isPending}
@@ -263,20 +383,20 @@ function LedgerEntryDialog({
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor={`le_ref_${entry?.id ?? "new"}`}>Reference Number</Label>
+              <Label htmlFor={`le_ref_${entry?.id ?? "new"}`}>{text.referenceNumber}</Label>
               <Input
                 defaultValue={entry?.reference_number ?? ""}
                 disabled={isPending}
                 id={`le_ref_${entry?.id ?? "new"}`}
                 name="reference_number"
-                placeholder="Wire / TT ref"
+                placeholder={text.wireRef}
               />
             </div>
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
-              <Label htmlFor={`le_usd_${entry?.id ?? "new"}`}>Amount (USD)</Label>
+              <Label htmlFor={`le_usd_${entry?.id ?? "new"}`}>{text.amountUsd}</Label>
               <Input
                 disabled={isPending}
                 id={`le_usd_${entry?.id ?? "new"}`}
@@ -290,7 +410,7 @@ function LedgerEntryDialog({
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor={`le_rmb_${entry?.id ?? "new"}`}>Amount (RMB)</Label>
+              <Label htmlFor={`le_rmb_${entry?.id ?? "new"}`}>{text.amountRmb}</Label>
               <Input
                 defaultValue={inputNumberValue(entry?.amount_rmb)}
                 disabled={isPending}
@@ -306,7 +426,7 @@ function LedgerEntryDialog({
 
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
-              <Label htmlFor={`le_expected_${entry?.id ?? "new"}`}>Expected Amount (USD)</Label>
+              <Label htmlFor={`le_expected_${entry?.id ?? "new"}`}>{text.expectedUsd}</Label>
               <Input
                 disabled={isPending}
                 id={`le_expected_${entry?.id ?? "new"}`}
@@ -319,11 +439,11 @@ function LedgerEntryDialog({
                 value={expectedUsd}
               />
               {computedFee != null ? (
-                <p className="text-xs text-slate-500">Bank fee = |expected - actual| = {formatUsd(computedFee)}</p>
+                <p className="text-xs text-slate-500">{text.bankFeeFormula} {formatUsd(computedFee)}</p>
               ) : null}
             </div>
             <div className="space-y-2">
-              <Label htmlFor={`le_fee_${entry?.id ?? "new"}`}>Bank Fee (USD)</Label>
+              <Label htmlFor={`le_fee_${entry?.id ?? "new"}`}>{text.bankFee} (USD)</Label>
               <Input
                 defaultValue={inputNumberValue(entry?.bank_fee_usd ?? 0)}
                 disabled={isPending}
@@ -337,13 +457,13 @@ function LedgerEntryDialog({
           </div>
 
           <div className="space-y-2">
-            <Label>Exchange Rate (optional)</Label>
+            <Label>Exchange Rate ({text.optional})</Label>
             <Select defaultValue={entry?.exchange_rate_id ?? "none"} name="exchange_rate_id">
               <SelectTrigger>
-                <SelectValue placeholder="Select locked rate" />
+          <SelectValue placeholder={text.selectRate} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="none">None</SelectItem>
+                <SelectItem value="none">{text.none}</SelectItem>
                 {exchangeRates.map((rate) => (
                   <SelectItem key={rate.id} value={rate.id}>
                     {rate.payment_type === "deposit" ? "Deposit" : "Final"} -{" "}
@@ -361,8 +481,9 @@ function LedgerEntryDialog({
                 id: invoice.id,
                 label: `${invoice.invoice_number} - ${formatUsd(invoice.total_usd)}`,
               }))}
-              label="Link to Client Invoice"
+              label={text.linkClientInvoice}
               name="client_invoice_id"
+              text={text}
             />
           ) : null}
 
@@ -373,8 +494,9 @@ function LedgerEntryDialog({
                 id: invoice.id,
                 label: `${invoice.invoice_number} - ${formatRmb(invoice.total_rmb)}`,
               }))}
-              label="Link to Supplier Invoice"
+              label={text.linkSupplierInvoice}
               name="supplier_invoice_id"
+              text={text}
             />
           ) : null}
 
@@ -385,13 +507,14 @@ function LedgerEntryDialog({
                 id: invoice.id,
                 label: `${invoice.invoice_number ?? invoice.id.slice(0, 8)} - ${formatUsd(invoice.amount_usd)}`,
               }))}
-              label="Link to Vendor Invoice"
+              label={text.linkVendorInvoice}
               name="expense_vendor_invoice_id"
+              text={text}
             />
           ) : null}
 
           <div className="space-y-2">
-            <Label htmlFor={`le_proof_${entry?.id ?? "new"}`}>Proof of Payment</Label>
+            <Label htmlFor={`le_proof_${entry?.id ?? "new"}`}>{text.proofOfPayment}</Label>
             <Input
               accept=".pdf,.jpg,.jpeg,.png"
               disabled={isPending}
@@ -400,12 +523,12 @@ function LedgerEntryDialog({
               type="file"
             />
             {entry?.proof_onedrive_url ? (
-              <p className="text-xs text-slate-500">Current proof: {entry.proof_file_name ?? "proof"}</p>
+              <p className="text-xs text-slate-500">{text.currentProof}: {entry.proof_file_name ?? "proof"}</p>
             ) : null}
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor={`le_notes_${entry?.id ?? "new"}`}>Notes</Label>
+            <Label htmlFor={`le_notes_${entry?.id ?? "new"}`}>{text.notes}</Label>
             <Textarea
               defaultValue={entry?.notes ?? ""}
               disabled={isPending}
@@ -419,10 +542,10 @@ function LedgerEntryDialog({
 
           <div className="flex justify-end gap-2">
             <Button disabled={isPending} onClick={() => setOpen(false)} type="button" variant="outline">
-              Cancel
+              {text.cancel}
             </Button>
             <Button className="bg-[#0d1b34] hover:bg-[#13294d]" disabled={isPending} type="submit">
-              {isPending ? "Saving..." : "Save Entry"}
+              {isPending ? text.saving : text.saveEntry}
             </Button>
           </div>
         </form>
@@ -436,21 +559,23 @@ function InvoiceSelect({
   invoices,
   label,
   name,
+  text,
 }: {
   name: string;
   label: string;
   defaultValue: string;
   invoices: { id: string; label: string }[];
+  text: ReturnType<typeof getLedgerText>;
 }) {
   return (
     <div className="space-y-2">
-      <Label>{label} (optional)</Label>
+      <Label>{label} ({text.optional})</Label>
       <Select defaultValue={defaultValue} name={name}>
         <SelectTrigger>
-          <SelectValue placeholder="Select invoice" />
+          <SelectValue placeholder={text.selectInvoice} />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="none">None</SelectItem>
+          <SelectItem value="none">{text.none}</SelectItem>
           {invoices.map((invoice) => (
             <SelectItem key={invoice.id} value={invoice.id}>
               {invoice.label}
@@ -462,7 +587,7 @@ function InvoiceSelect({
   );
 }
 
-function DeleteEntryButton({ entryId, tradeId }: { entryId: string; tradeId: string }) {
+function DeleteEntryButton({ entryId, text, tradeId }: { entryId: string; tradeId: string; text: ReturnType<typeof getLedgerText> }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
 
@@ -485,20 +610,20 @@ function DeleteEntryButton({ entryId, tradeId }: { entryId: string; tradeId: str
       <AlertDialogTrigger asChild>
         <Button disabled={isPending} size="icon" type="button" variant="ghost">
           <Trash2 className="h-4 w-4 text-slate-400 hover:text-red-600" />
-          <span className="sr-only">Delete entry</span>
+          <span className="sr-only">{text.deleteEntry}</span>
         </Button>
       </AlertDialogTrigger>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>Delete transaction?</AlertDialogTitle>
+          <AlertDialogTitle>{text.deleteTitle}</AlertDialogTitle>
           <AlertDialogDescription>
-            This will permanently remove this transaction. This action cannot be undone.
+            {text.deleteDescription}
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel disabled={isPending}>Cancel</AlertDialogCancel>
+          <AlertDialogCancel disabled={isPending}>{text.cancel}</AlertDialogCancel>
           <AlertDialogAction className="bg-red-600 hover:bg-red-700" disabled={isPending} onClick={handleDelete}>
-            {isPending ? "Deleting..." : "Delete"}
+            {isPending ? text.deleting : text.delete}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
@@ -523,24 +648,30 @@ export function LedgerTab({
   vendorInvoices: ExpenseVendorInvoice[];
   exchangeRates: ExchangeRate[];
 }) {
+  const { language } = useLanguage();
+  const text = getLedgerText(language);
+  const entryLabels = language === "zh" ? ENTRY_TYPE_LABELS_ZH : ENTRY_TYPE_LABELS;
+
   return (
     <div className="space-y-6">
-      <LedgerSummary entries={initialEntries} />
+      <LedgerSummary entries={initialEntries} text={text} />
 
       <Card className="border-slate-200 shadow-sm">
         <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle>Transactions</CardTitle>
+          <CardTitle>{text.transactions}</CardTitle>
           {canManage ? (
             <LedgerEntryDialog
               clientInvoices={clientInvoices}
               exchangeRates={exchangeRates}
+              language={language}
               supplierInvoices={supplierInvoices}
+              text={text}
               tradeId={tradeId}
               vendorInvoices={vendorInvoices}
             >
               <Button className="bg-[#0d1b34] hover:bg-[#13294d]">
                 <Plus className="mr-2 h-4 w-4" />
-                Add Transaction
+                {text.addTransaction}
               </Button>
             </LedgerEntryDialog>
           ) : null}
@@ -550,17 +681,17 @@ export function LedgerTab({
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Date</TableHead>
-                  <TableHead>Type</TableHead>
-                  <TableHead>Dir</TableHead>
-                  <TableHead className="text-right">Expected</TableHead>
-                  <TableHead className="text-right">Amount USD</TableHead>
-                  <TableHead className="text-right">Amount RMB</TableHead>
-                  <TableHead className="text-right">Fee</TableHead>
-                  <TableHead>Ref #</TableHead>
-                  <TableHead>Proof</TableHead>
-                  <TableHead>Invoice</TableHead>
-                  <TableHead>Notes</TableHead>
+                  <TableHead>{text.date}</TableHead>
+                  <TableHead>{text.type}</TableHead>
+                  <TableHead>{text.dir}</TableHead>
+                  <TableHead className="text-right">{text.expected}</TableHead>
+                  <TableHead className="text-right">{text.amountUsd}</TableHead>
+                  <TableHead className="text-right">{text.amountRmb}</TableHead>
+                  <TableHead className="text-right">{text.fee}</TableHead>
+                  <TableHead>{text.ref}</TableHead>
+                  <TableHead>{text.proof}</TableHead>
+                  <TableHead>{text.invoice}</TableHead>
+                  <TableHead>{text.notes}</TableHead>
                   {canManage ? <TableHead /> : null}
                 </TableRow>
               </TableHeader>
@@ -568,10 +699,10 @@ export function LedgerTab({
                 {initialEntries.map((entry) => (
                   <TableRow key={entry.id}>
                     <TableCell className="whitespace-nowrap">{formatDate(entry.entry_date)}</TableCell>
-                    <TableCell className="whitespace-nowrap text-sm">{ENTRY_TYPE_LABELS[entry.entry_type]}</TableCell>
+                    <TableCell className="whitespace-nowrap text-sm">{entryLabels[entry.entry_type]}</TableCell>
                     <TableCell>
                       <Badge className={DIRECTION_CLASSES[entry.direction]} variant="outline">
-                        {entry.direction === "in" ? "In" : "Out"}
+                        {entry.direction === "in" ? text.in : text.out}
                       </Badge>
                     </TableCell>
                     <TableCell className="text-right tabular-nums">{formatUsd(entry.expected_amount_usd)}</TableCell>
@@ -603,16 +734,18 @@ export function LedgerTab({
                             clientInvoices={clientInvoices}
                             entry={entry}
                             exchangeRates={exchangeRates}
+                            language={language}
                             supplierInvoices={supplierInvoices}
+                            text={text}
                             tradeId={tradeId}
                             vendorInvoices={vendorInvoices}
                           >
                             <Button size="icon" type="button" variant="ghost">
                               <Pencil className="h-4 w-4 text-slate-400 hover:text-[#0d1b34]" />
-                              <span className="sr-only">Edit entry</span>
+                              <span className="sr-only">{text.editEntry}</span>
                             </Button>
                           </LedgerEntryDialog>
-                          <DeleteEntryButton entryId={entry.id} tradeId={tradeId} />
+                          <DeleteEntryButton entryId={entry.id} text={text} tradeId={tradeId} />
                         </div>
                       </TableCell>
                     ) : null}
@@ -621,7 +754,7 @@ export function LedgerTab({
               </TableBody>
             </Table>
           ) : (
-            <p className="px-6 py-10 text-sm text-slate-500">No entries yet. Add the first cash movement.</p>
+            <p className="px-6 py-10 text-sm text-slate-500">{text.noEntries}</p>
           )}
         </CardContent>
       </Card>

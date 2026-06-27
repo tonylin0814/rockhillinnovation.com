@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { useLanguage } from "@/context/LanguageContext";
 import type { ShareholderBook } from "@/types";
 
 function formatUsd(value: number) {
@@ -53,6 +54,66 @@ export function ShareholderBookCard({
   book: ShareholderBook | null;
   canManage: boolean;
 }) {
+  const { language } = useLanguage();
+  const text = language === "zh"
+    ? {
+        bookCalculated: "利潤簿已計算",
+        bookConfirmed: "利潤簿已確認",
+        calculateBook: "計算利潤簿",
+        calculating: "計算中...",
+        confirm: "確認",
+        confirmed: "已確認",
+        confirming: "確認中...",
+        corporateTax: "營利事業所得稅",
+        distribution: "分配明細",
+        draft: "草稿",
+        expenseDeductions: "費用扣除",
+        grossProfit: "毛利",
+        grossShare: "毛利分配",
+        invoicedThrough: "開票公司",
+        netProfit: "淨利",
+        netShare: "淨額分配",
+        noCalculation: "尚未計算。",
+        noCalculationHelp: "點擊「計算利潤簿」執行第一次計算。",
+        perShare: "每 1% 分配",
+        person: "人員",
+        profitBook: "利潤簿",
+        recalculate: "重新計算",
+        splitPct: "分成 %",
+        summaryAsOf: "摘要 - 截至",
+        tax: "稅額",
+        taxableBase: "應稅基礎",
+        total: "合計",
+      }
+    : {
+        bookCalculated: "Book calculated",
+        bookConfirmed: "Book confirmed",
+        calculateBook: "Calculate Book",
+        calculating: "Calculating...",
+        confirm: "Confirm",
+        confirmed: "Confirmed",
+        confirming: "Confirming...",
+        corporateTax: "Corporate Tax",
+        distribution: "Distribution",
+        draft: "Draft",
+        expenseDeductions: "Expense Deductions",
+        grossProfit: "Gross Profit",
+        grossShare: "Gross Share",
+        invoicedThrough: "Invoiced Through",
+        netProfit: "Net Profit",
+        netShare: "Net Share",
+        noCalculation: "No calculation yet.",
+        noCalculationHelp: 'Click "Calculate Book" to run the first calculation.',
+        perShare: "Per 1% Share",
+        person: "Person",
+        profitBook: "Profit Book",
+        recalculate: "Recalculate",
+        splitPct: "Split %",
+        summaryAsOf: "Summary - as of",
+        tax: "Tax",
+        taxableBase: "Taxable Base",
+        total: "Total",
+      };
   const router = useRouter();
   const [isCalculating, startCalculate] = useTransition();
   const [isConfirming, startConfirm] = useTransition();
@@ -66,7 +127,7 @@ export function ShareholderBookCard({
         return;
       }
 
-      toast.success("Book calculated");
+      toast.success(text.bookCalculated);
       router.refresh();
     });
   }
@@ -84,7 +145,7 @@ export function ShareholderBookCard({
         return;
       }
 
-      toast.success("Book confirmed");
+      toast.success(text.bookConfirmed);
       router.refresh();
     });
   }
@@ -96,7 +157,7 @@ export function ShareholderBookCard({
     <Card className="border-slate-200 shadow-sm">
       <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3">
-          <CardTitle>Profit Book</CardTitle>
+          <CardTitle>{text.profitBook}</CardTitle>
           {book ? (
             <Badge
               className={
@@ -106,7 +167,7 @@ export function ShareholderBookCard({
               }
               variant="outline"
             >
-              {book.status === "confirmed" ? "Confirmed" : "Draft"}
+              {book.status === "confirmed" ? text.confirmed : text.draft}
             </Badge>
           ) : null}
         </div>
@@ -119,7 +180,7 @@ export function ShareholderBookCard({
                 ) : (
                   <Calculator className="mr-2 h-4 w-4" />
                 )}
-                {isCalculating ? "Calculating..." : book ? "Recalculate" : "Calculate Book"}
+                {isCalculating ? text.calculating : book ? text.recalculate : text.calculateBook}
               </Button>
             ) : null}
             {book?.status === "draft" ? (
@@ -129,7 +190,7 @@ export function ShareholderBookCard({
                 ) : (
                   <CheckCircle className="mr-2 h-4 w-4" />
                 )}
-                {isConfirming ? "Confirming..." : "Confirm"}
+                {isConfirming ? text.confirming : text.confirm}
               </Button>
             ) : null}
           </div>
@@ -139,39 +200,39 @@ export function ShareholderBookCard({
       <CardContent>
         {!book ? (
           <p className="text-sm text-slate-500">
-            No calculation yet. {canManage ? 'Click "Calculate Book" to run the first calculation.' : ""}
+            {text.noCalculation} {canManage ? text.noCalculationHelp : ""}
           </p>
         ) : (
           <div className="space-y-6">
             <div>
               <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
-                Summary - as of {formatDate(book.calculated_at)}
+                {text.summaryAsOf} {formatDate(book.calculated_at)}
               </p>
               <div className="rounded-lg border border-slate-200 px-4 py-1">
-                <SummaryRow label="Gross Profit" value={formatUsd(book.gross_profit_usd)} />
-                <SummaryRow label="Expense Deductions" value={`(${formatUsd(book.expense_deductions_usd)})`} />
-                <SummaryRow label="Taxable Base" value={formatUsd(book.taxable_base_usd)} />
+                <SummaryRow label={text.grossProfit} value={formatUsd(book.gross_profit_usd)} />
+                <SummaryRow label={text.expenseDeductions} value={`(${formatUsd(book.expense_deductions_usd)})`} />
+                <SummaryRow label={text.taxableBase} value={formatUsd(book.taxable_base_usd)} />
                 <SummaryRow
-                  label={`Corporate Tax (${formatPct(Number(book.corporate_tax_rate) * 100)})`}
+                  label={`${text.corporateTax} (${formatPct(Number(book.corporate_tax_rate) * 100)})`}
                   value={`(${formatUsd(book.corporate_tax_usd)})`}
                 />
-                <SummaryRow highlight label="Net Profit" value={formatUsd(book.net_profit_usd)} />
-                <SummaryRow label="Per 1% Share" value={formatUsd(book.per_share_usd)} />
+                <SummaryRow highlight label={text.netProfit} value={formatUsd(book.net_profit_usd)} />
+                <SummaryRow label={text.perShare} value={formatUsd(book.per_share_usd)} />
               </div>
             </div>
 
             {lines.length ? (
               <div>
-                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">Distribution</p>
+                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">{text.distribution}</p>
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Person</TableHead>
-                      <TableHead className="text-right">Split %</TableHead>
-                      <TableHead className="text-right">Gross Share</TableHead>
-                      <TableHead className="text-right">Tax</TableHead>
-                      <TableHead className="text-right">Net Share</TableHead>
-                      <TableHead>Invoiced Through</TableHead>
+                      <TableHead>{text.person}</TableHead>
+                      <TableHead className="text-right">{text.splitPct}</TableHead>
+                      <TableHead className="text-right">{text.grossShare}</TableHead>
+                      <TableHead className="text-right">{text.tax}</TableHead>
+                      <TableHead className="text-right">{text.netShare}</TableHead>
+                      <TableHead>{text.invoicedThrough}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -192,7 +253,7 @@ export function ShareholderBookCard({
                   </TableBody>
                   <TableFooter>
                     <TableRow>
-                      <TableCell className="font-semibold">Total</TableCell>
+                      <TableCell className="font-semibold">{text.total}</TableCell>
                       <TableCell className="text-right font-semibold">
                         {formatPct(lines.reduce((sum, line) => sum + Number(line.split_pct), 0))}
                       </TableCell>
