@@ -1,3 +1,4 @@
+import { T } from "@/components/i18n/T";
 import { ProductFormDialog, type ProductSupplierOption } from "@/components/products/ProductFormDialog";
 import { ProductsTable } from "@/components/products/ProductsTable";
 import { Button } from "@/components/ui/button";
@@ -18,8 +19,12 @@ export default async function ProductsPage({
     return (
       <div className="flex min-h-[calc(100vh-8rem)] items-center justify-center">
         <div className="text-center">
-          <h1 className="text-2xl font-semibold text-[#0d1b34]">Access denied</h1>
-          <p className="mt-2 text-sm text-slate-500">Products are available to signed-in users only.</p>
+          <h1 className="text-2xl font-semibold text-[#0d1b34]">
+            <T k="common.accessDenied" fallback="Access denied" />
+          </h1>
+          <p className="mt-2 text-sm text-slate-500">
+            <T k="products.accessDeniedHelp" fallback="Products are available to signed-in users only." />
+          </p>
         </div>
       </div>
     );
@@ -60,8 +65,12 @@ export default async function ProductsPage({
     <section className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Catalog</p>
-          <h1 className="mt-2 text-3xl font-semibold text-[#0d1b34]">Products</h1>
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+            <T k="products.catalog" fallback="Catalog" />
+          </p>
+          <h1 className="mt-2 text-3xl font-semibold text-[#0d1b34]">
+            <T k="products.title" fallback="Products" />
+          </h1>
         </div>
         {canManage ? (
           <div className="flex flex-wrap items-center justify-end gap-2">
@@ -71,7 +80,7 @@ export default async function ProductsPage({
               defaultProductType="set"
               mode="create"
               suppliers={supplierOptions}
-              trigger={<Button variant="outline">Add Set</Button>}
+              trigger={<Button variant="outline"><T k="products.addSet" fallback="Add Set" /></Button>}
             />
           </div>
         ) : null}
@@ -80,20 +89,20 @@ export default async function ProductsPage({
       <Tabs className="space-y-4" defaultValue={activeTab}>
         <TabsList>
           <TabsTrigger asChild value="products">
-            <a href="/products?tab=products">Products</a>
+            <a href="/products?tab=products"><T k="products.products" fallback="Products" /></a>
           </TabsTrigger>
           <TabsTrigger asChild value="sets">
-            <a href="/products?tab=sets">Sets</a>
+            <a href="/products?tab=sets"><T k="products.sets" fallback="Sets" /></a>
           </TabsTrigger>
           <TabsTrigger asChild value="inactive">
-            <a href="/products?tab=inactive">Inactive Items</a>
+            <a href="/products?tab=inactive"><T k="products.inactiveItems" fallback="Inactive Items" /></a>
           </TabsTrigger>
         </TabsList>
 
         <TabsContent value="products">
           <Card className="border-slate-200 shadow-sm">
             <CardHeader>
-              <CardTitle>Products</CardTitle>
+              <CardTitle><T k="products.products" fallback="Products" /></CardTitle>
             </CardHeader>
             <CardContent>
               <ProductsTable backHref="/products?tab=products" mode="products" products={standardProducts} />
@@ -104,7 +113,7 @@ export default async function ProductsPage({
         <TabsContent value="sets">
           <Card className="border-slate-200 shadow-sm">
             <CardHeader>
-              <CardTitle>Set Products</CardTitle>
+              <CardTitle><T k="products.setProducts" fallback="Set Products" /></CardTitle>
             </CardHeader>
             <CardContent>
               <ProductsTable backHref="/products?tab=sets" mode="sets" products={setProducts} />
@@ -115,7 +124,7 @@ export default async function ProductsPage({
         <TabsContent value="inactive">
           <Card className="border-slate-200 shadow-sm">
             <CardHeader>
-              <CardTitle>Inactive Items</CardTitle>
+              <CardTitle><T k="products.inactiveItems" fallback="Inactive Items" /></CardTitle>
             </CardHeader>
             <CardContent>
               <ProductsTable backHref="/products?tab=inactive" mode="inactive" products={inactiveProducts} />

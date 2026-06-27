@@ -1,6 +1,7 @@
 import { Suspense } from "react";
 
 import { CostHistoryTable } from "@/components/history/CostHistoryTable";
+import { T } from "@/components/i18n/T";
 import { getCurrentUser } from "@/lib/auth";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 
@@ -18,8 +19,12 @@ export default async function CostHistoryPage() {
     return (
       <div className="flex min-h-[calc(100vh-8rem)] items-center justify-center">
         <div className="text-center">
-          <h1 className="text-2xl font-semibold text-[#0d1b34]">Access denied</h1>
-          <p className="mt-2 text-sm text-slate-500">History is not available to your account.</p>
+          <h1 className="text-2xl font-semibold text-[#0d1b34]">
+            <T k="common.accessDenied" fallback="Access denied" />
+          </h1>
+          <p className="mt-2 text-sm text-slate-500">
+            <T k="history.accessDeniedHelp" fallback="History is not available to your account." />
+          </p>
         </div>
       </div>
     );
@@ -70,11 +75,15 @@ export default async function CostHistoryPage() {
   return (
     <section className="space-y-6">
       <div>
-        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Records</p>
-        <h1 className="mt-2 text-3xl font-semibold text-[#0d1b34]">Cost History</h1>
+        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+          <T k="history.records" fallback="Records" />
+        </p>
+        <h1 className="mt-2 text-3xl font-semibold text-[#0d1b34]">
+          <T k="history.costHistory" fallback="Cost History" />
+        </h1>
       </div>
 
-      <Suspense fallback={<div className="py-4 text-sm text-slate-500">Loading...</div>}>
+      <Suspense fallback={<div className="py-4 text-sm text-slate-500"><T k="common.loading" fallback="Loading..." /></div>}>
         <CostHistoryTable
           costRows={(costRows ?? []).map((row) => ({
             ...row,

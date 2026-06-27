@@ -6,6 +6,7 @@ import { useMemo, useState, useTransition } from "react";
 import { toast } from "sonner";
 
 import { saveSetComponents } from "@/app/actions/products";
+import { useLanguage } from "@/context/LanguageContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -60,6 +61,7 @@ export function SetComponentsEditor({
   canManage?: boolean;
 }) {
   const router = useRouter();
+  const { t } = useLanguage();
   const [isEditing, setIsEditing] = useState(false);
   const [rows, setRows] = useState<EditableComponent[]>(() => rowsFromComponents(initialComponents));
   const [isPending, startTransition] = useTransition();
@@ -128,12 +130,12 @@ export function SetComponentsEditor({
     const uniqueIds = new Set(selectedIds);
 
     if (selectedIds.length !== rows.length) {
-      toast.error("Select an English name for every component row");
+      toast.error(t.products.selectComponentRows);
       return;
     }
 
     if (uniqueIds.size !== selectedIds.length) {
-      toast.error("A component can only be added once");
+      toast.error(t.products.componentUnique);
       return;
     }
 
@@ -153,7 +155,7 @@ export function SetComponentsEditor({
         return;
       }
 
-      toast.success("Set components saved");
+      toast.success(t.products.setComponentsSaved);
       setIsEditing(false);
       router.refresh();
     });
@@ -164,7 +166,7 @@ export function SetComponentsEditor({
       <div className="flex justify-end">
         {canManage && !isEditing ? (
           <Button onClick={() => setIsEditing(true)} size="sm" variant="outline">
-            Edit Components
+            {t.actions.edit} {t.products.components}
           </Button>
         ) : null}
       </div>
@@ -174,11 +176,11 @@ export function SetComponentsEditor({
           <TableRow>
             {isEditing ? <TableHead className="w-10" /> : null}
             <TableHead className="w-14">#</TableHead>
-            <TableHead>Rock Hill Code</TableHead>
-            <TableHead>Product English Name</TableHead>
-            <TableHead>Supplier</TableHead>
-            <TableHead className="w-32">Qty Needed</TableHead>
-            {isEditing ? <TableHead className="text-right">Actions</TableHead> : null}
+            <TableHead>{t.products.rockHillCode}</TableHead>
+            <TableHead>{t.products.englishName}</TableHead>
+            <TableHead>{t.products.supplier}</TableHead>
+            <TableHead className="w-32">{t.table.quantity}</TableHead>
+            {isEditing ? <TableHead className="text-right">{t.table.actions}</TableHead> : null}
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -196,7 +198,7 @@ export function SetComponentsEditor({
                   {isEditing ? (
                     <Select onValueChange={(value) => updateComponent(index, value)} value={row.component_product_id}>
                       <SelectTrigger className="min-w-64 bg-white">
-                        <SelectValue placeholder="Select product" />
+                        <SelectValue placeholder={t.products.product} />
                       </SelectTrigger>
                       <SelectContent>
                         {availableProducts
@@ -278,7 +280,7 @@ export function SetComponentsEditor({
           ) : (
             <TableRow>
               <TableCell className="text-slate-500" colSpan={isEditing ? 6 : 5}>
-                No components added yet.
+                {t.common.noData}
               </TableCell>
             </TableRow>
           )}
@@ -290,7 +292,7 @@ export function SetComponentsEditor({
           <div className="flex justify-start">
             <Button disabled={!availableToAdd.length} onClick={addComponentRow} type="button" variant="outline">
               <Plus className="mr-2 h-4 w-4" />
-              Add Component Row
+              {t.actions.add} {t.products.components}
             </Button>
           </div>
 
@@ -304,11 +306,11 @@ export function SetComponentsEditor({
               type="button"
               variant="outline"
             >
-              Cancel
+              {t.actions.cancel}
             </Button>
             <Button className="bg-[#0d1b34] hover:bg-[#13294d]" disabled={isPending} onClick={handleSave} type="button">
               {isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-              Save Components
+              {t.actions.save} {t.products.components}
             </Button>
           </div>
         </div>

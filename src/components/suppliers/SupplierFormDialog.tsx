@@ -6,6 +6,7 @@ import { FormEvent, ReactNode, useEffect, useState, useTransition } from "react"
 import { toast } from "sonner";
 
 import { createSupplier, updateSupplier } from "@/app/actions/suppliers";
+import { useLanguage } from "@/context/LanguageContext";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -35,6 +36,7 @@ type SupplierFormDialogProps = {
 
 export function SupplierFormDialog({ mode, initialData, trigger }: SupplierFormDialogProps) {
   const router = useRouter();
+  const { t } = useLanguage();
   const [open, setOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [invoiceFormat, setInvoiceFormat] = useState<Supplier["invoice_format"]>(
@@ -68,7 +70,7 @@ export function SupplierFormDialog({ mode, initialData, trigger }: SupplierFormD
       }
 
       setOpen(false);
-      toast.success(mode === "create" ? "Supplier created successfully" : "Supplier updated successfully");
+      toast.success(mode === "create" ? t.suppliers.createdSuccessfully : t.suppliers.updatedSuccessfully);
       router.refresh();
 
       if (mode === "create" && result.id) {
@@ -83,13 +85,13 @@ export function SupplierFormDialog({ mode, initialData, trigger }: SupplierFormD
         {trigger ?? (
           <Button className="bg-[#0d1b34] hover:bg-[#13294d]">
             <Plus className="mr-2 h-4 w-4" />
-            Add Supplier
+            {t.suppliers.addSupplier}
           </Button>
         )}
       </DialogTrigger>
       <DialogContent className="sm:max-w-3xl">
         <DialogHeader>
-          <DialogTitle>{mode === "create" ? "Add Supplier" : "Edit Supplier"}</DialogTitle>
+          <DialogTitle>{mode === "create" ? t.suppliers.addSupplier : t.suppliers.editSupplier}</DialogTitle>
           <DialogDescription>
             {mode === "create" ? "Create a new supplier profile." : "Update this supplier profile."}
           </DialogDescription>
@@ -98,7 +100,7 @@ export function SupplierFormDialog({ mode, initialData, trigger }: SupplierFormD
         <form className="space-y-5" onSubmit={handleSubmit}>
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
-              <Label htmlFor="code">Supplier Code</Label>
+              <Label htmlFor="code">{t.suppliers.supplierCode}</Label>
               <Input
                 className="uppercase"
                 defaultValue={initialData?.code ?? ""}
@@ -112,11 +114,11 @@ export function SupplierFormDialog({ mode, initialData, trigger }: SupplierFormD
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="name">English Name</Label>
+              <Label htmlFor="name">{t.suppliers.englishName}</Label>
               <Input defaultValue={initialData?.name ?? ""} disabled={isPending} id="name" name="name" required />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="name_chinese">Chinese Name</Label>
+              <Label htmlFor="name_chinese">{t.suppliers.chineseName}</Label>
               <Input
                 defaultValue={initialData?.name_chinese ?? ""}
                 disabled={isPending}
@@ -125,11 +127,11 @@ export function SupplierFormDialog({ mode, initialData, trigger }: SupplierFormD
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="country">Country</Label>
+              <Label htmlFor="country">{t.table.country}</Label>
               <Input defaultValue={initialData?.country ?? ""} disabled={isPending} id="country" name="country" />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="website">Website</Label>
+              <Label htmlFor="website">{t.suppliers.website}</Label>
               <Input
                 defaultValue={initialData?.website ?? ""}
                 disabled={isPending}
@@ -139,18 +141,18 @@ export function SupplierFormDialog({ mode, initialData, trigger }: SupplierFormD
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="tel">TEL</Label>
+              <Label htmlFor="tel">{t.suppliers.tel}</Label>
               <Input defaultValue={initialData?.tel ?? ""} disabled={isPending} id="tel" name="tel" />
             </div>
             <div className="space-y-2 sm:col-span-2">
-              <Label htmlFor="invoice_format">Invoice Format</Label>
+              <Label htmlFor="invoice_format">{t.suppliers.invoiceFormat}</Label>
               <Select
                 disabled={isPending}
                 onValueChange={(value: Supplier["invoice_format"]) => setInvoiceFormat(value)}
                 value={invoiceFormat}
               >
                 <SelectTrigger id="invoice_format">
-                  <SelectValue placeholder="Select invoice format" />
+                  <SelectValue placeholder={t.suppliers.invoiceFormat} />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="image">Image</SelectItem>
@@ -163,12 +165,12 @@ export function SupplierFormDialog({ mode, initialData, trigger }: SupplierFormD
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="address">Address</Label>
+            <Label htmlFor="address">{t.table.address}</Label>
             <Textarea defaultValue={initialData?.address ?? ""} disabled={isPending} id="address" name="address" />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="other_address">Other Address</Label>
+            <Label htmlFor="other_address">{t.suppliers.otherAddress}</Label>
             <Textarea
               defaultValue={initialData?.other_address ?? ""}
               disabled={isPending}
@@ -179,12 +181,12 @@ export function SupplierFormDialog({ mode, initialData, trigger }: SupplierFormD
 
           <div className="space-y-4 rounded-lg border border-slate-200 p-4">
             <div>
-              <h3 className="text-sm font-semibold text-[#0d1b34]">Banking Information</h3>
+              <h3 className="text-sm font-semibold text-[#0d1b34]">{t.common.bankingInformation}</h3>
               <p className="mt-1 text-xs text-slate-500">Optional supplier payment details.</p>
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
-                <Label htmlFor="bank_account_name">Account Name</Label>
+                <Label htmlFor="bank_account_name">{t.table.accountName}</Label>
                 <Input
                   defaultValue={initialData?.bank_account_name ?? ""}
                   disabled={isPending}
@@ -193,7 +195,7 @@ export function SupplierFormDialog({ mode, initialData, trigger }: SupplierFormD
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="bank_account_number">Account Number</Label>
+                <Label htmlFor="bank_account_number">{t.table.accountNumber}</Label>
                 <Input
                   defaultValue={initialData?.bank_account_number ?? ""}
                   disabled={isPending}
@@ -202,7 +204,7 @@ export function SupplierFormDialog({ mode, initialData, trigger }: SupplierFormD
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="bank_currency">Currency</Label>
+                <Label htmlFor="bank_currency">{t.table.currency}</Label>
                 <Input
                   defaultValue={initialData?.bank_currency ?? ""}
                   disabled={isPending}
@@ -212,7 +214,7 @@ export function SupplierFormDialog({ mode, initialData, trigger }: SupplierFormD
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="bank_name">Bank Name</Label>
+                <Label htmlFor="bank_name">{t.table.bankName}</Label>
                 <Input
                   defaultValue={initialData?.bank_name ?? ""}
                   disabled={isPending}
@@ -248,7 +250,7 @@ export function SupplierFormDialog({ mode, initialData, trigger }: SupplierFormD
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="bank_swift_code">SWIFT Code</Label>
+                <Label htmlFor="bank_swift_code">{t.table.swiftCode}</Label>
                 <Input
                   defaultValue={initialData?.bank_swift_code ?? ""}
                   disabled={isPending}
@@ -257,7 +259,7 @@ export function SupplierFormDialog({ mode, initialData, trigger }: SupplierFormD
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="bank_tel">Bank TEL</Label>
+                <Label htmlFor="bank_tel">{t.table.bankTel}</Label>
                 <Input
                   defaultValue={initialData?.bank_tel ?? ""}
                   disabled={isPending}
@@ -267,7 +269,7 @@ export function SupplierFormDialog({ mode, initialData, trigger }: SupplierFormD
               </div>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="bank_address">Bank Address</Label>
+              <Label htmlFor="bank_address">{t.table.bankAddress}</Label>
               <Textarea
                 defaultValue={initialData?.bank_address ?? ""}
                 disabled={isPending}
@@ -276,7 +278,7 @@ export function SupplierFormDialog({ mode, initialData, trigger }: SupplierFormD
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="banking_instructions">Banking Instructions</Label>
+              <Label htmlFor="banking_instructions">{t.suppliers.bankingInstructions}</Label>
               <Textarea
                 defaultValue={initialData?.banking_instructions ?? ""}
                 disabled={isPending}
@@ -289,7 +291,7 @@ export function SupplierFormDialog({ mode, initialData, trigger }: SupplierFormD
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="notes">Notes</Label>
+            <Label htmlFor="notes">{t.table.notes}</Label>
             <Textarea defaultValue={initialData?.notes ?? ""} disabled={isPending} id="notes" name="notes" />
           </div>
 
@@ -297,11 +299,11 @@ export function SupplierFormDialog({ mode, initialData, trigger }: SupplierFormD
 
           <div className="sticky bottom-0 -mx-6 -mb-6 flex justify-end gap-2 border-t border-slate-200 bg-white px-6 py-4">
             <Button disabled={isPending} onClick={() => setOpen(false)} type="button" variant="outline">
-              Cancel
+              {t.actions.cancel}
             </Button>
             <Button className="bg-[#0d1b34] hover:bg-[#13294d]" disabled={isPending} type="submit">
               {isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-              {mode === "create" ? "Create Supplier" : "Save Changes"}
+              {mode === "create" ? t.suppliers.createSupplier : t.suppliers.saveChanges}
             </Button>
           </div>
         </form>

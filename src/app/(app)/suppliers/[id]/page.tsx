@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import type { ReactNode } from "react";
 
 import { SupplierContactsEditor } from "@/components/suppliers/SupplierContactsEditor";
 import { SupplierFormDialog } from "@/components/suppliers/SupplierFormDialog";
@@ -42,7 +43,7 @@ function InvoiceFormatBadge({ format }: { format: Supplier["invoice_format"] }) 
   );
 }
 
-function DetailRow({ label, value }: { label: string; value: string | number | null }) {
+function DetailRow({ label, value }: { label: ReactNode; value: string | number | null }) {
   return (
     <div className="border-b border-slate-100 py-3 last:border-0">
       <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{label}</p>
@@ -58,8 +59,12 @@ export default async function SupplierDetailPage({ params }: { params: { id: str
     return (
       <div className="flex min-h-[calc(100vh-8rem)] items-center justify-center">
         <div className="text-center">
-          <h1 className="text-2xl font-semibold text-[#0d1b34]">Access denied</h1>
-          <p className="mt-2 text-sm text-slate-500">Supplier profiles are available to admins and managers only.</p>
+          <h1 className="text-2xl font-semibold text-[#0d1b34]">
+            <T k="common.accessDenied" fallback="Access denied" />
+          </h1>
+          <p className="mt-2 text-sm text-slate-500">
+            <T k="suppliers.accessDeniedHelp" fallback="Supplier profiles are available to admins and managers only." />
+          </p>
         </div>
       </div>
     );
@@ -86,7 +91,7 @@ export default async function SupplierDetailPage({ params }: { params: { id: str
     <section className="space-y-6">
       <div>
         <Link className="text-sm font-medium text-slate-500 transition-colors hover:text-[#0d1b34]" href="/suppliers">
-          ← Suppliers
+          ← <T k="suppliers.title" fallback="Suppliers" />
         </Link>
         <div className="mt-4 flex flex-wrap items-center gap-3">
           <h1 className="text-3xl font-semibold text-[#0d1b34]">{supplier.code}</h1>
@@ -98,57 +103,59 @@ export default async function SupplierDetailPage({ params }: { params: { id: str
         <div className="space-y-6 lg:col-span-2">
           <Card className="border-slate-200 shadow-sm">
             <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle>Main Info</CardTitle>
+              <CardTitle><T k="common.mainInfo" fallback="Main Info" /></CardTitle>
               <SupplierFormDialog
                 initialData={supplier}
                 mode="edit"
                 trigger={
                   <Button size="sm" variant="outline">
-                    Edit
+                    <T k="actions.edit" fallback="Edit" />
                   </Button>
                 }
               />
             </CardHeader>
             <CardContent>
               <div className="grid gap-x-6 sm:grid-cols-2">
-                <DetailRow label="Supplier Code" value={supplier.code} />
-                <DetailRow label="English Name" value={supplier.name} />
-                <DetailRow label="Chinese Name" value={supplier.name_chinese} />
-                <DetailRow label="Country" value={supplier.country} />
-                <DetailRow label="Website" value={supplier.website} />
-                <DetailRow label="TEL" value={supplier.tel} />
-                <DetailRow label="Currency" value={supplier.currency} />
+                <DetailRow label={<T k="suppliers.supplierCode" fallback="Supplier Code" />} value={supplier.code} />
+                <DetailRow label={<T k="suppliers.englishName" fallback="English Name" />} value={supplier.name} />
+                <DetailRow label={<T k="suppliers.chineseName" fallback="Chinese Name" />} value={supplier.name_chinese} />
+                <DetailRow label={<T k="table.country" fallback="Country" />} value={supplier.country} />
+                <DetailRow label={<T k="suppliers.website" fallback="Website" />} value={supplier.website} />
+                <DetailRow label={<T k="suppliers.tel" fallback="TEL" />} value={supplier.tel} />
+                <DetailRow label={<T k="table.currency" fallback="Currency" />} value={supplier.currency} />
                 <div className="border-b border-slate-100 py-3">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Invoice Format</p>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                    <T k="suppliers.invoiceFormat" fallback="Invoice Format" />
+                  </p>
                   <div className="mt-1">
                     <InvoiceFormatBadge format={supplier.invoice_format} />
                   </div>
                 </div>
               </div>
-              <DetailRow label="Address" value={supplier.address} />
-              <DetailRow label="Other Address" value={supplier.other_address} />
-              <DetailRow label="Notes" value={supplier.notes} />
+              <DetailRow label={<T k="table.address" fallback="Address" />} value={supplier.address} />
+              <DetailRow label={<T k="suppliers.otherAddress" fallback="Other Address" />} value={supplier.other_address} />
+              <DetailRow label={<T k="table.notes" fallback="Notes" />} value={supplier.notes} />
             </CardContent>
           </Card>
 
           <Card className="border-slate-200 shadow-sm">
             <CardHeader>
-              <CardTitle>Banking Information</CardTitle>
+              <CardTitle><T k="common.bankingInformation" fallback="Banking Information" /></CardTitle>
             </CardHeader>
             <CardContent>
               <div className="grid gap-x-6 sm:grid-cols-2">
-                <DetailRow label="Account Name" value={supplier.bank_account_name} />
-                <DetailRow label="Account Number" value={supplier.bank_account_number} />
-                <DetailRow label="Currency" value={supplier.bank_currency} />
-                <DetailRow label="Bank Name" value={supplier.bank_name} />
+                <DetailRow label={<T k="table.accountName" fallback="Account Name" />} value={supplier.bank_account_name} />
+                <DetailRow label={<T k="table.accountNumber" fallback="Account Number" />} value={supplier.bank_account_number} />
+                <DetailRow label={<T k="table.currency" fallback="Currency" />} value={supplier.bank_currency} />
+                <DetailRow label={<T k="table.bankName" fallback="Bank Name" />} value={supplier.bank_name} />
                 <DetailRow label="Institution No." value={supplier.bank_institution_no} />
                 <DetailRow label="Transit / Branch No." value={supplier.bank_transit_no} />
                 <DetailRow label="CNAPS No." value={supplier.bank_cnaps_no} />
-                <DetailRow label="SWIFT Code" value={supplier.bank_swift_code} />
-                <DetailRow label="Bank TEL" value={supplier.bank_tel} />
+                <DetailRow label={<T k="table.swiftCode" fallback="SWIFT Code" />} value={supplier.bank_swift_code} />
+                <DetailRow label={<T k="table.bankTel" fallback="Bank TEL" />} value={supplier.bank_tel} />
               </div>
-              <DetailRow label="Bank Address" value={supplier.bank_address} />
-              <DetailRow label="Banking Instructions" value={supplier.banking_instructions} />
+              <DetailRow label={<T k="table.bankAddress" fallback="Bank Address" />} value={supplier.bank_address} />
+              <DetailRow label={<T k="suppliers.bankingInstructions" fallback="Banking Instructions" />} value={supplier.banking_instructions} />
             </CardContent>
           </Card>
 
@@ -167,18 +174,22 @@ export default async function SupplierDetailPage({ params }: { params: { id: str
         <div>
           <Card className="border-slate-200 shadow-sm">
             <CardHeader>
-              <CardTitle>Profile</CardTitle>
+              <CardTitle><T k="common.profile" fallback="Profile" /></CardTitle>
             </CardHeader>
             <CardContent className="space-y-5">
               <div>
-                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Status</p>
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  <T k="table.status" fallback="Status" />
+                </p>
                 <div className="mt-2 flex items-center justify-between gap-3">
                   <StatusBadge status={supplier.status} />
                   <SupplierStatusButton status={supplier.status} supplierId={supplier.id} />
                 </div>
               </div>
               <div>
-                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Created</p>
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  <T k="table.created" fallback="Created" />
+                </p>
                 <p className="mt-1 text-sm text-[#0d1b34]">
                   {new Intl.DateTimeFormat("en-US", {
                     dateStyle: "medium",

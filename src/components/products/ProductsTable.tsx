@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 
+import { useLanguage } from "@/context/LanguageContext";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import {
@@ -26,6 +27,8 @@ type PaymentFilter = "all" | "outsourced" | "produced";
 type ProductsTableMode = "products" | "sets" | "inactive";
 
 function StatusBadge({ status }: { status: Product["status"] }) {
+  const { language, t } = useLanguage();
+
   return (
     <Badge
       className={
@@ -35,12 +38,14 @@ function StatusBadge({ status }: { status: Product["status"] }) {
       }
       variant="outline"
     >
-      {status}
+      {language === "zh" ? t.status[status] ?? status : status}
     </Badge>
   );
 }
 
 function PaymentCategoryBadge({ category }: { category: Product["payment_category"] }) {
+  const { language, t } = useLanguage();
+
   if (!category) {
     return <span className="text-slate-400">-</span>;
   }
@@ -54,7 +59,7 @@ function PaymentCategoryBadge({ category }: { category: Product["payment_categor
       }
       variant="outline"
     >
-      {category}
+      {language === "zh" ? t.products[category] ?? category : category}
     </Badge>
   );
 }
@@ -88,6 +93,7 @@ export function ProductsTable({
   mode?: ProductsTableMode;
   products: Product[];
 }) {
+  const { t } = useLanguage();
   const [search, setSearch] = useState("");
   const [paymentFilter, setPaymentFilter] = useState<PaymentFilter>("all");
   const detailHref = (productId: string) => `/products/${productId}?from=${encodeURIComponent(backHref)}`;
@@ -115,18 +121,18 @@ export function ProductsTable({
         <Input
           className="sm:max-w-sm"
           onChange={(event) => setSearch(event.target.value)}
-          placeholder="Search code or name..."
+          placeholder={t.products.searchPlaceholder}
           value={search}
         />
         {mode === "products" ? (
           <Select onValueChange={(value: PaymentFilter) => setPaymentFilter(value)} value={paymentFilter}>
             <SelectTrigger className="sm:w-56">
-              <SelectValue placeholder="Payment category" />
+              <SelectValue placeholder={t.products.paymentCategory} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All</SelectItem>
-              <SelectItem value="outsourced">Outsourced</SelectItem>
-              <SelectItem value="produced">Produced</SelectItem>
+              <SelectItem value="all">{t.common.all}</SelectItem>
+              <SelectItem value="outsourced">{t.products.outsourced}</SelectItem>
+              <SelectItem value="produced">{t.products.produced}</SelectItem>
             </SelectContent>
           </Select>
         ) : null}
@@ -135,14 +141,14 @@ export function ProductsTable({
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>Rock Hill Code</TableHead>
-            {mode !== "sets" ? <TableHead>Supplier Code</TableHead> : null}
-            <TableHead>English Name</TableHead>
-            <TableHead>Chinese Name</TableHead>
-            {mode !== "sets" ? <TableHead>Supplier</TableHead> : null}
-            {mode === "sets" ? <TableHead>Components</TableHead> : <TableHead>Payment Category</TableHead>}
-            {mode === "inactive" ? <TableHead>Type</TableHead> : null}
-            <TableHead>Status</TableHead>
+            <TableHead>{t.products.rockHillCode}</TableHead>
+            {mode !== "sets" ? <TableHead>{t.products.supplierCode}</TableHead> : null}
+            <TableHead>{t.products.englishName}</TableHead>
+            <TableHead>{t.products.chineseName}</TableHead>
+            {mode !== "sets" ? <TableHead>{t.products.supplier}</TableHead> : null}
+            {mode === "sets" ? <TableHead>{t.products.components}</TableHead> : <TableHead>{t.products.paymentCategory}</TableHead>}
+            {mode === "inactive" ? <TableHead>{t.products.type}</TableHead> : null}
+            <TableHead>{t.table.status}</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -167,13 +173,13 @@ export function ProductsTable({
                 </TableCell>
                 {mode !== "sets" ? <TableCell>{product.supplier?.code ?? "-"}</TableCell> : null}
                 {mode === "sets" ? (
-                  <TableCell>{product.components?.length ?? 0} products</TableCell>
+                  <TableCell>{product.components?.length ?? 0} {t.products.products.toLowerCase()}</TableCell>
                 ) : (
                   <TableCell>
                     <PaymentCategoryBadge category={product.payment_category} />
                   </TableCell>
                 )}
-                {mode === "inactive" ? <TableCell>{product.product_type === "set" ? "Set" : "Product"}</TableCell> : null}
+                {mode === "inactive" ? <TableCell>{product.product_type === "set" ? t.products.set : t.products.product}</TableCell> : null}
                 <TableCell>
                   <StatusBadge status={product.status} />
                 </TableCell>
@@ -182,7 +188,7 @@ export function ProductsTable({
           ) : (
             <TableRow>
               <TableCell className="text-slate-500" colSpan={mode === "sets" ? 5 : mode === "inactive" ? 8 : 7}>
-                {mode === "products" ? "No products yet." : mode === "sets" ? "No sets yet." : "No inactive items."}
+                {mode === "products" ? t.products.noProductsYet : mode === "sets" ? t.products.noSets : t.products.noInactiveItems}
               </TableCell>
             </TableRow>
           )}

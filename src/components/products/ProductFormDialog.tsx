@@ -6,6 +6,7 @@ import { FormEvent, ReactNode, useEffect, useState, useTransition } from "react"
 import { toast } from "sonner";
 
 import { createProduct, saveSetComponents, updateProduct } from "@/app/actions/products";
+import { useLanguage } from "@/context/LanguageContext";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -83,6 +84,7 @@ export function ProductFormDialog({
   trigger,
 }: ProductFormDialogProps) {
   const router = useRouter();
+  const { t } = useLanguage();
   const [open, setOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [productType, setProductType] = useState<Product["product_type"]>(
@@ -226,7 +228,7 @@ export function ProductFormDialog({
       }
 
       setOpen(false);
-      toast.success(mode === "create" ? "Product created successfully" : "Product updated successfully");
+      toast.success(mode === "create" ? t.products.createdSuccessfully : t.products.updatedSuccessfully);
       router.refresh();
 
       if (mode === "create" && result.id) {
@@ -241,13 +243,13 @@ export function ProductFormDialog({
         {trigger ?? (
           <Button className="bg-[#0d1b34] hover:bg-[#13294d]">
             <Plus className="mr-2 h-4 w-4" />
-            {defaultProductType === "set" ? "Add Set" : "Add Product"}
+            {defaultProductType === "set" ? t.products.addSet : t.products.addProduct}
           </Button>
         )}
       </DialogTrigger>
       <DialogContent className="sm:max-w-5xl">
         <DialogHeader>
-          <DialogTitle>{mode === "create" ? "Add Product" : "Edit Product"}</DialogTitle>
+          <DialogTitle>{mode === "create" ? t.products.addProduct : t.products.editProduct}</DialogTitle>
           <DialogDescription>
             {mode === "create" ? "Create a new product profile." : "Update this product profile."}
           </DialogDescription>
@@ -255,10 +257,10 @@ export function ProductFormDialog({
 
         <form className="space-y-5" onSubmit={handleSubmit}>
           <section className="space-y-4 rounded-lg border-2 border-slate-300 p-4">
-            <h3 className="text-sm font-semibold uppercase tracking-wide text-blue-700">Edit Product</h3>
+            <h3 className="text-sm font-semibold uppercase tracking-wide text-blue-700">{t.products.editProduct}</h3>
             <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
-              <Label htmlFor="code">Rock Hill Product Code</Label>
+              <Label htmlFor="code">{t.products.rockHillProductCode}</Label>
               <Input
                 className="uppercase"
                 defaultValue={initialData?.code ?? ""}
@@ -273,7 +275,7 @@ export function ProductFormDialog({
             </div>
             {productType === "part" ? (
               <div className="space-y-2">
-                <Label htmlFor="supplier_product_code">Supplier Product Code</Label>
+                <Label htmlFor="supplier_product_code">{t.products.supplierProductCode}</Label>
                 <Input
                   defaultValue={initialData?.supplier_product_code ?? ""}
                   disabled={isPending}
@@ -284,7 +286,7 @@ export function ProductFormDialog({
               </div>
             ) : null}
             <div className="space-y-2">
-              <Label htmlFor="name_english">English Name</Label>
+              <Label htmlFor="name_english">{t.products.englishName}</Label>
               <Input
                 defaultValue={initialData?.name_english ?? ""}
                 disabled={isPending}
@@ -294,7 +296,7 @@ export function ProductFormDialog({
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="name_chinese">Chinese Name</Label>
+              <Label htmlFor="name_chinese">{t.products.chineseName}</Label>
               <Input
                 defaultValue={initialData?.name_chinese ?? ""}
                 disabled={isPending}
@@ -303,29 +305,29 @@ export function ProductFormDialog({
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="product_type">Product Type</Label>
+              <Label htmlFor="product_type">{t.products.productType}</Label>
               <Select
                 disabled={isPending}
                 onValueChange={(value: Product["product_type"]) => setProductType(value)}
                 value={productType}
               >
                 <SelectTrigger id="product_type">
-                  <SelectValue placeholder="Select product type" />
+                  <SelectValue placeholder={t.products.productType} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="part">Product</SelectItem>
-                  <SelectItem value="set">Set</SelectItem>
+                  <SelectItem value="part">{t.products.product}</SelectItem>
+                  <SelectItem value="set">{t.products.set}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="supplier_id">Supplier</Label>
+              <Label htmlFor="supplier_id">{t.products.supplier}</Label>
               <Select disabled={isPending} onValueChange={setSupplierId} value={supplierId}>
                 <SelectTrigger id="supplier_id">
-                  <SelectValue placeholder="Select supplier" />
+                  <SelectValue placeholder={t.products.supplier} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="none">None</SelectItem>
+                  <SelectItem value="none">{t.common.none}</SelectItem>
                   {suppliers.map((supplier) => (
                     <SelectItem key={supplier.id} value={supplier.id}>
                       {supplier.code}
@@ -336,18 +338,18 @@ export function ProductFormDialog({
             </div>
             {productType === "part" ? (
               <div className="space-y-2">
-                <Label htmlFor="payment_category">Source</Label>
+                <Label htmlFor="payment_category">{t.products.source}</Label>
                 <Select
                   disabled={isPending}
                   onValueChange={(value: NonNullable<Product["payment_category"]>) => setPaymentCategory(value)}
                   value={paymentCategory ?? "outsourced"}
                 >
                   <SelectTrigger id="payment_category">
-                    <SelectValue placeholder="Select source" />
+                    <SelectValue placeholder={t.products.source} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="outsourced">Outsourced</SelectItem>
-                    <SelectItem value="produced">Produced</SelectItem>
+                    <SelectItem value="outsourced">{t.products.outsourced}</SelectItem>
+                    <SelectItem value="produced">{t.products.produced}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -361,7 +363,7 @@ export function ProductFormDialog({
                   onChange={(event) => setHasCarton(event.target.checked)}
                   type="checkbox"
                 />
-                Carton
+                {t.products.carton}
               </label>
               <p className="text-xs text-slate-500">Check this if the product includes a carton box.</p>
             </div>
@@ -379,20 +381,20 @@ export function ProductFormDialog({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="notes">Notes</Label>
+              <Label htmlFor="notes">{t.table.notes}</Label>
               <Textarea defaultValue={initialData?.notes ?? ""} disabled={isPending} id="notes" name="notes" />
             </div>
           </section>
 
           <section className="space-y-4 rounded-lg border-2 border-slate-300 p-4">
             <div>
-              <h3 className="text-sm font-semibold uppercase tracking-wide text-blue-700">Product Specification</h3>
+              <h3 className="text-sm font-semibold uppercase tracking-wide text-blue-700">{t.products.productSpecification}</h3>
               <p className="text-xs text-slate-500">Physical dimensions and weight of the product itself.</p>
             </div>
 
             <div className="flex flex-wrap items-end gap-3">
               <div className="space-y-2">
-                <Label>Product Dimensions (cm)</Label>
+                <Label>{t.products.dimensionsLwh} (cm)</Label>
                 <div className="flex flex-wrap gap-2">
                   <Input
                     aria-label="Product length in cm"
@@ -433,7 +435,7 @@ export function ProductFormDialog({
                 </div>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="product_weight_kg">Product Weight (kg)</Label>
+                <Label htmlFor="product_weight_kg">{t.products.weight} (kg)</Label>
                 <Input
                   className="w-32"
                   defaultValue={initialData?.product_weight_kg ?? ""}
@@ -449,7 +451,7 @@ export function ProductFormDialog({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="product_art_notes">Art / Design Notes</Label>
+              <Label htmlFor="product_art_notes">{t.products.artDesignNotes}</Label>
               <Textarea
                 className="min-h-[80px]"
                 defaultValue={initialData?.product_art_notes ?? ""}
@@ -464,18 +466,18 @@ export function ProductFormDialog({
           {mode === "create" && productType === "set" ? (
             <section className="space-y-4 rounded-lg border-2 border-slate-300 p-4">
               <div>
-                <h3 className="text-sm font-semibold uppercase tracking-wide text-blue-700">Set Components</h3>
+                <h3 className="text-sm font-semibold uppercase tracking-wide text-blue-700">{t.products.components}</h3>
                 <p className="text-xs text-slate-500">Select each product in the set and enter the quantity needed.</p>
               </div>
 
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Rock Hill Code</TableHead>
-                    <TableHead>Product English Name</TableHead>
-                    <TableHead>Supplier</TableHead>
-                    <TableHead className="w-32">Qty Needed</TableHead>
-                    <TableHead className="w-16 text-right">Remove</TableHead>
+                    <TableHead>{t.products.rockHillCode}</TableHead>
+                    <TableHead>{t.products.englishName}</TableHead>
+                    <TableHead>{t.products.supplier}</TableHead>
+                    <TableHead className="w-32">{t.table.quantity}</TableHead>
+                    <TableHead className="w-16 text-right">{t.actions.remove}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -490,7 +492,7 @@ export function ProductFormDialog({
                             value={row.component_product_id}
                           >
                             <SelectTrigger className="min-w-64 bg-white">
-                              <SelectValue placeholder="Select product" />
+                              <SelectValue placeholder={t.products.product} />
                             </SelectTrigger>
                             <SelectContent>
                               {availableProducts
@@ -543,7 +545,7 @@ export function ProductFormDialog({
                   ) : (
                     <TableRow>
                       <TableCell className="text-slate-500" colSpan={5}>
-                        No components added yet.
+                        {t.common.noData}
                       </TableCell>
                     </TableRow>
                   )}
@@ -558,7 +560,7 @@ export function ProductFormDialog({
                   variant="outline"
                 >
                   <Plus className="mr-2 h-4 w-4" />
-                  Add Component Row
+                  {t.actions.add} {t.products.components}
                 </Button>
               </div>
             </section>
@@ -567,7 +569,7 @@ export function ProductFormDialog({
           <section className="space-y-3 rounded-lg border-2 border-slate-300 p-4">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
-                <h3 className="text-sm font-semibold uppercase tracking-wide text-blue-700">Packaging Information</h3>
+                <h3 className="text-sm font-semibold uppercase tracking-wide text-blue-700">{t.products.packagingInformation}</h3>
                 <p className="text-xs text-slate-500">Carton and pallet details for shipping and production planning.</p>
               </div>
               <label className="flex items-center gap-2 text-sm font-medium text-[#0d1b34]">
@@ -578,14 +580,14 @@ export function ProductFormDialog({
                   onChange={(event) => setPackagingRequired(event.target.checked)}
                   type="checkbox"
                 />
-                Has packaging info
+                {t.products.packagingInformation}
               </label>
             </div>
             {packagingRequired ? (
               <div className="space-y-4">
                 <div className="flex flex-wrap items-end gap-3">
                   <div className="space-y-2">
-                    <Label htmlFor="qty_per_carton">Qty per Carton</Label>
+                    <Label htmlFor="qty_per_carton">{t.products.qtyPerCarton}</Label>
                     <Input
                       className="w-32"
                       disabled={isPending}
@@ -598,7 +600,7 @@ export function ProductFormDialog({
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label>Carton Dimensions / Weight</Label>
+                    <Label>{t.products.cartonDimensions} / {t.products.weight}</Label>
                     <div className="flex flex-wrap gap-2">
                       <Input
                         aria-label="Carton length in cm"
@@ -653,7 +655,7 @@ export function ProductFormDialog({
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div className="space-y-3">
                     <div className="space-y-2">
-                      <Label htmlFor="cartons_per_pallet_std">Cartons / Pallet (20 ft & 40 ft)</Label>
+                      <Label htmlFor="cartons_per_pallet_std">{t.products.cartonsPalletStd}</Label>
                       <Input
                         disabled={isPending}
                         id="cartons_per_pallet_std"
@@ -666,7 +668,7 @@ export function ProductFormDialog({
                       />
                     </div>
                     <div className="rounded-md border border-slate-200 bg-slate-50 p-3">
-                      <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">QTY Items / Pallet (20 ft & 40 ft)</p>
+                      <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{t.products.qtyItemsPalletStd}</p>
                       <p className="mt-1 text-sm font-semibold text-[#0d1b34]">
                         {qtyItemsPerPalletStd ? qtyItemsPerPalletStd.toLocaleString() : "-"}
                       </p>
@@ -674,7 +676,7 @@ export function ProductFormDialog({
                   </div>
                   <div className="space-y-3">
                     <div className="space-y-2">
-                      <Label htmlFor="cartons_per_pallet_hq">Cartons / Pallet (40 ft HQ)</Label>
+                      <Label htmlFor="cartons_per_pallet_hq">{t.products.cartonsPalletHq}</Label>
                       <Input
                         disabled={isPending}
                         id="cartons_per_pallet_hq"
@@ -687,7 +689,7 @@ export function ProductFormDialog({
                       />
                     </div>
                     <div className="rounded-md border border-slate-200 bg-slate-50 p-3">
-                      <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">QTY Items / Pallet (40 ft HQ)</p>
+                      <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{t.products.qtyItemsPalletHq}</p>
                       <p className="mt-1 text-sm font-semibold text-[#0d1b34]">
                         {qtyItemsPerPalletHq ? qtyItemsPerPalletHq.toLocaleString() : "-"}
                       </p>
@@ -702,11 +704,11 @@ export function ProductFormDialog({
 
           <div className="flex justify-end gap-2">
             <Button disabled={isPending} onClick={() => setOpen(false)} type="button" variant="outline">
-              Cancel
+              {t.actions.cancel}
             </Button>
             <Button className="bg-[#0d1b34] hover:bg-[#13294d]" disabled={isPending} type="submit">
               {isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-              {mode === "create" ? (productType === "set" ? "Create Set" : "Create Product") : "Save Changes"}
+              {mode === "create" ? (productType === "set" ? t.products.createSet : t.products.createProduct) : t.products.saveChanges}
             </Button>
           </div>
         </form>

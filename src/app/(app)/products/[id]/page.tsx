@@ -1,7 +1,9 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import type { ReactNode } from "react";
 
 import { CartonLabelButton } from "@/components/products/CartonLabelButton";
+import { T } from "@/components/i18n/T";
 import { ProductFormDialog, type ProductSupplierOption } from "@/components/products/ProductFormDialog";
 import { ProductImagesEditor } from "@/components/products/ProductImagesEditor";
 import { ProductStatusButton } from "@/components/products/ProductStatusButton";
@@ -67,7 +69,7 @@ function PaymentCategoryBadge({ category }: { category: Product["payment_categor
   );
 }
 
-function DetailRow({ label, value }: { label: string; value: string | number | null }) {
+function DetailRow({ label, value }: { label: ReactNode; value: string | number | null }) {
   return (
     <div className="border-b border-slate-100 py-3 last:border-0">
       <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{label}</p>
@@ -201,8 +203,12 @@ export default async function ProductDetailPage({
     return (
       <div className="flex min-h-[calc(100vh-8rem)] items-center justify-center">
         <div className="text-center">
-          <h1 className="text-2xl font-semibold text-[#0d1b34]">Access denied</h1>
-          <p className="mt-2 text-sm text-slate-500">Products are available to signed-in users only.</p>
+          <h1 className="text-2xl font-semibold text-[#0d1b34]">
+            <T k="common.accessDenied" fallback="Access denied" />
+          </h1>
+          <p className="mt-2 text-sm text-slate-500">
+            <T k="products.accessDeniedHelp" fallback="Products are available to signed-in users only." />
+          </p>
         </div>
       </div>
     );
@@ -251,7 +257,9 @@ export default async function ProductDetailPage({
     return (
       <div className="flex min-h-[calc(100vh-8rem)] items-center justify-center">
         <div className="text-center">
-          <h1 className="text-2xl font-semibold text-[#0d1b34]">Access denied</h1>
+          <h1 className="text-2xl font-semibold text-[#0d1b34]">
+            <T k="common.accessDenied" fallback="Access denied" />
+          </h1>
           <p className="mt-2 text-sm text-slate-500">This product is outside your access scope.</p>
         </div>
       </div>
@@ -318,7 +326,7 @@ export default async function ProductDetailPage({
     <section className="space-y-6">
       <div>
         <Link className="text-sm font-medium text-slate-500 transition-colors hover:text-[#0d1b34]" href={backHref}>
-          Back to Products
+          <T k="products.backToProducts" fallback="Back to Products" />
         </Link>
         <div className="mt-4 flex flex-wrap items-center gap-3">
           <h1 className="text-3xl font-semibold text-[#0d1b34]">{product.name_english}</h1>
@@ -330,7 +338,7 @@ export default async function ProductDetailPage({
         <div className="space-y-6 lg:col-span-2">
           <Card className="border-slate-200 shadow-sm">
             <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle>Main Info</CardTitle>
+              <CardTitle><T k="common.mainInfo" fallback="Main Info" /></CardTitle>
               {canManage ? (
                 <div className="flex flex-wrap justify-end gap-2">
                   <CartonLabelButton productId={product.id} />
@@ -340,7 +348,7 @@ export default async function ProductDetailPage({
                     suppliers={supplierOptions}
                     trigger={
                       <Button size="sm" variant="outline">
-                        Edit
+                        <T k="actions.edit" fallback="Edit" />
                       </Button>
                     }
                   />
@@ -349,38 +357,38 @@ export default async function ProductDetailPage({
             </CardHeader>
             <CardContent>
               <div className="grid gap-x-6 sm:grid-cols-2">
-                <DetailRow label="Rock Hill Product Code" value={product.code} />
-                <DetailRow label="Supplier Product Code" value={product.supplier_product_code} />
-                <DetailRow label="English Name" value={product.name_english} />
-                <DetailRow label="Chinese Name" value={product.name_chinese} />
+                <DetailRow label={<T k="products.rockHillProductCode" fallback="Rock Hill Product Code" />} value={product.code} />
+                <DetailRow label={<T k="products.supplierProductCode" fallback="Supplier Product Code" />} value={product.supplier_product_code} />
+                <DetailRow label={<T k="products.englishName" fallback="English Name" />} value={product.name_english} />
+                <DetailRow label={<T k="products.chineseName" fallback="Chinese Name" />} value={product.name_chinese} />
                 <div className="border-b border-slate-100 py-3">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Product Type</p>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500"><T k="products.productType" fallback="Product Type" /></p>
                   <div className="mt-1">
                     <ProductTypeBadge type={product.product_type} />
                   </div>
                 </div>
                 <DetailRow
-                  label="Supplier"
+                  label={<T k="products.supplier" fallback="Supplier" />}
                   value={product.supplier?.code ?? null}
                 />
-                {product.product_type === "set" ? <DetailRow label="Carton" value={product.has_carton ? "Yes" : "No"} /> : null}
+                {product.product_type === "set" ? <DetailRow label={<T k="products.carton" fallback="Carton" />} value={product.has_carton ? "Yes" : "No"} /> : null}
                 <div className="border-b border-slate-100 py-3">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Payment Category</p>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500"><T k="products.paymentCategory" fallback="Payment Category" /></p>
                   <div className="mt-1">
                     <PaymentCategoryBadge category={product.payment_category} />
                   </div>
                 </div>
                 <div className="border-b border-slate-100 py-3">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Status</p>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500"><T k="table.status" fallback="Status" /></p>
                   <div className="mt-2 flex items-center gap-3">
                     <StatusBadge status={product.status} />
                     {canManage ? <ProductStatusButton productId={product.id} status={product.status} /> : null}
                   </div>
                 </div>
-                <DetailRow label="Created" value={formatDate(product.created_at)} />
-                <DetailRow label="Updated" value={formatDate(product.updated_at)} />
+                <DetailRow label={<T k="table.created" fallback="Created" />} value={formatDate(product.created_at)} />
+                <DetailRow label={<T k="products.updated" fallback="Updated" />} value={formatDate(product.updated_at)} />
               </div>
-              <DetailRow label="Notes" value={product.notes} />
+              <DetailRow label={<T k="table.notes" fallback="Notes" />} value={product.notes} />
             </CardContent>
           </Card>
 
@@ -388,7 +396,7 @@ export default async function ProductDetailPage({
             <>
               <Card className="border-slate-200 shadow-sm">
                 <CardHeader>
-                  <CardTitle>Set Builder</CardTitle>
+                  <CardTitle><T k="products.setBuilder" fallback="Set Builder" /></CardTitle>
                 </CardHeader>
                 <CardContent>
                   <SetComponentsEditor
@@ -402,7 +410,7 @@ export default async function ProductDetailPage({
 
               <Card className="border-slate-200 shadow-sm">
                 <CardHeader>
-                  <CardTitle>Calculated Set Cost</CardTitle>
+                  <CardTitle><T k="products.calculatedSetCost" fallback="Calculated Set Cost" /></CardTitle>
                 </CardHeader>
                 <CardContent>
                   <SetCostCalculator
@@ -418,7 +426,7 @@ export default async function ProductDetailPage({
           <Card className="border-slate-200 shadow-sm">
             <CardHeader>
               <CardTitle className="text-sm font-semibold uppercase tracking-wide text-blue-700">
-                Product Specification
+                <T k="products.productSpecification" fallback="Product Specification" />
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3 text-sm">
@@ -426,7 +434,7 @@ export default async function ProductDetailPage({
               hasNumberValue(product.product_width_cm) ||
               hasNumberValue(product.product_length_cm) ? (
                 <div>
-                  <p className="text-xs text-slate-500">Dimensions (L x W x H)</p>
+                  <p className="text-xs text-slate-500"><T k="products.dimensionsLwh" fallback="Dimensions (L x W x H)" /></p>
                   <p className="font-medium text-[#0d1b34]">
                     {product.product_length_cm ?? "-"} x {product.product_width_cm ?? "-"} x{" "}
                     {product.product_height_cm ?? "-"} cm
@@ -435,13 +443,13 @@ export default async function ProductDetailPage({
               ) : null}
               {hasNumberValue(product.product_weight_kg) ? (
                 <div>
-                  <p className="text-xs text-slate-500">Weight</p>
+                  <p className="text-xs text-slate-500"><T k="products.weight" fallback="Weight" /></p>
                   <p className="font-medium text-[#0d1b34]">{product.product_weight_kg} kg</p>
                 </div>
               ) : null}
               {product.product_art_notes ? (
                 <div>
-                  <p className="text-xs text-slate-500">Art / Design Notes</p>
+                  <p className="text-xs text-slate-500"><T k="products.artDesignNotes" fallback="Art / Design Notes" /></p>
                   <p className="whitespace-pre-wrap text-[#0d1b34]">{product.product_art_notes}</p>
                 </div>
               ) : null}
@@ -450,7 +458,7 @@ export default async function ProductDetailPage({
               !hasNumberValue(product.product_length_cm) &&
               !hasNumberValue(product.product_weight_kg) &&
               !product.product_art_notes ? (
-                <p className="text-slate-400">No specification entered.</p>
+                <p className="text-slate-400"><T k="products.noSpecification" fallback="No specification entered." /></p>
               ) : null}
             </CardContent>
           </Card>
@@ -458,30 +466,30 @@ export default async function ProductDetailPage({
           {product.packaging_required ? (
             <Card className="border-slate-200 shadow-sm">
               <CardHeader>
-                <CardTitle>Packaging Information</CardTitle>
+                <CardTitle><T k="products.packagingInformation" fallback="Packaging Information" /></CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="grid gap-x-6 sm:grid-cols-2">
-                  <DetailRow label="Qty per Carton" value={formatWholeNumber(product.qty_per_carton)} />
+                  <DetailRow label={<T k="products.qtyPerCarton" fallback="Qty per Carton" />} value={formatWholeNumber(product.qty_per_carton)} />
                   <DetailRow
-                    label="Carton Dimensions"
+                    label={<T k="products.cartonDimensions" fallback="Carton Dimensions" />}
                     value={`${formatPackagingValue(product.carton_length_cm)} L x ${formatPackagingValue(
                       product.carton_width_cm
                     )} W x ${formatPackagingValue(product.carton_height_cm)} H cm`}
                   />
-                  <DetailRow label="Carton Weight" value={formatPackagingValue(product.carton_weight_kg, " kg")} />
+                  <DetailRow label={<T k="products.cartonWeight" fallback="Carton Weight" />} value={formatPackagingValue(product.carton_weight_kg, " kg")} />
                 </div>
                 <div className="mt-4 grid gap-4 sm:grid-cols-2">
                   <div className="rounded-md border border-slate-200 bg-slate-50 p-3">
                     <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                      Cartons / Pallet (20 ft & 40 ft)
+                      <T k="products.cartonsPalletStd" fallback="Cartons / Pallet (20 ft & 40 ft)" />
                     </p>
                     <p className="mt-1 text-sm font-semibold text-[#0d1b34]">
                       {formatPackagingValue(product.cartons_per_pallet_std)}
                     </p>
                     <div className="my-3 border-t border-slate-200" />
                     <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                      QTY Items / Pallet (20 ft & 40 ft)
+                      <T k="products.qtyItemsPalletStd" fallback="QTY Items / Pallet (20 ft & 40 ft)" />
                     </p>
                     <p className="mt-1 text-sm font-semibold text-[#0d1b34]">
                       {formatWholeNumber(calculateQtyItemsPerPallet(product, product.cartons_per_pallet_std))}
@@ -489,14 +497,14 @@ export default async function ProductDetailPage({
                   </div>
                   <div className="rounded-md border border-slate-200 bg-slate-50 p-3">
                     <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                      Cartons / Pallet (40 ft HQ)
+                      <T k="products.cartonsPalletHq" fallback="Cartons / Pallet (40 ft HQ)" />
                     </p>
                     <p className="mt-1 text-sm font-semibold text-[#0d1b34]">
                       {formatPackagingValue(product.cartons_per_pallet_hq)}
                     </p>
                     <div className="my-3 border-t border-slate-200" />
                     <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                      QTY Items / Pallet (40 ft HQ)
+                      <T k="products.qtyItemsPalletHq" fallback="QTY Items / Pallet (40 ft HQ)" />
                     </p>
                     <p className="mt-1 text-sm font-semibold text-[#0d1b34]">
                       {formatWholeNumber(calculateQtyItemsPerPallet(product, product.cartons_per_pallet_hq))}
@@ -510,26 +518,26 @@ export default async function ProductDetailPage({
 
           <Card className="border-slate-200 shadow-sm">
             <CardHeader>
-              <CardTitle>Cost History</CardTitle>
+              <CardTitle><T k="history.costHistory" fallback="Cost History" /></CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid gap-4 rounded-lg border border-slate-200 bg-slate-50 p-4 sm:grid-cols-4">
                 <div>
-                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Latest Cost</p>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500"><T k="products.latestCost" fallback="Latest Cost" /></p>
                   <p className="mt-1 text-2xl font-semibold text-[#0d1b34]">{formatRmb(latestCost?.unit_cost_rmb)}</p>
                 </div>
                 <div>
-                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Latest MOQ</p>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500"><T k="products.latestMoq" fallback="Latest MOQ" /></p>
                   <p className="mt-1 text-sm text-[#0d1b34]">{formatWholeNumber(latestCost?.moq)}</p>
                 </div>
                 <div>
-                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Latest Date</p>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500"><T k="products.latestDate" fallback="Latest Date" /></p>
                   <p className="mt-1 text-sm text-[#0d1b34]">
                     {latestCost ? formatDate(latestCost.quoted_date) : "-"}
                   </p>
                 </div>
                 <div>
-                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Source</p>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500"><T k="products.source" fallback="Source" /></p>
                   <p className="mt-1 text-sm text-[#0d1b34]">{latestCost?.source ?? "-"}</p>
                 </div>
               </div>
@@ -537,14 +545,14 @@ export default async function ProductDetailPage({
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Date</TableHead>
-                    <TableHead>Supplier Code</TableHead>
+                    <TableHead><T k="table.date" fallback="Date" /></TableHead>
+                    <TableHead><T k="products.supplierCode" fallback="Supplier Code" /></TableHead>
                     <TableHead className="w-[6ch]">MOQ</TableHead>
-                    <TableHead className="w-[8ch] text-right">Unit (RMB)</TableHead>
-                    <TableHead className="min-w-[14rem]">Quality</TableHead>
-                    <TableHead className="w-[7ch]">Carton</TableHead>
-                    <TableHead className="min-w-[20rem]">Notes</TableHead>
-                    <TableHead>Source</TableHead>
+                    <TableHead className="w-[8ch] text-right"><T k="products.unitRmb" fallback="Unit (RMB)" /></TableHead>
+                    <TableHead className="min-w-[14rem]"><T k="products.quality" fallback="Quality" /></TableHead>
+                    <TableHead className="w-[7ch]"><T k="products.carton" fallback="Carton" /></TableHead>
+                    <TableHead className="min-w-[20rem]"><T k="table.notes" fallback="Notes" /></TableHead>
+                    <TableHead><T k="products.source" fallback="Source" /></TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -566,7 +574,7 @@ export default async function ProductDetailPage({
                   ) : (
                     <TableRow>
                       <TableCell className="text-slate-500" colSpan={8}>
-                        No cost history yet.
+                        <T k="products.noCostHistory" fallback="No cost history yet." />
                       </TableCell>
                     </TableRow>
                   )}
@@ -579,7 +587,7 @@ export default async function ProductDetailPage({
         <div>
           <Card className="border-slate-200 shadow-sm">
             <CardHeader>
-              <CardTitle>Product Image</CardTitle>
+              <CardTitle><T k="products.productImage" fallback="Product Image" /></CardTitle>
             </CardHeader>
             <CardContent>
                   <ProductImagesEditor canManage={canManage} initialImages={product.product_images} productId={product.id} />

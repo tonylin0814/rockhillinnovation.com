@@ -5,6 +5,7 @@ import { FormEvent, ReactNode, useMemo, useState, useTransition } from "react";
 import { toast } from "sonner";
 
 import { createQuoteHistory, deleteQuoteHistory, updateQuoteHistory } from "@/app/actions/history";
+import { useLanguage } from "@/context/LanguageContext";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -104,12 +105,11 @@ function SortHeader<T extends string>({
 
 function DeleteButton({
   action,
-  label,
 }: {
   action: () => Promise<{ success?: true; error?: string }>;
-  label: string;
 }) {
   const [isPending, startTransition] = useTransition();
+  const { t } = useLanguage();
 
   function handleDelete() {
     startTransition(async () => {
@@ -120,7 +120,7 @@ function DeleteButton({
         return;
       }
 
-      toast.success(`${label} deleted`);
+      toast.success(t.history.deleted);
       window.location.reload();
     });
   }
@@ -134,15 +134,15 @@ function DeleteButton({
       </AlertDialogTrigger>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>Delete {label}?</AlertDialogTitle>
+          <AlertDialogTitle>{t.history.deleteQuote}</AlertDialogTitle>
           <AlertDialogDescription>
-            This will permanently remove this {label} row. This action cannot be undone.
+            {t.history.deleteDescription}
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel disabled={isPending}>Cancel</AlertDialogCancel>
+          <AlertDialogCancel disabled={isPending}>{t.actions.cancel}</AlertDialogCancel>
           <AlertDialogAction className="bg-red-600 hover:bg-red-700" disabled={isPending} onClick={handleDelete}>
-            {isPending ? "Deleting..." : "Delete"}
+            {isPending ? t.history.deleting : t.actions.delete}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
@@ -151,6 +151,7 @@ function DeleteButton({
 }
 
 function QuoteHistoryDialog({ children, quote }: { children: ReactNode; quote?: QuotationHistory }) {
+  const { t } = useLanguage();
   const [open, setOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -168,7 +169,7 @@ function QuoteHistoryDialog({ children, quote }: { children: ReactNode; quote?: 
         return;
       }
 
-      toast.success(quote ? "Quote history updated" : "Quote history added");
+      toast.success(quote ? t.history.quoteUpdated : t.history.quoteAdded);
       setOpen(false);
       window.location.reload();
     });
@@ -179,12 +180,12 @@ function QuoteHistoryDialog({ children, quote }: { children: ReactNode; quote?: 
       <DialogTrigger asChild>{children}</DialogTrigger>
       <DialogContent className="sm:max-w-3xl">
         <DialogHeader>
-          <DialogTitle>{quote ? "Edit Quote History" : "Add Quote History"}</DialogTitle>
-          <DialogDescription>Permanent quoted-price reference row.</DialogDescription>
+          <DialogTitle>{quote ? t.history.editQuoteHistory : t.history.addQuoteHistory}</DialogTitle>
+          <DialogDescription>{t.history.quoteReferenceRow}</DialogDescription>
         </DialogHeader>
         <form className="grid gap-4 sm:grid-cols-2" onSubmit={handleSubmit}>
           <div className="space-y-2">
-            <Label htmlFor="quote_date">Date</Label>
+            <Label htmlFor="quote_date">{t.table.date}</Label>
             <Input
               defaultValue={quote?.quote_date ?? new Date().toISOString().slice(0, 10)}
               disabled={isPending}
@@ -195,11 +196,11 @@ function QuoteHistoryDialog({ children, quote }: { children: ReactNode; quote?: 
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="trade_id">Trade ID</Label>
+            <Label htmlFor="trade_id">{t.history.tradeId}</Label>
             <Input defaultValue={quote?.trade_id ?? ""} disabled={isPending} id="trade_id" name="trade_id" />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="rock_hill_code">Rock Hill Code</Label>
+            <Label htmlFor="rock_hill_code">{t.products.rockHillCode}</Label>
             <Input
               defaultValue={quote?.rock_hill_code ?? ""}
               disabled={isPending}
@@ -209,7 +210,7 @@ function QuoteHistoryDialog({ children, quote }: { children: ReactNode; quote?: 
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="product_name">Product Name</Label>
+            <Label htmlFor="product_name">{t.history.productName}</Label>
             <Input
               defaultValue={quote?.product_name ?? ""}
               disabled={isPending}
@@ -219,7 +220,7 @@ function QuoteHistoryDialog({ children, quote }: { children: ReactNode; quote?: 
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="quantity">Quantity</Label>
+            <Label htmlFor="quantity">{t.table.quantity}</Label>
             <Input
               defaultValue={quote?.quantity ?? 1}
               disabled={isPending}
@@ -232,7 +233,7 @@ function QuoteHistoryDialog({ children, quote }: { children: ReactNode; quote?: 
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="quoted_usd">Quoted USD</Label>
+            <Label htmlFor="quoted_usd">{t.history.quotedUsd}</Label>
             <Input
               defaultValue={quote?.quoted_usd ?? ""}
               disabled={isPending}
@@ -245,17 +246,17 @@ function QuoteHistoryDialog({ children, quote }: { children: ReactNode; quote?: 
             />
           </div>
           <div className="space-y-2 sm:col-span-2">
-            <Label htmlFor="notes">Notes</Label>
+            <Label htmlFor="notes">{t.table.notes}</Label>
             <Textarea defaultValue={quote?.notes ?? ""} disabled={isPending} id="notes" name="notes" />
           </div>
           {error ? <p className="text-sm font-medium text-red-600 sm:col-span-2">{error}</p> : null}
           <div className="flex justify-end gap-2 sm:col-span-2">
             <Button disabled={isPending} onClick={() => setOpen(false)} type="button" variant="outline">
-              Cancel
+              {t.actions.cancel}
             </Button>
             <Button className="bg-[#0d1b34] hover:bg-[#13294d]" disabled={isPending} type="submit">
               {isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-              Save
+              {t.actions.save}
             </Button>
           </div>
         </form>
@@ -271,6 +272,7 @@ export function QuoteHistoryTable({
   canManage?: boolean;
   quoteRows: QuotationHistory[];
 }) {
+  const { t } = useLanguage();
   const [quoteSearch, setQuoteSearch] = useState("");
   const [quoteSortKey, setQuoteSortKey] = useState<QuoteSortKey>("date");
   const [quoteSortDirection, setQuoteSortDirection] = useState<SortDirection>("desc");
@@ -324,12 +326,12 @@ export function QuoteHistoryTable({
   return (
     <div className="rounded-lg border border-slate-200 bg-white shadow-sm">
       <div className="flex items-center justify-between gap-3 border-b border-slate-200 p-4">
-        <h2 className="text-lg font-semibold text-[#0d1b34]">Quote History</h2>
+        <h2 className="text-lg font-semibold text-[#0d1b34]">{t.history.quoteHistory}</h2>
         {canManage ? (
           <QuoteHistoryDialog>
             <Button className="bg-[#0d1b34] hover:bg-[#13294d]" size="sm">
               <Plus className="mr-2 h-4 w-4" />
-              Add Quote
+              {t.history.addQuote}
             </Button>
           </QuoteHistoryDialog>
         ) : null}
@@ -337,7 +339,7 @@ export function QuoteHistoryTable({
       <div className="grid gap-3 border-b border-slate-200 p-4 md:grid-cols-[minmax(16rem,1fr)]">
         <Input
           onChange={(event) => setQuoteSearch(event.target.value)}
-          placeholder="Search date, trade, Rock Hill code, product name, notes..."
+          placeholder={t.history.searchQuotePlaceholder}
           value={quoteSearch}
         />
       </div>
@@ -345,16 +347,16 @@ export function QuoteHistoryTable({
         <TableHeader>
           <TableRow>
             <SortHeader activeKey={quoteSortKey} columnKey="date" direction={quoteSortDirection} onSort={handleQuoteSort}>
-              Date
+              {t.table.date}
             </SortHeader>
             <SortHeader activeKey={quoteSortKey} columnKey="trade" direction={quoteSortDirection} onSort={handleQuoteSort}>
-              Trade ID
+              {t.history.tradeId}
             </SortHeader>
             <SortHeader activeKey={quoteSortKey} columnKey="code" direction={quoteSortDirection} onSort={handleQuoteSort}>
-              Rock Hill Code
+              {t.products.rockHillCode}
             </SortHeader>
             <SortHeader activeKey={quoteSortKey} columnKey="name" direction={quoteSortDirection} onSort={handleQuoteSort}>
-              Product Name
+              {t.history.productName}
             </SortHeader>
             <SortHeader
               activeKey={quoteSortKey}
@@ -372,18 +374,18 @@ export function QuoteHistoryTable({
               direction={quoteSortDirection}
               onSort={handleQuoteSort}
             >
-              Quoted USD
+              {t.history.quotedUsd}
             </SortHeader>
-            <TableHead>Notes</TableHead>
+            <TableHead>{t.table.notes}</TableHead>
             <SortHeader
               activeKey={quoteSortKey}
               columnKey="created"
               direction={quoteSortDirection}
               onSort={handleQuoteSort}
             >
-              Created
+              {t.history.created}
             </SortHeader>
-            {canManage ? <TableHead className="text-right">Actions</TableHead> : null}
+            {canManage ? <TableHead className="text-right">{t.table.actions}</TableHead> : null}
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -406,7 +408,7 @@ export function QuoteHistoryTable({
                           <Edit className="h-4 w-4" />
                         </Button>
                       </QuoteHistoryDialog>
-                      <DeleteButton action={() => deleteQuoteHistory(row.id)} label="quote history" />
+                      <DeleteButton action={() => deleteQuoteHistory(row.id)} />
                     </div>
                   </TableCell>
                 ) : null}
@@ -415,7 +417,7 @@ export function QuoteHistoryTable({
           ) : (
             <TableRow>
               <TableCell className="text-slate-500" colSpan={canManage ? 9 : 8}>
-                No quote history matches these filters.
+                {t.history.noQuoteMatches}
               </TableCell>
             </TableRow>
           )}

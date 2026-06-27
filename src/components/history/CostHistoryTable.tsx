@@ -5,6 +5,7 @@ import { FormEvent, ReactNode, useMemo, useState, useTransition } from "react";
 import { toast } from "sonner";
 
 import { createCostHistory, deleteCostHistory, updateCostHistory } from "@/app/actions/history";
+import { useLanguage } from "@/context/LanguageContext";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -137,12 +138,11 @@ function SortHeader<T extends string>({
 
 function DeleteButton({
   action,
-  label,
 }: {
   action: () => Promise<{ success?: true; error?: string }>;
-  label: string;
 }) {
   const [isPending, startTransition] = useTransition();
+  const { t } = useLanguage();
 
   function handleDelete() {
     startTransition(async () => {
@@ -153,7 +153,7 @@ function DeleteButton({
         return;
       }
 
-      toast.success(`${label} deleted`);
+      toast.success(t.history.deleted);
       window.location.reload();
     });
   }
@@ -167,15 +167,15 @@ function DeleteButton({
       </AlertDialogTrigger>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>Delete {label}?</AlertDialogTitle>
+          <AlertDialogTitle>{t.history.deleteCost}</AlertDialogTitle>
           <AlertDialogDescription>
-            This will permanently remove this {label} row. This action cannot be undone.
+            {t.history.deleteDescription}
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel disabled={isPending}>Cancel</AlertDialogCancel>
+          <AlertDialogCancel disabled={isPending}>{t.actions.cancel}</AlertDialogCancel>
           <AlertDialogAction className="bg-red-600 hover:bg-red-700" disabled={isPending} onClick={handleDelete}>
-            {isPending ? "Deleting..." : "Delete"}
+            {isPending ? t.history.deleting : t.actions.delete}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
@@ -194,6 +194,7 @@ function CostHistoryDialog({
   products: ProductOption[];
   suppliers: SupplierOption[];
 }) {
+  const { t } = useLanguage();
   const [open, setOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -211,7 +212,7 @@ function CostHistoryDialog({
         return;
       }
 
-      toast.success(cost ? "Cost history updated" : "Cost history added");
+      toast.success(cost ? t.history.costUpdated : t.history.costAdded);
       setOpen(false);
       window.location.reload();
     });
@@ -222,15 +223,15 @@ function CostHistoryDialog({
       <DialogTrigger asChild>{children}</DialogTrigger>
       <DialogContent className="sm:max-w-3xl">
         <DialogHeader>
-          <DialogTitle>{cost ? "Edit Cost History" : "Add Cost History"}</DialogTitle>
-          <DialogDescription>Manual product cost row.</DialogDescription>
+          <DialogTitle>{cost ? t.history.editCostHistory : t.history.addCostHistory}</DialogTitle>
+          <DialogDescription>{t.history.manualCostRow}</DialogDescription>
         </DialogHeader>
         <form className="grid gap-4 sm:grid-cols-2" onSubmit={handleSubmit}>
           <div className="space-y-2">
-            <Label>Product</Label>
+            <Label>{t.products.product}</Label>
             <Select defaultValue={cost?.product_id} disabled={isPending} name="product_id" required>
               <SelectTrigger>
-                <SelectValue placeholder="Select product" />
+                <SelectValue placeholder={t.products.product} />
               </SelectTrigger>
               <SelectContent>
                 {products.map((product) => (
@@ -242,13 +243,13 @@ function CostHistoryDialog({
             </Select>
           </div>
           <div className="space-y-2">
-            <Label>Supplier</Label>
+            <Label>{t.products.supplier}</Label>
             <Select defaultValue={cost?.supplier_id ?? "none"} disabled={isPending} name="supplier_id">
               <SelectTrigger>
-                <SelectValue placeholder="Select supplier" />
+                <SelectValue placeholder={t.products.supplier} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="none">None</SelectItem>
+                <SelectItem value="none">{t.common.none}</SelectItem>
                 {suppliers.map((supplier) => (
                   <SelectItem key={supplier.id} value={supplier.id}>
                     {supplier.code}
@@ -258,7 +259,7 @@ function CostHistoryDialog({
             </Select>
           </div>
           <div className="space-y-2">
-            <Label htmlFor="supplier_product_code">Supplier Code</Label>
+            <Label htmlFor="supplier_product_code">{t.products.supplierCode}</Label>
             <Input
               defaultValue={cost?.supplier_product_code ?? ""}
               disabled={isPending}
@@ -267,7 +268,7 @@ function CostHistoryDialog({
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="quoted_date">Date</Label>
+            <Label htmlFor="quoted_date">{t.table.date}</Label>
             <Input
               defaultValue={cost?.quoted_date ?? new Date().toISOString().slice(0, 10)}
               disabled={isPending}
@@ -278,7 +279,7 @@ function CostHistoryDialog({
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="unit_cost_rmb">Unit (RMB)</Label>
+            <Label htmlFor="unit_cost_rmb">{t.products.unitRmb}</Label>
             <Input
               defaultValue={cost?.unit_cost_rmb ?? ""}
               disabled={isPending}
@@ -295,7 +296,7 @@ function CostHistoryDialog({
             <Input defaultValue={cost?.moq ?? ""} disabled={isPending} id="moq" name="moq" />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="quality">Quality</Label>
+            <Label htmlFor="quality">{t.products.quality}</Label>
             <Input defaultValue={cost?.quality ?? ""} disabled={isPending} id="quality" name="quality" />
           </div>
           <label className="flex items-center gap-2 pt-8 text-sm font-medium text-[#0d1b34]">
@@ -306,24 +307,24 @@ function CostHistoryDialog({
               type="checkbox"
               value="true"
             />
-            Carton
+            {t.products.carton}
           </label>
           <div className="space-y-2 sm:col-span-2">
-            <Label htmlFor="source">Source</Label>
+            <Label htmlFor="source">{t.products.source}</Label>
             <Input defaultValue={cost?.source ?? "manual"} disabled={isPending} id="source" name="source" required />
           </div>
           <div className="space-y-2 sm:col-span-2">
-            <Label htmlFor="notes">Notes</Label>
+            <Label htmlFor="notes">{t.table.notes}</Label>
             <Textarea defaultValue={cost?.notes ?? ""} disabled={isPending} id="notes" name="notes" />
           </div>
           {error ? <p className="text-sm font-medium text-red-600 sm:col-span-2">{error}</p> : null}
           <div className="flex justify-end gap-2 sm:col-span-2">
             <Button disabled={isPending} onClick={() => setOpen(false)} type="button" variant="outline">
-              Cancel
+              {t.actions.cancel}
             </Button>
             <Button className="bg-[#0d1b34] hover:bg-[#13294d]" disabled={isPending} type="submit">
               {isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-              Save
+              {t.actions.save}
             </Button>
           </div>
         </form>
@@ -343,6 +344,7 @@ export function CostHistoryTable({
   products: ProductOption[];
   suppliers: SupplierOption[];
 }) {
+  const { t } = useLanguage();
   const [costSearch, setCostSearch] = useState("");
   const [costSourceFilter, setCostSourceFilter] = useState("all");
   const [costSortKey, setCostSortKey] = useState<CostSortKey>("date");
@@ -405,12 +407,12 @@ export function CostHistoryTable({
   return (
     <div className="rounded-lg border border-slate-200 bg-white shadow-sm">
       <div className="flex items-center justify-between gap-3 border-b border-slate-200 p-4">
-        <h2 className="text-lg font-semibold text-[#0d1b34]">Cost History</h2>
+        <h2 className="text-lg font-semibold text-[#0d1b34]">{t.history.costHistory}</h2>
         {canManage ? (
           <CostHistoryDialog products={products} suppliers={suppliers}>
             <Button className="bg-[#0d1b34] hover:bg-[#13294d]" size="sm">
               <Plus className="mr-2 h-4 w-4" />
-              Add Cost
+              {t.history.addCost}
             </Button>
           </CostHistoryDialog>
         ) : null}
@@ -418,15 +420,15 @@ export function CostHistoryTable({
       <div className="grid gap-3 border-b border-slate-200 p-4 md:grid-cols-[minmax(16rem,1fr)_14rem]">
         <Input
           onChange={(event) => setCostSearch(event.target.value)}
-          placeholder="Search product, supplier code, MOQ, quality, source..."
+          placeholder={t.history.searchCostPlaceholder}
           value={costSearch}
         />
         <Select onValueChange={setCostSourceFilter} value={costSourceFilter}>
           <SelectTrigger>
-            <SelectValue placeholder="Source" />
+            <SelectValue placeholder={t.products.source} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All Sources</SelectItem>
+            <SelectItem value="all">{t.history.allSources}</SelectItem>
             {costSources.map((source) => (
               <SelectItem key={source} value={source}>
                 {source}
@@ -439,10 +441,10 @@ export function CostHistoryTable({
         <TableHeader>
           <TableRow>
             <SortHeader activeKey={costSortKey} columnKey="date" direction={costSortDirection} onSort={handleCostSort}>
-              Date
+              {t.table.date}
             </SortHeader>
             <SortHeader activeKey={costSortKey} columnKey="product" direction={costSortDirection} onSort={handleCostSort}>
-              Rock Hill Code
+              {t.products.rockHillCode}
             </SortHeader>
             <SortHeader
               activeKey={costSortKey}
@@ -450,7 +452,7 @@ export function CostHistoryTable({
               direction={costSortDirection}
               onSort={handleCostSort}
             >
-              Product Name
+              {t.history.productName}
             </SortHeader>
             <SortHeader
               activeKey={costSortKey}
@@ -468,7 +470,7 @@ export function CostHistoryTable({
               direction={costSortDirection}
               onSort={handleCostSort}
             >
-              Unit (RMB)
+              {t.products.unitRmb}
             </SortHeader>
             <SortHeader
               activeKey={costSortKey}
@@ -477,15 +479,15 @@ export function CostHistoryTable({
               direction={costSortDirection}
               onSort={handleCostSort}
             >
-              Quality
+              {t.products.quality}
             </SortHeader>
             <SortHeader activeKey={costSortKey} columnKey="carton" direction={costSortDirection} onSort={handleCostSort}>
-              Carton
+              {t.products.carton}
             </SortHeader>
             <SortHeader activeKey={costSortKey} columnKey="source" direction={costSortDirection} onSort={handleCostSort}>
-              Source
+              {t.products.source}
             </SortHeader>
-            {canManage ? <TableHead className="text-right">Actions</TableHead> : null}
+            {canManage ? <TableHead className="text-right">{t.table.actions}</TableHead> : null}
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -498,7 +500,7 @@ export function CostHistoryTable({
                 <TableCell>{formatMoq(row.moq)}</TableCell>
                 <TableCell className="text-right font-medium">{formatRmb(row.unit_cost_rmb)}</TableCell>
                 <TableCell>{row.quality ?? "-"}</TableCell>
-                <TableCell>{row.carton_box_packaging ? "Yes" : "No"}</TableCell>
+                <TableCell>{row.carton_box_packaging ? t.common.yes : t.common.no}</TableCell>
                 <TableCell>{row.source}</TableCell>
                 {canManage ? (
                   <TableCell className="text-right">
@@ -508,7 +510,7 @@ export function CostHistoryTable({
                           <Edit className="h-4 w-4" />
                         </Button>
                       </CostHistoryDialog>
-                      <DeleteButton action={() => deleteCostHistory(row.id, row.product_id)} label="cost history" />
+                      <DeleteButton action={() => deleteCostHistory(row.id, row.product_id)} />
                     </div>
                   </TableCell>
                 ) : null}
@@ -517,7 +519,7 @@ export function CostHistoryTable({
           ) : (
             <TableRow>
               <TableCell className="text-slate-500" colSpan={canManage ? 9 : 8}>
-                No cost history matches these filters.
+                {t.history.noCostMatches}
               </TableCell>
             </TableRow>
           )}
