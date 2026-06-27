@@ -147,7 +147,8 @@ export async function generateSupplierInvoiceOutgoing(
     const rate = parseFloat(raw);
     return Number.isFinite(rate) && rate > 0 ? rate : null;
   })();
-  const supplierExtraLines = invoiceType === "deposit" ? parseSupplierExtraLines(formData) : [];
+  const supplierExtraLines =
+    invoiceType === "deposit" || invoiceType === "commercial" ? parseSupplierExtraLines(formData) : [];
 
   const supabase = createServerSupabaseClient();
   const { data: trade, error: tradeError } = await supabase

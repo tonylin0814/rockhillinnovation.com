@@ -1,6 +1,6 @@
 "use client";
 
-import { FileText, Loader2 } from "lucide-react";
+import { FileText, Loader2, Plus, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { FormEvent, ReactNode, useState, useTransition } from "react";
 import { toast } from "sonner";
@@ -27,6 +27,21 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 
 type SupplierOption = { code: string; id: string; name: string };
+type SupplierExtraLine = {
+  _key: string;
+  description_chinese: string;
+  description_english: string;
+  amount_rmb: string;
+};
+
+function createSupplierExtraLine(): SupplierExtraLine {
+  return {
+    _key: crypto.randomUUID(),
+    amount_rmb: "",
+    description_chinese: "",
+    description_english: "",
+  };
+}
 
 function todayInputValue() {
   return new Date().toISOString().slice(0, 10);
@@ -54,14 +69,38 @@ export function GenerateSupplierCommercialInvoiceDialog({
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const [supplierCode, setSupplierCode] = useState(suppliers[0]?.code ?? "");
+  const [extraLines, setExtraLines] = useState<SupplierExtraLine[]>([]);
   const suffix = orderNumberSuffix(orderNumber);
   const generatedInvoiceNumber = supplierCode && suffix ? `${supplierCode}-${suffix}` : "";
+
+  function addExtraLine() {
+    setExtraLines((prev) => [...prev, createSupplierExtraLine()]);
+  }
+
+  function removeExtraLine(index: number) {
+    setExtraLines((prev) => prev.filter((_, rowIndex) => rowIndex !== index));
+  }
+
+  function updateExtraLine(index: number, field: keyof Omit<SupplierExtraLine, "_key">, value: string) {
+    setExtraLines((prev) => prev.map((row, rowIndex) => (rowIndex === index ? { ...row, [field]: value } : row)));
+  }
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError(null);
     const formData = new FormData(event.currentTarget);
     formData.set("invoice_number", generatedInvoiceNumber);
+
+    if (extraLines.length > 0) {
+      const payload = extraLines
+        .filter((line) => line.description_english.trim() && Number(line.amount_rmb) > 0)
+        .map((line) => ({
+          amount_rmb: Number(line.amount_rmb),
+          description_chinese: line.description_chinese.trim() || null,
+          description_english: line.description_english.trim(),
+        }));
+      formData.set("extra_lines_json", JSON.stringify(payload));
+    }
 
     startTransition(async () => {
       const result = await generateSupplierCommercialInvoice(tradeId, formData);
@@ -78,7 +117,15 @@ export function GenerateSupplierCommercialInvoiceDialog({
   }
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog
+      open={open}
+      onOpenChange={(value) => {
+        setOpen(value);
+        if (value) {
+          setExtraLines([]);
+        }
+      }}
+    >
       <DialogTrigger asChild>{children}</DialogTrigger>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
@@ -123,6 +170,59 @@ export function GenerateSupplierCommercialInvoiceDialog({
           <div className="space-y-2">
             <Label htmlFor="sup_commercial_notes">Notes</Label>
             <Textarea disabled={isPending} id="sup_commercial_notes" name="notes" />
+          </div>
+
+          <div className="space-y-3 rounded-lg border border-slate-200 bg-slate-50 p-4">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <p className="text-sm font-semibold text-[#0d1b34]">Extra Lines</p>
+                <p className="text-xs text-slate-500">Optional additional items appended to this invoice (RMB).</p>
+              </div>
+              <Button disabled={isPending} onClick={addExtraLine} size="sm" type="button" variant="outline">
+                <Plus className="mr-2 h-4 w-4" />
+                Add Line
+              </Button>
+            </div>
+
+            {extraLines.length > 0 ? (
+              <div className="space-y-2">
+                {extraLines.map((line, index) => (
+                  <div className="grid gap-2 sm:grid-cols-[1fr_1fr_9rem_auto]" key={line._key}>
+                    <Input
+                      disabled={isPending}
+                      onChange={(event) => updateExtraLine(index, "description_english", event.target.value)}
+                      placeholder="Description (English)"
+                      value={line.description_english}
+                    />
+                    <Input
+                      disabled={isPending}
+                      onChange={(event) => updateExtraLine(index, "description_chinese", event.target.value)}
+                      placeholder="Description (Chinese, optional)"
+                      value={line.description_chinese}
+                    />
+                    <Input
+                      disabled={isPending}
+                      min="0.01"
+                      onChange={(event) => updateExtraLine(index, "amount_rmb", event.target.value)}
+                      placeholder="¥ Amount"
+                      step="0.01"
+                      type="number"
+                      value={line.amount_rmb}
+                    />
+                    <Button
+                      disabled={isPending}
+                      onClick={() => removeExtraLine(index)}
+                      size="icon"
+                      type="button"
+                      variant="ghost"
+                    >
+                      <Trash2 className="h-4 w-4 text-red-500" />
+                      <span className="sr-only">Remove line</span>
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            ) : null}
           </div>
 
           {error ? <p className="text-sm font-medium text-red-600">{error}</p> : null}
