@@ -6,6 +6,7 @@ import { useMemo, useTransition } from "react";
 import { toast } from "sonner";
 
 import { deleteDocument, updateDocumentStatus } from "@/app/actions/documents";
+import { useLanguage } from "@/context/LanguageContext";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -75,6 +76,24 @@ const statusClasses: Record<TradeDocument["status"], string> = {
   archived: "border-red-200 bg-red-50 text-red-700",
 };
 
+const zhCategoryLabels: Record<TradeDocument["document_category"], string> = {
+  approval: "核准文件",
+  client_quotation: "客戶報價",
+  design: "設計",
+  invoice: "發票",
+  other: "其他",
+  shipping: "出貨",
+  supplier_quote: "供應商報價",
+};
+
+const zhStatusLabels: Record<TradeDocument["status"], string> = {
+  approved: "已核准",
+  archived: "已封存",
+  draft: "草稿",
+  sent: "已寄出",
+  sent_to_printer: "已送印",
+};
+
 function formatDate(value: string) {
   return new Intl.DateTimeFormat("en-US", {
     month: "short",
@@ -86,14 +105,35 @@ function formatDate(value: string) {
 }
 
 function StatusBadge({ status }: { status: TradeDocument["status"] }) {
+  const { language } = useLanguage();
+  const labels = language === "zh" ? zhStatusLabels : statusLabels;
   return (
     <Badge className={statusClasses[status]} variant="outline">
-      {statusLabels[status]}
+      {labels[status]}
     </Badge>
   );
 }
 
 function DocumentStatusDropdown({ document }: { document: TradeDocument }) {
+  const { language } = useLanguage();
+  const labels = language === "zh" ? zhStatusLabels : statusLabels;
+  const text = language === "zh"
+    ? {
+        delete: "刪除",
+        deleteDocument: "刪除文件",
+        deleteDescription: "這會從交易中移除此文件紀錄。此動作無法復原。",
+        deleteTitle: "刪除文件？",
+        updateStatus: "更新狀態",
+        cancel: "取消",
+      }
+    : {
+        delete: "Delete",
+        deleteDocument: "Delete Document",
+        deleteDescription: "This removes the document record from the trade. This cannot be undone.",
+        deleteTitle: "Delete document?",
+        updateStatus: "Update status",
+        cancel: "Cancel",
+      };
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
 
@@ -131,35 +171,35 @@ function DocumentStatusDropdown({ document }: { document: TradeDocument }) {
         <DropdownMenuTrigger asChild>
           <Button disabled={isPending} size="icon" type="button" variant="ghost">
             <MoreHorizontal className="h-4 w-4" />
-            <span className="sr-only">Update status</span>
+            <span className="sr-only">{text.updateStatus}</span>
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
           {(Object.keys(statusLabels) as TradeDocument["status"][]).map((status) => (
             <DropdownMenuItem disabled={status === document.status} key={status} onClick={() => setStatus(status)}>
-              {statusLabels[status]}
+              {labels[status]}
             </DropdownMenuItem>
           ))}
           <DropdownMenuSeparator />
           <AlertDialogTrigger asChild>
             <DropdownMenuItem className="text-red-600 focus:text-red-600" onSelect={(event) => event.preventDefault()}>
               <Trash2 className="mr-2 h-4 w-4" />
-              Delete
+              {text.delete}
             </DropdownMenuItem>
           </AlertDialogTrigger>
         </DropdownMenuContent>
       </DropdownMenu>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>Delete document?</AlertDialogTitle>
+          <AlertDialogTitle>{text.deleteTitle}</AlertDialogTitle>
           <AlertDialogDescription>
-            This removes the document record from the trade. This cannot be undone.
+            {text.deleteDescription}
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel disabled={isPending}>Cancel</AlertDialogCancel>
+          <AlertDialogCancel disabled={isPending}>{text.cancel}</AlertDialogCancel>
           <AlertDialogAction className="bg-red-600 hover:bg-red-700" disabled={isPending} onClick={handleDelete}>
-            Delete Document
+            {text.deleteDocument}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
@@ -176,6 +216,27 @@ export function DocumentsTab({
   tradeCode: string;
   initialDocuments: TradeDocument[];
 }) {
+  const { language } = useLanguage();
+  const labels = language === "zh" ? zhCategoryLabels : categoryLabels;
+  const text = language === "zh"
+    ? {
+        actions: "操作",
+        date: "日期",
+        fileName: "檔案名稱",
+        noDocuments: "尚無文件。請上傳第一個文件。",
+        relatedParty: "相關對象",
+        status: "狀態",
+        version: "版本",
+      }
+    : {
+        actions: "Actions",
+        date: "Date",
+        fileName: "File Name",
+        noDocuments: "No documents yet. Upload the first document.",
+        relatedParty: "Related Party",
+        status: "Status",
+        version: "Version",
+      };
   const groupedDocuments = useMemo(
     () =>
       categoryOrder
@@ -198,19 +259,19 @@ export function DocumentsTab({
           {groupedDocuments.map((group) => (
             <div className="space-y-2" key={group.category}>
               <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
-                {categoryLabels[group.category]}
+                {labels[group.category]}
               </h3>
               <Card className="border-slate-200 shadow-sm">
                 <CardContent className="p-0">
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>File Name</TableHead>
-                        <TableHead>Version</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Related Party</TableHead>
-                        <TableHead>Date</TableHead>
-                        <TableHead className="text-right">Actions</TableHead>
+                        <TableHead>{text.fileName}</TableHead>
+                        <TableHead>{text.version}</TableHead>
+                        <TableHead>{text.status}</TableHead>
+                        <TableHead>{text.relatedParty}</TableHead>
+                        <TableHead>{text.date}</TableHead>
+                        <TableHead className="text-right">{text.actions}</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -255,7 +316,7 @@ export function DocumentsTab({
       ) : (
         <Card className="border-slate-200 shadow-sm">
           <CardContent className="py-10 text-sm text-slate-500">
-            No documents yet. Upload the first document.
+            {text.noDocuments}
           </CardContent>
         </Card>
       )}

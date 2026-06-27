@@ -6,6 +6,7 @@ import { useState, useTransition } from "react";
 import { toast } from "sonner";
 
 import { updateQuotationSessionStatus } from "@/app/actions/client-quotations";
+import { useLanguage } from "@/context/LanguageContext";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -50,9 +51,10 @@ function formatDate(value: string) {
 }
 
 function StatusBadge({ status }: { status: ClientQuotationSession["status"] }) {
+  const { t } = useLanguage();
   return (
     <Badge className={statusClasses[status]} variant="outline">
-      {status}
+      {t.status[status as keyof typeof t.status] ?? status}
     </Badge>
   );
 }
@@ -68,6 +70,40 @@ export function ClientQuotationsTab({
   canManage: boolean;
   workingExchangeRate: number | null;
 }) {
+  const { language } = useLanguage();
+  const text = language === "zh"
+    ? {
+        accepted: "標記為已接受",
+        client: "客戶",
+        description: "建立、審核並管理此交易的客戶報價輪次。",
+        downloadPdf: "下載 PDF",
+        edit: "編輯",
+        generatePdf: "產生 PDF",
+        hideLines: "隱藏明細",
+        rejected: "標記為已拒絕",
+        regeneratePdf: "重新產生 PDF",
+        revert: "轉回草稿",
+        round: "第 {round} 輪",
+        sent: "標記為已寄出",
+        title: "客戶報價輪次",
+        viewLines: "查看明細",
+      }
+    : {
+        accepted: "Mark Accepted",
+        client: "Client",
+        description: "Create, review, and manage quotation sessions for this trade.",
+        downloadPdf: "Download PDF",
+        edit: "Edit",
+        generatePdf: "Generate PDF",
+        hideLines: "Hide Lines",
+        rejected: "Mark Rejected",
+        regeneratePdf: "Regenerate PDF",
+        revert: "Revert to Draft",
+        round: "Round {round}",
+        sent: "Mark Sent",
+        title: "Client quotation rounds",
+        viewLines: "View Lines",
+      };
   const router = useRouter();
   const [expandedSessionId, setExpandedSessionId] = useState<string | null>(null);
   const [editRequestBySession, setEditRequestBySession] = useState<Record<string, number>>({});
@@ -148,8 +184,8 @@ export function ClientQuotationsTab({
     <div className="space-y-4">
       <div className="flex flex-col gap-3 rounded-lg border border-slate-200 bg-white p-4 shadow-sm lg:flex-row lg:items-end lg:justify-between">
         <div className="space-y-1">
-          <p className="text-sm font-medium text-[#0d1b34]">Client quotation rounds</p>
-          <p className="text-xs text-slate-500">Create, review, and manage quotation sessions for this trade.</p>
+          <p className="text-sm font-medium text-[#0d1b34]">{text.title}</p>
+          <p className="text-xs text-slate-500">{text.description}</p>
         </div>
 
         <div className="flex justify-end">{canManage ? <NewQuotationSessionDialog tradeId={tradeId} /> : null}</div>
@@ -167,13 +203,13 @@ export function ClientQuotationsTab({
                   <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
                     <div>
                       <div className="flex flex-wrap items-center gap-2">
-                        <CardTitle>Round {session.session_number}</CardTitle>
+                        <CardTitle>{text.round.replace("{round}", String(session.session_number))}</CardTitle>
                         <span className="text-sm text-slate-500">{formatDate(session.quote_date)}</span>
                         <StatusBadge status={session.status} />
                       </div>
                       {session.client ? (
                         <p className="mt-2 text-sm text-slate-500">
-                          Client: {session.client.code}
+                          {text.client}: {session.client.code}
                         </p>
                       ) : null}
                       {session.notes ? <p className="mt-2 text-sm text-slate-500">{session.notes}</p> : null}
@@ -188,7 +224,7 @@ export function ClientQuotationsTab({
                           variant="outline"
                         >
                           <Send className="mr-2 h-4 w-4" />
-                          Mark Sent
+                          {text.sent}
                         </Button>
                       ) : null}
                       {canManage && session.status === "sent" ? (
@@ -200,7 +236,7 @@ export function ClientQuotationsTab({
                             variant="outline"
                           >
                             <CheckCircle2 className="mr-2 h-4 w-4" />
-                            Mark Accepted
+                            {text.accepted}
                           </Button>
                           <Button
                             disabled={isSessionPending}
@@ -209,7 +245,7 @@ export function ClientQuotationsTab({
                             variant="outline"
                           >
                             <XCircle className="mr-2 h-4 w-4" />
-                            Mark Rejected
+                            {text.rejected}
                           </Button>
                         </>
                       ) : null}
@@ -221,14 +257,14 @@ export function ClientQuotationsTab({
                           variant="outline"
                         >
                           <RotateCcw className="mr-2 h-4 w-4" />
-                          Revert to Draft
+                          {text.revert}
                         </Button>
                       ) : null}
                       {canManage ? (
                         <GenerateQuotationDialog defaultRef={session.quotation_ref ?? undefined} sessionId={session.id}>
                           <Button size="sm" variant="outline">
                             <FileText className="mr-1.5 h-3.5 w-3.5" />
-                            {session.pdf_onedrive_url ? "Regenerate PDF" : "Generate PDF"}
+                            {session.pdf_onedrive_url ? text.regeneratePdf : text.generatePdf}
                           </Button>
                         </GenerateQuotationDialog>
                       ) : null}
@@ -242,17 +278,17 @@ export function ClientQuotationsTab({
                           )}
                         >
                           <Download className="h-3.5 w-3.5" />
-                          Download PDF
+                          {text.downloadPdf}
                         </a>
                       ) : null}
                       {canManage && (session.status === "draft" || session.status === "sent") ? (
                         <Button disabled={loadingSessionId === session.id} onClick={() => editLines(session.id)} size="sm">
                           <PencilLine className="mr-1.5 h-3.5 w-3.5" />
-                          Edit
+                          {text.edit}
                         </Button>
                       ) : null}
                       <Button onClick={() => toggleLines(session.id)} size="sm" variant="outline">
-                        {isExpanded ? "Hide Lines" : "View Lines"}
+                        {isExpanded ? text.hideLines : text.viewLines}
                       </Button>
                     </div>
                   </div>

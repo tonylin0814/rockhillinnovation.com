@@ -6,6 +6,7 @@ import { useMemo, useState, useTransition } from "react";
 import { toast } from "sonner";
 
 import { saveTradeShareholders } from "@/app/actions/trades";
+import { useLanguage } from "@/context/LanguageContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -80,6 +81,54 @@ export function ShareholderRulesEditor({
   availableVendors: VendorOption[];
   canManage: boolean;
 }) {
+  const { language } = useLanguage();
+  const text = language === "zh"
+    ? {
+        actions: "操作",
+        addPerson: "新增人員",
+        cancel: "取消",
+        editSplitRules: "編輯分成規則",
+        invoicesThroughEntity: "透過公司實體開票",
+        noRules: "尚無利潤分成規則。",
+        none: "無",
+        percentHelp: "百分比總和必須為 100%",
+        person: "人員",
+        personName: "人員姓名",
+        profitSplitRules: "利潤分成規則",
+        removeShareholder: "移除股東",
+        save: "儲存",
+        selectUser: "選擇使用者",
+        selectVendor: "選擇費用廠商",
+        splitPct: "分成 %",
+        total: "合計",
+        useTextName: "使用文字姓名",
+        vendor: "費用廠商",
+        yes: "是",
+        no: "否",
+      }
+    : {
+        actions: "Actions",
+        addPerson: "Add Person",
+        cancel: "Cancel",
+        editSplitRules: "Edit Split Rules",
+        invoicesThroughEntity: "Invoices Through Entity",
+        noRules: "No profit split rules yet.",
+        none: "None",
+        percentHelp: "Percentages must sum to 100%",
+        person: "Person",
+        personName: "Person name",
+        profitSplitRules: "Profit Split Rules",
+        removeShareholder: "Remove shareholder",
+        save: "Save",
+        selectUser: "Select user",
+        selectVendor: "Select vendor",
+        splitPct: "Split %",
+        total: "Total",
+        useTextName: "Use text name",
+        vendor: "Vendor",
+        yes: "Yes",
+        no: "No",
+      };
   const router = useRouter();
   const [isEditing, setIsEditing] = useState(false);
   const [rows, setRows] = useState<EditableShareholder[]>(() => rowsFromShareholders(initialShareholders));
@@ -151,10 +200,10 @@ export function ShareholderRulesEditor({
   return (
     <Card className="border-slate-200 shadow-sm">
       <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle>Profit Split Rules</CardTitle>
+        <CardTitle>{text.profitSplitRules}</CardTitle>
         {canManage && !isEditing ? (
           <Button onClick={() => setIsEditing(true)} size="sm" variant="outline">
-            Edit Split Rules
+            {text.editSplitRules}
           </Button>
         ) : null}
       </CardHeader>
@@ -162,11 +211,11 @@ export function ShareholderRulesEditor({
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Person</TableHead>
-              <TableHead>Split %</TableHead>
-              <TableHead>Invoices Through Entity</TableHead>
-              <TableHead>Vendor</TableHead>
-              {isEditing ? <TableHead className="text-right">Actions</TableHead> : null}
+              <TableHead>{text.person}</TableHead>
+              <TableHead>{text.splitPct}</TableHead>
+              <TableHead>{text.invoicesThroughEntity}</TableHead>
+              <TableHead>{text.vendor}</TableHead>
+              {isEditing ? <TableHead className="text-right">{text.actions}</TableHead> : null}
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -190,10 +239,10 @@ export function ShareholderRulesEditor({
                             value={row.user_id}
                           >
                             <SelectTrigger className="min-w-56">
-                              <SelectValue placeholder="Select user" />
+                              <SelectValue placeholder={text.selectUser} />
                             </SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="none">Use text name</SelectItem>
+                              <SelectItem value="none">{text.useTextName}</SelectItem>
                               {availableUsers.map((availableUser) => (
                                 <SelectItem key={availableUser.id} value={availableUser.id}>
                                   {availableUser.name} ({availableUser.email})
@@ -201,11 +250,13 @@ export function ShareholderRulesEditor({
                               ))}
                             </SelectContent>
                           </Select>
-                          <Input
-                            onChange={(event) => updateRow(index, { person_name: event.currentTarget.value })}
-                            placeholder="Person name"
-                            value={row.person_name}
-                          />
+                          {row.user_id === "none" ? (
+                            <Input
+                              onChange={(event) => updateRow(index, { person_name: event.currentTarget.value })}
+                              placeholder={text.personName}
+                              value={row.person_name}
+                            />
+                          ) : null}
                         </div>
                       ) : (
                         row.person_name
@@ -239,12 +290,12 @@ export function ShareholderRulesEditor({
                             }
                             type="checkbox"
                           />
-                          Yes
+                          {text.yes}
                         </label>
                       ) : row.invoices_through_entity ? (
-                        vendor ? `Yes (${vendor.code})` : "Yes"
+                        vendor ? `${text.yes} (${vendor.code})` : text.yes
                       ) : (
-                        "No"
+                        text.no
                       )}
                     </TableCell>
                     <TableCell>
@@ -254,10 +305,10 @@ export function ShareholderRulesEditor({
                           value={row.expense_vendor_id}
                         >
                           <SelectTrigger className="min-w-56">
-                            <SelectValue placeholder="Select vendor" />
+                            <SelectValue placeholder={text.selectVendor} />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="none">None</SelectItem>
+                            <SelectItem value="none">{text.none}</SelectItem>
                             {availableVendors.map((availableVendor) => (
                               <SelectItem key={availableVendor.id} value={availableVendor.id}>
                                 {availableVendor.code}
@@ -274,7 +325,7 @@ export function ShareholderRulesEditor({
                     {isEditing ? (
                       <TableCell className="text-right">
                         <Button
-                          aria-label="Remove shareholder"
+                          aria-label={text.removeShareholder}
                           onClick={() => removeRow(index)}
                           size="icon"
                           type="button"
@@ -290,14 +341,14 @@ export function ShareholderRulesEditor({
             ) : (
               <TableRow>
                 <TableCell className="text-slate-500" colSpan={isEditing ? 5 : 4}>
-                  No profit split rules yet.
+                  {text.noRules}
                 </TableCell>
               </TableRow>
             )}
           </TableBody>
           <TableFooter>
             <TableRow>
-              <TableCell className="font-semibold">Total</TableCell>
+              <TableCell className="font-semibold">{text.total}</TableCell>
               <TableCell className={`font-semibold ${totalClass(total)}`}>{total.toFixed(2)}%</TableCell>
               <TableCell colSpan={isEditing ? 3 : 2} />
             </TableRow>
@@ -308,7 +359,7 @@ export function ShareholderRulesEditor({
           <div className="flex flex-wrap items-center justify-between gap-3">
             <Button onClick={addRow} type="button" variant="outline">
               <Plus className="mr-2 h-4 w-4" />
-              Add Person
+              {text.addPerson}
             </Button>
             <div className="flex justify-end gap-2">
               <Button
@@ -320,9 +371,9 @@ export function ShareholderRulesEditor({
                 type="button"
                 variant="outline"
               >
-                Cancel
+                {text.cancel}
               </Button>
-              <span title={!isTotalValid ? "Percentages must sum to 100%" : undefined}>
+              <span title={!isTotalValid ? text.percentHelp : undefined}>
                 <Button
                   className="bg-[#0d1b34] hover:bg-[#13294d]"
                   disabled={isPending || !isTotalValid}
@@ -330,7 +381,7 @@ export function ShareholderRulesEditor({
                   type="button"
                 >
                   {isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                  Save
+                  {text.save}
                 </Button>
               </span>
             </div>

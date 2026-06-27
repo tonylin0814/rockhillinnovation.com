@@ -6,6 +6,7 @@ import { useEffect, useMemo, useState, useTransition } from "react";
 import { toast } from "sonner";
 
 import { saveQuoteLines } from "@/app/actions/supplier-quotes";
+import { useLanguage } from "@/context/LanguageContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -114,6 +115,44 @@ export function QuoteLinesEditor({
   sessionStatus: SupplierQuoteSession["status"];
   canManage: boolean;
 }) {
+  const { language } = useLanguage();
+  const text = language === "zh"
+    ? {
+        actions: "操作",
+        addLine: "新增明細",
+        cancel: "取消",
+        change: "變動",
+        changePct: "變動 %",
+        code: "代碼",
+        costRmb: "成本（人民幣）",
+        edit: "編輯",
+        noLines: "尚無明細。",
+        none: "無",
+        previousCost: "前次成本",
+        product: "產品",
+        qty: "數量",
+        save: "儲存",
+        selectProduct: "選擇產品",
+        total: "合計",
+      }
+    : {
+        actions: "Actions",
+        addLine: "Add Line",
+        cancel: "Cancel",
+        change: "Change",
+        changePct: "Change %",
+        code: "Code",
+        costRmb: "Cost (RMB)",
+        edit: "Edit",
+        noLines: "No lines yet.",
+        none: "None",
+        previousCost: "Prv. Cost",
+        product: "Product",
+        qty: "Qty",
+        save: "Save",
+        selectProduct: "Select product",
+        total: "Total",
+      };
   const router = useRouter();
   const [isEditing, setIsEditing] = useState(false);
   const [rows, setRows] = useState<EditableQuoteLine[]>(() => rowsFromLines(initialLines));
@@ -273,7 +312,7 @@ export function QuoteLinesEditor({
       <div className="flex justify-end">
         {canEdit && !isEditing ? (
           <Button onClick={() => setIsEditing(true)} size="sm" variant="outline">
-            Edit
+            {text.edit}
           </Button>
         ) : null}
       </div>
@@ -282,14 +321,14 @@ export function QuoteLinesEditor({
         <TableHeader>
           <TableRow>
             <TableHead className="w-14">#</TableHead>
-            <TableHead>Code</TableHead>
-            <TableHead>Product</TableHead>
-            <TableHead className="w-[101px]">Qty</TableHead>
-            <TableHead>Cost (RMB)</TableHead>
-            <TableHead>Prv. Cost</TableHead>
-            <TableHead>Change</TableHead>
-            <TableHead>Change %</TableHead>
-            {isEditing ? <TableHead className="text-right">Actions</TableHead> : null}
+            <TableHead>{text.code}</TableHead>
+            <TableHead>{text.product}</TableHead>
+            <TableHead className="w-[101px]">{text.qty}</TableHead>
+            <TableHead>{text.costRmb}</TableHead>
+            <TableHead>{text.previousCost}</TableHead>
+            <TableHead>{text.change}</TableHead>
+            <TableHead>{text.changePct}</TableHead>
+            {isEditing ? <TableHead className="text-right">{text.actions}</TableHead> : null}
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -344,10 +383,10 @@ export function QuoteLinesEditor({
                     {isEditing ? (
                       <Select onValueChange={(value) => handleProductChange(index, value)} value={row.product_id}>
                         <SelectTrigger className="min-w-64">
-                          <SelectValue placeholder="Select product" />
+                          <SelectValue placeholder={text.selectProduct} />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="none">None</SelectItem>
+                          <SelectItem value="none">{text.none}</SelectItem>
                           {sortedProducts.map((availableProduct) => (
                             <SelectItem key={availableProduct.id} value={availableProduct.id}>
                               {availableProduct.name_english}
@@ -422,7 +461,7 @@ export function QuoteLinesEditor({
           ) : (
             <TableRow>
               <TableCell className="text-slate-500" colSpan={isEditing ? 9 : 8}>
-                No lines yet.
+                {text.noLines}
               </TableCell>
             </TableRow>
           )}
@@ -430,7 +469,7 @@ export function QuoteLinesEditor({
         <TableFooter>
           <TableRow>
             <TableCell className="font-semibold" colSpan={4}>
-              Total
+              {text.total}
             </TableCell>
             <TableCell className="font-semibold">{formatRmbTotal(runningCostTotal)}</TableCell>
             <TableCell />
@@ -445,7 +484,7 @@ export function QuoteLinesEditor({
         <div className="flex flex-wrap items-center justify-between gap-3">
           <Button onClick={addLine} type="button" variant="outline">
             <Plus className="mr-2 h-4 w-4" />
-            Add Line
+            {text.addLine}
           </Button>
           <div className="flex justify-end gap-2">
             <Button
@@ -458,11 +497,11 @@ export function QuoteLinesEditor({
               type="button"
               variant="outline"
             >
-              Cancel
+              {text.cancel}
             </Button>
             <Button className="bg-[#0d1b34] hover:bg-[#13294d]" disabled={isPending} onClick={handleSave} type="button">
               {isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-              Save
+              {text.save}
             </Button>
           </div>
         </div>

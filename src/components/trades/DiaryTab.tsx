@@ -6,6 +6,7 @@ import { FormEvent, useState, useTransition } from "react";
 import { toast } from "sonner";
 
 import { addDiaryEntry, deleteDiaryEntry, updateDiaryEntry } from "@/app/actions/trade-diary";
+import { useLanguage } from "@/context/LanguageContext";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -39,6 +40,46 @@ export function DiaryTab({
   entries: TradeDiaryEntry[];
   canManage: boolean;
 }) {
+  const { language } = useLanguage();
+  const text = language === "zh"
+    ? {
+        addEntry: "新增日誌",
+        addMoreFiles: "新增更多檔案",
+        attachments: "附件",
+        cancel: "取消",
+        delete: "刪除",
+        deleteDescription: "此動作無法復原。",
+        deleteEntry: "刪除日誌",
+        deleteTitle: "刪除日誌？",
+        editEntry: "編輯日誌",
+        edited: "（已編輯）",
+        existingAttachments: "既有附件",
+        newEntry: "新增日誌",
+        noEntries: "尚無日誌。",
+        note: "內容",
+        placeholder: "寫下此交易的備註...",
+        save: "儲存",
+        upToFive: "最多 5 個",
+      }
+    : {
+        addEntry: "Add Entry",
+        addMoreFiles: "Add More Files",
+        attachments: "Attachments",
+        cancel: "Cancel",
+        delete: "Delete",
+        deleteDescription: "This cannot be undone.",
+        deleteEntry: "Delete diary entry",
+        deleteTitle: "Delete diary entry?",
+        editEntry: "Edit Entry",
+        edited: " (edited)",
+        existingAttachments: "Existing Attachments",
+        newEntry: "New Diary Entry",
+        noEntries: "No diary entries yet.",
+        note: "Note",
+        placeholder: "Write a note about this trade...",
+        save: "Save",
+        upToFive: "up to 5",
+      };
   const router = useRouter();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingEntry, setEditingEntry] = useState<TradeDiaryEntry | null>(null);
@@ -108,7 +149,7 @@ export function DiaryTab({
         <div className="flex justify-end">
           <Button className="bg-[#0d1b34] hover:bg-[#13294d]" onClick={openAdd} size="sm" type="button">
             <Plus className="mr-2 h-4 w-4" />
-            Add Entry
+            {text.addEntry}
           </Button>
         </div>
       ) : null}
@@ -128,7 +169,7 @@ export function DiaryTab({
                       month: "short",
                       year: "numeric",
                     })}
-                    {entry.updated_at !== entry.created_at ? " (edited)" : ""}
+                    {entry.updated_at !== entry.created_at ? text.edited : ""}
                   </p>
                   <p className="mt-2 whitespace-pre-wrap text-sm text-[#0d1b34]">{entry.content}</p>
                   {entry.attachments.length ? (
@@ -151,24 +192,24 @@ export function DiaryTab({
                   <div className="flex shrink-0 gap-1">
                     <Button className="h-8 w-8" onClick={() => openEdit(entry)} size="icon" type="button" variant="ghost">
                       <Pencil className="h-4 w-4" />
-                      <span className="sr-only">Edit diary entry</span>
+                      <span className="sr-only">{text.editEntry}</span>
                     </Button>
                     <AlertDialog>
                       <AlertDialogTrigger asChild>
                         <Button className="h-8 w-8" size="icon" type="button" variant="ghost">
                           <Trash2 className="h-4 w-4 text-slate-400 hover:text-red-600" />
-                          <span className="sr-only">Delete diary entry</span>
+                          <span className="sr-only">{text.deleteEntry}</span>
                         </Button>
                       </AlertDialogTrigger>
                       <AlertDialogContent>
                         <AlertDialogHeader>
-                          <AlertDialogTitle>Delete diary entry?</AlertDialogTitle>
-                          <AlertDialogDescription>This cannot be undone.</AlertDialogDescription>
+                          <AlertDialogTitle>{text.deleteTitle}</AlertDialogTitle>
+                          <AlertDialogDescription>{text.deleteDescription}</AlertDialogDescription>
                         </AlertDialogHeader>
                         <AlertDialogFooter>
-                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogCancel>{text.cancel}</AlertDialogCancel>
                           <AlertDialogAction className="bg-red-600 hover:bg-red-700" onClick={() => handleDelete(entry.id)}>
-                            Delete
+                            {text.delete}
                           </AlertDialogAction>
                         </AlertDialogFooter>
                       </AlertDialogContent>
@@ -181,23 +222,23 @@ export function DiaryTab({
         </ul>
       ) : (
         <p className="rounded-lg border border-dashed border-slate-200 bg-white px-6 py-10 text-sm text-slate-500">
-          No diary entries yet.
+          {text.noEntries}
         </p>
       )}
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
-            <DialogTitle>{editingEntry ? "Edit Entry" : "New Diary Entry"}</DialogTitle>
+            <DialogTitle>{editingEntry ? text.editEntry : text.newEntry}</DialogTitle>
           </DialogHeader>
           <form className="space-y-4" onSubmit={handleSubmit}>
             <div className="space-y-2">
-              <Label htmlFor="diary-content">Note</Label>
+              <Label htmlFor="diary-content">{text.note}</Label>
               <Textarea
                 id="diary-content"
                 name="content"
                 onChange={(event) => setContent(event.target.value)}
-                placeholder="Write a note about this trade..."
+                placeholder={text.placeholder}
                 required
                 rows={5}
                 value={content}
@@ -206,7 +247,7 @@ export function DiaryTab({
 
             {editingEntry && visibleAttachments.length ? (
               <div className="space-y-2">
-                <Label>Existing Attachments</Label>
+                <Label>{text.existingAttachments}</Label>
                 <div className="flex flex-wrap gap-2">
                   {editingEntry.attachments.map((attachment, index) =>
                     removedIndices.includes(index) ? null : (
@@ -230,7 +271,7 @@ export function DiaryTab({
             ) : null}
 
             <div className="space-y-2">
-              <Label>{editingEntry ? "Add More Files" : "Attachments"} (up to 5)</Label>
+              <Label>{editingEntry ? text.addMoreFiles : text.attachments} ({text.upToFive})</Label>
               <div className="space-y-1">
                 {Array.from({ length: 5 }).map((_, index) => (
                   <input
@@ -248,11 +289,11 @@ export function DiaryTab({
 
             <DialogFooter>
               <Button onClick={() => setDialogOpen(false)} type="button" variant="outline">
-                Cancel
+                {text.cancel}
               </Button>
               <Button disabled={pending} type="submit">
                 {pending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                {editingEntry ? "Save" : "Add Entry"}
+                {editingEntry ? text.save : text.addEntry}
               </Button>
             </DialogFooter>
           </form>

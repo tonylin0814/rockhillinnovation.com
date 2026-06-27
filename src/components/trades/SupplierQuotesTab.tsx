@@ -6,6 +6,7 @@ import { useMemo, useState, useTransition } from "react";
 import { toast } from "sonner";
 
 import { deleteQuoteSession, updateQuoteSessionStatus } from "@/app/actions/supplier-quotes";
+import { useLanguage } from "@/context/LanguageContext";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -119,6 +120,44 @@ export function SupplierQuotesTab({
   availableProducts: ProductOption[];
   canManage: boolean;
 }) {
+  const { language } = useLanguage();
+  const text = language === "zh"
+    ? {
+        confirm: "確認",
+        delete: "刪除",
+        deleteDescription: "這會刪除此輪供應商報價與所有明細。剩餘輪次會自動重新編號。",
+        deleteRound: "刪除第 {round} 輪？",
+        edit: "編輯",
+        hideLines: "隱藏明細",
+        lookup: "查詢任何產品的價格歷史",
+        noProducts: "找不到產品。",
+        noSessions: "尚無供應商報價輪次。",
+        noSource: "尚未附來源文件",
+        round: "第 {round} 輪",
+        search: "搜尋產品代碼或名稱",
+        searchProducts: "搜尋產品...",
+        source: "來源文件",
+        supersede: "取代",
+        viewLines: "查看明細",
+      }
+    : {
+        confirm: "Confirm",
+        delete: "Delete",
+        deleteDescription: "This deletes the quote round and its lines. Remaining rounds will be renumbered automatically.",
+        deleteRound: "Delete Round {round}?",
+        edit: "Edit",
+        hideLines: "Hide Lines",
+        lookup: "Look up price history for any product",
+        noProducts: "No products found.",
+        noSessions: "No quote sessions yet.",
+        noSource: "No source document attached",
+        round: "Round {round}",
+        search: "Search product code or name",
+        searchProducts: "Search products...",
+        source: "Source document",
+        supersede: "Supersede",
+        viewLines: "View Lines",
+      };
   const router = useRouter();
   const [expandedSessionId, setExpandedSessionId] = useState<string | null>(null);
   const [editRequestBySession, setEditRequestBySession] = useState<Record<string, number>>({});
@@ -227,22 +266,22 @@ export function SupplierQuotesTab({
     <div className="space-y-4">
       <div className="flex flex-col gap-3 rounded-lg border border-slate-200 bg-white p-4 shadow-sm lg:flex-row lg:items-end lg:justify-between">
         <div className="space-y-2">
-          <p className="text-sm font-medium text-[#0d1b34]">Look up price history for any product</p>
+          <p className="text-sm font-medium text-[#0d1b34]">{text.lookup}</p>
           <Popover open={priceLookupOpen} onOpenChange={setPriceLookupOpen}>
             <PopoverTrigger asChild>
               <Button className="w-full justify-between lg:w-96" role="combobox" type="button" variant="outline">
                 <span className="flex min-w-0 items-center gap-2">
                   <BarChart2 className="h-4 w-4 text-slate-500" />
-                  <span className="truncate">Search product code or name</span>
+                  <span className="truncate">{text.search}</span>
                 </span>
                 <ChevronsUpDown className="h-4 w-4 text-slate-400" />
               </Button>
             </PopoverTrigger>
             <PopoverContent align="start" className="w-[min(24rem,calc(100vw-2rem))] p-0">
               <Command>
-                <CommandInput placeholder="Search products..." />
+                <CommandInput placeholder={text.searchProducts} />
                 <CommandList>
-                  <CommandEmpty>No products found.</CommandEmpty>
+                  <CommandEmpty>{text.noProducts}</CommandEmpty>
                   <CommandGroup>
                     {sortedProducts.map((product) => (
                       <CommandItem
@@ -296,7 +335,7 @@ export function SupplierQuotesTab({
                   <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
                     <div>
                       <div className="flex flex-wrap items-center gap-2">
-                        <CardTitle>Round {session.session_number}</CardTitle>
+                        <CardTitle>{text.round.replace("{round}", String(session.session_number))}</CardTitle>
                         <span className="text-sm text-slate-500">{formatDate(session.quote_date)}</span>
                         <StatusBadge status={session.status} />
                         <RecordedByBadge recordedBy={session.recorded_by} />
@@ -310,10 +349,10 @@ export function SupplierQuotesTab({
                             target="_blank"
                           >
                             <FileText className="h-3 w-3" />
-                            Source document
+                            {text.source}
                           </a>
                         ) : (
-                          <span className="text-xs text-slate-400">No source document attached</span>
+                          <span className="text-xs text-slate-400">{text.noSource}</span>
                         )}
                       </div>
                       {session.notes ? <p className="mt-2 text-sm text-slate-500">{session.notes}</p> : null}
@@ -329,7 +368,7 @@ export function SupplierQuotesTab({
                           variant="outline"
                         >
                           <CheckCircle2 className="mr-2 h-4 w-4" />
-                          Confirm
+                          {text.confirm}
                         </Button>
                       ) : null}
                       {canManage && session.status === "confirmed" ? (
@@ -340,13 +379,13 @@ export function SupplierQuotesTab({
                           variant="outline"
                         >
                           <RotateCcw className="mr-2 h-4 w-4" />
-                          Supersede
+                          {text.supersede}
                         </Button>
                       ) : null}
                       {canManage && session.status === "draft" ? (
                         <Button disabled={loadingSessionId === session.id} onClick={() => editLines(session.id)} size="sm">
                           <PencilLine className="mr-1.5 h-3.5 w-3.5" />
-                          Edit
+                          {text.edit}
                         </Button>
                       ) : null}
                       <Button
@@ -354,22 +393,21 @@ export function SupplierQuotesTab({
                         size="sm"
                         variant="outline"
                       >
-                        {isExpanded ? "Hide Lines" : "View Lines"}
+                        {isExpanded ? text.hideLines : text.viewLines}
                       </Button>
                       {canManage ? (
                         <AlertDialog>
                           <AlertDialogTrigger asChild>
                             <Button disabled={isSessionPending} size="sm" variant="outline">
                               <Trash2 className="mr-2 h-4 w-4" />
-                              Delete
+                              {text.delete}
                             </Button>
                           </AlertDialogTrigger>
                           <AlertDialogContent>
                             <AlertDialogHeader>
-                              <AlertDialogTitle>Delete Round {session.session_number}?</AlertDialogTitle>
+                              <AlertDialogTitle>{text.deleteRound.replace("{round}", String(session.session_number))}</AlertDialogTitle>
                               <AlertDialogDescription>
-                                This deletes the quote round and its lines. Remaining rounds will be renumbered
-                                automatically.
+                                {text.deleteDescription}
                               </AlertDialogDescription>
                             </AlertDialogHeader>
                             <AlertDialogFooter>
@@ -379,7 +417,7 @@ export function SupplierQuotesTab({
                                 disabled={isSessionPending}
                                 onClick={() => deleteSession(session.id)}
                               >
-                                Delete
+                                {text.delete}
                               </AlertDialogAction>
                             </AlertDialogFooter>
                           </AlertDialogContent>
@@ -414,7 +452,7 @@ export function SupplierQuotesTab({
         </div>
       ) : (
         <Card className="border-slate-200 shadow-sm">
-          <CardContent className="py-10 text-sm text-slate-500">No quote sessions yet.</CardContent>
+          <CardContent className="py-10 text-sm text-slate-500">{text.noSessions}</CardContent>
         </Card>
       )}
     </div>

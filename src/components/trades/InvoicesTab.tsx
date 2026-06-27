@@ -13,6 +13,7 @@ import {
   updateSupplierInvoiceStatus,
 } from "@/app/actions/supplier-invoices-outgoing";
 import { deleteVendorOutgoingInvoice } from "@/app/actions/vendor-invoices";
+import { useLanguage } from "@/context/LanguageContext";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -127,6 +128,52 @@ function formatQuantityInput(value: string) {
 
 function parseFormattedNumber(value: string) {
   return value.replace(/,/g, "");
+}
+
+function getInvoiceTabText(language: "en" | "zh") {
+  return language === "zh"
+    ? {
+        actions: "操作",
+        adjustments: "調整項目",
+        clientInvoices: "客戶發票",
+        date: "日期",
+        download: "下載",
+        invoiceNo: "發票號碼",
+        noClientInvoices: "尚無客戶發票。",
+        noSupplierInvoices: "尚無供應商發票。",
+        noVendorInvoices: "尚無費用廠商發票。",
+        pdf: "PDF",
+        status: "狀態",
+        supplierInvoices: "供應商發票（開出）",
+        supplierRef: "供應商參照",
+        totalRmb: "合計（人民幣）",
+        totalUsd: "合計（美元）",
+        type: "類型",
+        usdEquiv: "美元等值",
+        vendor: "費用廠商",
+        vendorInvoices: "費用廠商發票（開出）",
+      }
+    : {
+        actions: "Actions",
+        adjustments: "Adjustments",
+        clientInvoices: "Client Invoices",
+        date: "Date",
+        download: "Download",
+        invoiceNo: "Invoice #",
+        noClientInvoices: "No client invoices yet.",
+        noSupplierInvoices: "No supplier invoices yet.",
+        noVendorInvoices: "No vendor invoices yet.",
+        pdf: "PDF",
+        status: "Status",
+        supplierInvoices: "Supplier Invoices (Outgoing)",
+        supplierRef: "Supplier Ref",
+        totalRmb: "Total (RMB)",
+        totalUsd: "Total (USD)",
+        type: "Type",
+        usdEquiv: "USD Equiv.",
+        vendor: "Vendor",
+        vendorInvoices: "Vendor Invoices (Outgoing)",
+      };
 }
 
 const clientTypeLabels: Record<ClientInvoice["invoice_type"], string> = {
@@ -1144,11 +1191,14 @@ export function InvoicesTab({
   vendors: VendorOption[];
   workingExchangeRate?: number | null;
 }) {
+  const { language } = useLanguage();
+  const text = getInvoiceTabText(language);
+
   return (
     <div className="space-y-8">
       <div className="space-y-4">
         <div className="flex items-center justify-between">
-          <h2 className="text-base font-semibold text-[#0d1b34]">Client Invoices</h2>
+          <h2 className="text-base font-semibold text-[#0d1b34]">{text.clientInvoices}</h2>
           {canManage ? <GenerateClientInvoiceMenu orderNumber={orderNumber} tradeId={tradeId} /> : null}
         </div>
 
@@ -1158,13 +1208,13 @@ export function InvoicesTab({
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Invoice #</TableHead>
-                    <TableHead>Type</TableHead>
-                    <TableHead>Date</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Total (USD)</TableHead>
-                    <TableHead>PDF</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
+                    <TableHead>{text.invoiceNo}</TableHead>
+                    <TableHead>{text.type}</TableHead>
+                    <TableHead>{text.date}</TableHead>
+                    <TableHead>{text.status}</TableHead>
+                    <TableHead>{text.totalUsd}</TableHead>
+                    <TableHead>{text.pdf}</TableHead>
+                    <TableHead className="text-right">{text.actions}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -1186,7 +1236,7 @@ export function InvoicesTab({
                             className="font-medium text-[#0d1b34] underline-offset-4 hover:underline"
                             href={buildDownloadUrl(invoice.pdf_onedrive_url, `invoice-${invoice.invoice_number}.pdf`)}
                           >
-                            Download
+                            {text.download}
                           </a>
                         ) : (
                           "-"
@@ -1208,14 +1258,14 @@ export function InvoicesTab({
           </Card>
         ) : (
           <Card className="border-slate-200 shadow-sm">
-            <CardContent className="py-10 text-sm text-slate-500">No client invoices yet.</CardContent>
+            <CardContent className="py-10 text-sm text-slate-500">{text.noClientInvoices}</CardContent>
           </Card>
         )}
       </div>
 
       <div className="space-y-4">
         <div className="flex items-center justify-between">
-          <h2 className="text-base font-semibold text-[#0d1b34]">Supplier Invoices (Outgoing)</h2>
+          <h2 className="text-base font-semibold text-[#0d1b34]">{text.supplierInvoices}</h2>
           {canManage ? (
             <GenerateSupplierInvoiceMenu
               orderNumber={orderNumber}
@@ -1232,15 +1282,15 @@ export function InvoicesTab({
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Invoice #</TableHead>
-                    <TableHead>Type</TableHead>
-                    <TableHead>Date</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Total (RMB)</TableHead>
-                    <TableHead>USD Equiv.</TableHead>
-                    <TableHead>PDF</TableHead>
-                    <TableHead>Supplier Ref</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
+                    <TableHead>{text.invoiceNo}</TableHead>
+                    <TableHead>{text.type}</TableHead>
+                    <TableHead>{text.date}</TableHead>
+                    <TableHead>{text.status}</TableHead>
+                    <TableHead>{text.totalRmb}</TableHead>
+                    <TableHead>{text.usdEquiv}</TableHead>
+                    <TableHead>{text.pdf}</TableHead>
+                    <TableHead>{text.supplierRef}</TableHead>
+                    <TableHead className="text-right">{text.actions}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -1267,7 +1317,7 @@ export function InvoicesTab({
                                 className="font-medium text-[#0d1b34] underline-offset-4 hover:underline"
                                 href={buildDownloadUrl(invoice.pdf_onedrive_url, `invoice-${invoice.invoice_number}.pdf`)}
                               >
-                                Download
+                                {text.download}
                               </a>
                             ) : (
                               "-"
@@ -1289,7 +1339,7 @@ export function InvoicesTab({
                             <TableCell colSpan={9}>
                               <div className="space-y-2 py-2">
                                 <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                                  Adjustments
+                                  {text.adjustments}
                                 </p>
                                 <div className="space-y-1">
                                   {adjustments.map((adjustment) => (
@@ -1315,14 +1365,14 @@ export function InvoicesTab({
           </Card>
         ) : (
           <Card className="border-slate-200 shadow-sm">
-            <CardContent className="py-10 text-sm text-slate-500">No supplier invoices yet.</CardContent>
+            <CardContent className="py-10 text-sm text-slate-500">{text.noSupplierInvoices}</CardContent>
           </Card>
         )}
       </div>
 
       <div className="space-y-4">
         <div className="flex items-center justify-between">
-          <h2 className="text-base font-semibold text-[#0d1b34]">Vendor Invoices (Outgoing)</h2>
+          <h2 className="text-base font-semibold text-[#0d1b34]">{text.vendorInvoices}</h2>
           {canManage && vendors.length ? (
             <GenerateVendorOutgoingInvoiceDialog tradeId={tradeId} vendors={vendors} />
           ) : null}
@@ -1334,13 +1384,13 @@ export function InvoicesTab({
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Invoice #</TableHead>
-                    <TableHead>Vendor</TableHead>
-                    <TableHead>Date</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Total (USD)</TableHead>
-                    <TableHead>PDF</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
+                    <TableHead>{text.invoiceNo}</TableHead>
+                    <TableHead>{text.vendor}</TableHead>
+                    <TableHead>{text.date}</TableHead>
+                    <TableHead>{text.status}</TableHead>
+                    <TableHead>{text.totalUsd}</TableHead>
+                    <TableHead>{text.pdf}</TableHead>
+                    <TableHead className="text-right">{text.actions}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -1360,7 +1410,7 @@ export function InvoicesTab({
                             className="font-medium text-[#0d1b34] underline-offset-4 hover:underline"
                             href={buildDownloadUrl(invoice.pdf_onedrive_url, `vendor-invoice-${invoice.id}.pdf`)}
                           >
-                            Download
+                            {text.download}
                           </a>
                         ) : (
                           "-"
@@ -1380,7 +1430,7 @@ export function InvoicesTab({
           </Card>
         ) : (
           <Card className="border-slate-200 shadow-sm">
-            <CardContent className="py-10 text-sm text-slate-500">No vendor invoices yet.</CardContent>
+            <CardContent className="py-10 text-sm text-slate-500">{text.noVendorInvoices}</CardContent>
           </Card>
         )}
       </div>
