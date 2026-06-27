@@ -21,38 +21,15 @@ import {
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { useLanguage } from "@/context/LanguageContext";
 import { cn } from "@/lib/utils";
 import type { CurrentUser } from "@/types";
-
-const navItems = [
-  { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-  { label: "Trades", href: "/trades", icon: ArrowLeftRight },
-  { label: "Clients", href: "/clients", icon: Building2 },
-  { label: "Suppliers", href: "/suppliers", icon: Factory },
-  { label: "Vendors", href: "/vendors", icon: Briefcase },
-  { label: "Products", href: "/products", icon: Package },
-];
-
-const historySubItems = [
-  { label: "Cost History", href: "/history/cost", icon: DollarSign },
-  { label: "Quote History", href: "/history/quote", icon: FileText },
-];
-
-const toolsNavItems = [
-  { label: "Pallet Calculator", href: "/tools/pallet-calculator", icon: Package2 },
-  { label: "Pallet Profiles", href: "/tools/pallet-profiles", icon: Package2 },
-];
-
-const adminNavItems = [
-  { label: "Admin", href: "/admin/users", icon: ShieldCheck },
-  { label: "Settings", href: "/admin/settings", icon: Settings },
-  { label: "Finance", href: "/finance", icon: BarChart3 },
-];
 
 type SidebarUser = Pick<CurrentUser, "name" | "role">;
 
 export function Sidebar({ currentUser }: { currentUser: SidebarUser }) {
   const pathname = usePathname();
+  const { t } = useLanguage();
   const role = currentUser.role;
   const isAdmin = role === "admin";
   const isManager = role === "manager";
@@ -61,6 +38,27 @@ export function Sidebar({ currentUser }: { currentUser: SidebarUser }) {
   const isAdminOrManager = isAdmin || isManager;
   const isHistoryActive = pathname.startsWith("/history");
   const isToolsActive = pathname.startsWith("/tools");
+  const navItems = [
+    { label: t.nav.dashboard, href: "/dashboard", icon: LayoutDashboard },
+    { label: t.nav.trades, href: "/trades", icon: ArrowLeftRight },
+    { label: t.nav.clients, href: "/clients", icon: Building2 },
+    { label: t.nav.suppliers, href: "/suppliers", icon: Factory },
+    { label: t.nav.vendors, href: "/vendors", icon: Briefcase },
+    { label: t.nav.products, href: "/products", icon: Package },
+  ];
+  const historySubItems = [
+    { label: t.nav.costHistory, href: "/history/cost", icon: DollarSign },
+    { label: t.nav.quoteHistory, href: "/history/quote", icon: FileText },
+  ];
+  const toolsNavItems = [
+    { label: t.nav.palletCalculator, href: "/tools/pallet-calculator", icon: Package2 },
+    { label: t.nav.palletProfiles, href: "/tools/pallet-profiles", icon: Package2 },
+  ];
+  const adminNavItems = [
+    { label: t.nav.admin, href: "/admin/users", icon: ShieldCheck },
+    { label: t.nav.settings, href: "/admin/settings", icon: Settings },
+    { label: t.nav.finance, href: "/finance", icon: BarChart3 },
+  ];
   const visibleNavItems = navItems.filter((item) => {
     if (item.href === "/clients") return isAdminOrManager;
     if (item.href === "/suppliers") return isAdminOrManager;
@@ -126,7 +124,7 @@ export function Sidebar({ currentUser }: { currentUser: SidebarUser }) {
               )}
             >
               <History className="h-4 w-4" />
-              History
+              {t.nav.history}
             </div>
             {historySubItems.map((item) => (
               <NavLink href={item.href} icon={item.icon} indent key={item.href} label={item.label} />
@@ -143,7 +141,7 @@ export function Sidebar({ currentUser }: { currentUser: SidebarUser }) {
               )}
             >
               <Package2 className="h-4 w-4" />
-              Tools
+              {t.nav.tools}
             </div>
             {toolsNavItems.map((item) => (
               <NavLink href={item.href} icon={item.icon} indent key={item.href} label={item.label} />
@@ -151,7 +149,7 @@ export function Sidebar({ currentUser }: { currentUser: SidebarUser }) {
           </>
         ) : null}
 
-        {isAdminOrManager ? <NavLink href="/admin/activity" icon={History} label="Activity" /> : null}
+        {isAdminOrManager ? <NavLink href="/admin/activity" icon={History} label={t.nav.activity} /> : null}
 
         {isAdmin
           ? adminNavItems.map((item) => <NavLink href={item.href} icon={item.icon} key={item.href} label={item.label} />)
