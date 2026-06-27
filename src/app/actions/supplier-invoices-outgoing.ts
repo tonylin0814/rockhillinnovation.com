@@ -52,7 +52,9 @@ const editableSupplierInvoiceLineSchema = z.object({
 const supplierExtraLineSchema = z.object({
   description_chinese: z.string().nullable().default(null),
   description_english: z.string().nullable().default(null),
-  amount_rmb: z.coerce.number().positive("Amount must be greater than zero"),
+  amount_rmb: z.coerce
+    .number()
+    .refine((value) => value !== 0, "Amount cannot be zero"),
 });
 
 const matchSchema = z.object({

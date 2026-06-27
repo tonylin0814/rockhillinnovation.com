@@ -91,7 +91,10 @@ export function GenerateSupplierCommercialInvoiceDialog({
 
     if (extraLines.length > 0) {
       const payload = extraLines
-        .filter((line) => line.description_chinese.trim() && Number(line.amount_rmb) > 0)
+        .filter((line) => {
+          const amount = Number(line.amount_rmb);
+          return line.description_chinese.trim() && Number.isFinite(amount) && amount !== 0;
+        })
         .map((line) => ({
           amount_rmb: Number(line.amount_rmb),
           description_chinese: line.description_chinese.trim() || null,
@@ -194,7 +197,6 @@ export function GenerateSupplierCommercialInvoiceDialog({
                     />
                     <Input
                       disabled={isPending}
-                      min="0.01"
                       onChange={(event) => updateExtraLine(index, "amount_rmb", event.target.value)}
                       placeholder="¥ Amount"
                       step="0.01"
