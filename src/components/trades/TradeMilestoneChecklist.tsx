@@ -1,6 +1,6 @@
 "use client";
 
-import { CheckCircle2, Circle, Clock3 } from "lucide-react";
+import { CheckCircle2, ChevronRight, Circle } from "lucide-react";
 import { useState } from "react";
 
 import { MilestoneStepDialog } from "@/components/trades/MilestoneStepDialog";
@@ -143,7 +143,6 @@ export function TradeMilestoneChecklist({
           currentStep: "目前步驟",
           noCurrentStep: "所有里程碑已完成",
           notes: "筆紀錄",
-          openStep: "開啟步驟",
           progress: "進度",
         }
       : {
@@ -151,7 +150,6 @@ export function TradeMilestoneChecklist({
           currentStep: "Current step",
           noCurrentStep: "All milestones complete",
           notes: "notes",
-          openStep: "Open step",
           progress: "Progress",
         };
 
@@ -179,58 +177,81 @@ export function TradeMilestoneChecklist({
           </div>
         </div>
 
-        <div className="space-y-4">
+        <div className="space-y-3">
           {MILESTONE_GROUPS.map((group) => (
-            <section className="rounded-lg border border-slate-200 bg-white" key={group.title}>
-              <div className="border-b border-slate-100 px-4 py-3">
-                <h3 className="text-sm font-semibold text-[#0d1b34]">
+            <section className="rounded-lg border border-slate-200 bg-white shadow-sm" key={group.title}>
+              <div className="grid gap-0 lg:grid-cols-[190px_minmax(0,1fr)]">
+                <div className="border-b border-slate-100 bg-slate-50 px-4 py-3 lg:border-b-0 lg:border-r">
+                  <h3 className="text-sm font-semibold text-[#0d1b34]">
                   {language === "zh" ? group.titleZh : group.title}
-                </h3>
-              </div>
-              <div className="divide-y divide-slate-100">
-                {group.items.map((key) => {
-                  const milestone = milestoneMap.get(key);
-                  const done = Boolean(milestone?.completed_at);
-                  const notesCount = diaryEntries.filter((entry) => entry.milestone_key === key).length;
+                  </h3>
+                  <p className="mt-1 text-xs text-slate-500">
+                    {group.items.filter((key) => milestoneMap.get(key)?.completed_at).length} / {group.items.length}
+                  </p>
+                </div>
+                <div className="overflow-x-auto px-4 py-3">
+                  <div className="flex min-w-max items-stretch gap-2">
+                    {group.items.map((key, index) => {
+                      const milestone = milestoneMap.get(key);
+                      const done = Boolean(milestone?.completed_at);
+                      const isCurrent = key === nextMilestone;
+                      const notesCount = diaryEntries.filter((entry) => entry.milestone_key === key).length;
 
-                  return (
-                    <button
-                      className="group flex w-full items-center gap-3 px-4 py-3 text-left transition hover:bg-slate-50"
-                      key={key}
-                      onClick={() => setActiveKey(key)}
-                      type="button"
-                    >
-                      <span
-                        className={cn(
-                          "flex h-8 w-8 shrink-0 items-center justify-center rounded-full border transition",
-                          done
-                            ? "border-emerald-200 bg-emerald-50 text-emerald-600"
-                            : "border-slate-200 bg-white text-slate-300 group-hover:border-[#0d1b34] group-hover:text-[#0d1b34]"
-                        )}
-                      >
-                        {done ? <CheckCircle2 className="h-4 w-4" /> : <Circle className="h-4 w-4" />}
-                      </span>
-                      <span className="min-w-0 flex-1">
-                        <span className="block truncate text-sm font-semibold text-[#0d1b34]">
-                          {getMilestoneLabel(key, language)}
-                        </span>
-                        <span className="mt-0.5 flex flex-wrap items-center gap-2 text-xs text-slate-500">
-                          {done && milestone?.completed_at ? <span>{formatDate(milestone.completed_at)}</span> : null}
-                          {done && milestone?.completed_by ? <span>{milestone.completed_by}</span> : null}
-                          {notesCount ? (
-                            <span className="rounded-full bg-slate-100 px-2 py-0.5 font-medium text-slate-600">
-                              {notesCount} {text.notes}
+                      return (
+                        <div className="flex items-center gap-2" key={key}>
+                          <button
+                            className={cn(
+                              "group flex w-[178px] flex-col rounded-lg border px-3 py-2 text-left transition",
+                              done
+                                ? "border-emerald-200 bg-emerald-50 hover:border-emerald-300"
+                                : isCurrent
+                                  ? "border-[#0d1b34] bg-white shadow-sm hover:bg-slate-50"
+                                  : "border-slate-200 bg-white hover:border-[#0d1b34]/40 hover:bg-slate-50"
+                            )}
+                            onClick={() => setActiveKey(key)}
+                            type="button"
+                          >
+                            <span className="flex items-start gap-2">
+                              <span
+                                className={cn(
+                                  "mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border",
+                                  done
+                                    ? "border-emerald-500 bg-emerald-500 text-white"
+                                    : isCurrent
+                                      ? "border-[#0d1b34] text-[#0d1b34]"
+                                      : "border-slate-300 text-slate-300 group-hover:border-[#0d1b34]/50 group-hover:text-[#0d1b34]/70"
+                                )}
+                              >
+                                {done ? <CheckCircle2 className="h-3.5 w-3.5" /> : <Circle className="h-3.5 w-3.5" />}
+                              </span>
+                              <span className="min-w-0">
+                                <span className="line-clamp-2 text-xs font-semibold leading-snug text-[#0d1b34]">
+                                  {getMilestoneLabel(key, language)}
+                                </span>
+                              </span>
                             </span>
+                            <span className="mt-2 flex min-h-[20px] flex-wrap items-center gap-1 text-[10px] text-slate-500">
+                              {done && milestone?.completed_at ? <span>{formatDate(milestone.completed_at)}</span> : null}
+                              {notesCount ? (
+                                <span className="rounded-full bg-white px-1.5 py-0.5 font-medium text-slate-600">
+                                  {notesCount} {text.notes}
+                                </span>
+                              ) : null}
+                              {isCurrent && !done ? (
+                                <span className="rounded-full bg-[#0d1b34] px-1.5 py-0.5 font-medium text-white">
+                                  {text.currentStep}
+                                </span>
+                              ) : null}
+                            </span>
+                          </button>
+                          {index < group.items.length - 1 ? (
+                            <ChevronRight className="h-4 w-4 shrink-0 text-slate-300" />
                           ) : null}
-                        </span>
-                      </span>
-                      <span className="hidden items-center gap-1 text-xs font-medium text-slate-400 transition group-hover:text-[#0d1b34] sm:inline-flex">
-                        <Clock3 className="h-3.5 w-3.5" />
-                        {text.openStep}
-                      </span>
-                    </button>
-                  );
-                })}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
               </div>
             </section>
           ))}
