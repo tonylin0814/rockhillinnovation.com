@@ -525,7 +525,7 @@ export function PayoutPage({
                         (item) => item.trade_id === trade.id && item.trade_shareholder_id === shareholder.id
                       ) ?? null;
                     const status = invoice?.status ?? "outstanding";
-                    const dividend = invoice ? Number(invoice.dividend_usd) : resolveDividend(shareholder, trade.book);
+                    const dividend = resolveDividend(shareholder, trade.book);
                     const canActOnShareholder = canEdit && !isTonyShareholder(shareholder);
 
                     return (
