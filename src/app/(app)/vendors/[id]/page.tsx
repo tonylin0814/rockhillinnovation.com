@@ -51,7 +51,7 @@ function DetailRow({ label, value }: { label: React.ReactNode; value: string | n
   return (
     <div className="border-b border-slate-100 py-3 last:border-0">
       <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{label}</p>
-      <p className="mt-1 text-sm text-[#0d1b34]">{value || "-"}</p>
+      <p className="mt-1 whitespace-pre-line text-sm text-[#0d1b34]">{value || "-"}</p>
     </div>
   );
 }
