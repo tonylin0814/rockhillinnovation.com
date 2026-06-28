@@ -1,11 +1,11 @@
 "use client";
 
-import { Pencil, Plus, Trash2 } from "lucide-react";
+import { Loader2, Pencil, Plus, RefreshCw, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { FormEvent, useState, useTransition } from "react";
 import { toast } from "sonner";
 
-import { updateVendorOutgoingInvoice } from "@/app/actions/vendor-invoices";
+import { regenerateVendorOutgoingInvoicePdf, updateVendorOutgoingInvoice } from "@/app/actions/vendor-invoices";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -96,6 +96,8 @@ export function EditVendorOutgoingInvoiceDialog({ invoice }: { invoice: ExpenseV
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError(null);
+    const submitter = (event.nativeEvent as SubmitEvent).submitter as HTMLButtonElement | null;
+    const shouldRegenerate = submitter?.value === "regenerate";
     const formData = new FormData(event.currentTarget);
     formData.set(
       "lines",
@@ -115,7 +117,19 @@ export function EditVendorOutgoingInvoiceDialog({ invoice }: { invoice: ExpenseV
         return;
       }
 
-      toast.success("Vendor invoice updated");
+      if (shouldRegenerate) {
+        const regenerateResult = await regenerateVendorOutgoingInvoicePdf(invoice.id);
+
+        if (regenerateResult.error) {
+          setError(regenerateResult.error);
+          return;
+        }
+
+        toast.success("Vendor invoice saved and PDF regenerated");
+      } else {
+        toast.success("Vendor invoice updated");
+      }
+
       setOpen(false);
       router.refresh();
     });
@@ -242,7 +256,11 @@ export function EditVendorOutgoingInvoiceDialog({ invoice }: { invoice: ExpenseV
             </div>
           </div>
           {error ? <p className="text-sm font-medium text-red-600">{error}</p> : null}
-          <div className="flex justify-end gap-2">
+          <div className="flex flex-wrap justify-end gap-2">
+            <Button disabled={isPending} name="intent" type="submit" value="regenerate" variant="outline">
+              {isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}
+              Regenerate PDF
+            </Button>
             <Button disabled={isPending} onClick={() => setOpen(false)} type="button" variant="outline">
               Cancel
             </Button>

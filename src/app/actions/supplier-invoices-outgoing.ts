@@ -14,6 +14,53 @@ import { buildSupplierInvoiceOutgoingHtml, type SupplierBanking } from "@/lib/te
 export type ActionResult = { success?: true; error?: string; invoiceId?: string; downloadUrl?: string };
 
 type InvoiceKind = "deposit" | "final" | "commercial";
+type StoredSupplierInvoiceLine = {
+  description_chinese: string | null;
+  description_english: string | null;
+  payment_category: string | null;
+  product:
+    | {
+        supplier:
+          | {
+              address: string | null;
+              bank_account_name: string | null;
+              bank_account_number: string | null;
+              bank_address: string | null;
+              bank_cnaps_no: string | null;
+              bank_currency: string | null;
+              bank_name: string | null;
+              bank_swift_code: string | null;
+              bank_tel: string | null;
+              banking_instructions: string | null;
+              code: string | null;
+              name: string | null;
+              name_chinese: string | null;
+            }
+          | Array<{
+              address: string | null;
+              bank_account_name: string | null;
+              bank_account_number: string | null;
+              bank_address: string | null;
+              bank_cnaps_no: string | null;
+              bank_currency: string | null;
+              bank_name: string | null;
+              bank_swift_code: string | null;
+              bank_tel: string | null;
+              banking_instructions: string | null;
+              code: string | null;
+              name: string | null;
+              name_chinese: string | null;
+            }>
+          | null;
+      }
+    | Array<{
+        supplier: unknown;
+      }>
+    | null;
+  quantity: number | string;
+  sort_order: number | string | null;
+  unit_price_rmb: number | string;
+};
 
 function emptyToNull(value: FormDataEntryValue | null): string | null {
   if (typeof value !== "string") {
@@ -703,6 +750,215 @@ export async function updateSupplierInvoice(invoiceId: string, formData: FormDat
 
   revalidatePath(`/trades/${invoice.trade_id}`);
   return { success: true };
+}
+
+export async function regenerateSupplierInvoicePdf(invoiceId: string): Promise<ActionResult> {
+  const access = await requireManager();
+
+  if ("error" in access) {
+    return { error: access.error };
+  }
+
+  const parsed = z.string().uuid().safeParse(invoiceId);
+
+  if (!parsed.success) {
+    return { error: "Invalid invoice" };
+  }
+
+  const supabase = createServerSupabaseClient();
+  const { data: invoice, error: invoiceError } = await supabase
+    .from("supplier_invoices_outgoing")
+    .select(
+      `*,
+       trade:trades(id, trade_id, working_exchange_rate),
+       exchange_rate:exchange_rates(rate_rmb_per_usd),
+       lines:supplier_invoice_outgoing_lines(
+         *,
+         product:products(
+           id,
+           name_chinese,
+           name_english,
+           supplier:suppliers(
+             id, code, name, name_chinese, address,
+             bank_account_name, bank_account_number, bank_name, bank_address,
+             bank_cnaps_no, bank_swift_code, bank_currency, bank_tel, banking_instructions
+           )
+         )
+       )`
+    )
+    .eq("id", invoiceId)
+    .maybeSingle();
+
+  if (invoiceError) {
+    return { error: invoiceError.message };
+  }
+
+  if (!invoice) {
+    return { error: "Invoice not found" };
+  }
+
+  const trade = Array.isArray(invoice.trade) ? invoice.trade[0] : invoice.trade;
+
+  if (!trade) {
+    return { error: "Trade not found" };
+  }
+
+  const lines = (Array.isArray(invoice.lines) ? invoice.lines : []) as StoredSupplierInvoiceLine[];
+
+  if (!lines.length) {
+    return { error: "Invoice has no detail lines to regenerate." };
+  }
+
+  let supplierName: string | null = null;
+  let supplierNameChinese: string | null = null;
+  let supplierCode: string | null = null;
+  let supplierAddress: string | null = null;
+  let supplierBanking: SupplierBanking | null = null;
+
+  for (const line of lines) {
+    const product = Array.isArray(line.product) ? line.product[0] : line.product;
+    const supplier = product ? (Array.isArray(product.supplier) ? product.supplier[0] : product.supplier) : null;
+
+    if (supplier?.name || supplier?.code) {
+      supplierCode = supplier.code ?? null;
+      supplierName = supplier.name ?? null;
+      supplierNameChinese = supplier.name_chinese ?? null;
+      supplierAddress = supplier.address ?? null;
+      supplierBanking = {
+        accountName: supplier.bank_account_name ?? null,
+        accountNumber: supplier.bank_account_number ?? null,
+        bankAddress: supplier.bank_address ?? null,
+        bankName: supplier.bank_name ?? null,
+        bankTel: supplier.bank_tel ?? null,
+        bankingInstructions: supplier.banking_instructions ?? null,
+        cnapsNo: supplier.bank_cnaps_no ?? null,
+        currency: supplier.bank_currency ?? null,
+        swiftCode: supplier.bank_swift_code ?? null,
+      };
+      break;
+    }
+  }
+
+  function pctForLine(category: string | null): number {
+    if (invoice.invoice_type === "commercial") return 100;
+    if (category === "produced") return 50;
+    return 100;
+  }
+
+  const pdfLines = lines
+    .slice()
+    .sort((a, b) => Number(a.sort_order ?? 0) - Number(b.sort_order ?? 0))
+    .map((line) => {
+      const paymentCategory = (line.payment_category ?? "produced") as
+        | "outsourced"
+        | "produced"
+        | "misc_expense"
+        | "adjustment";
+      const paymentPct = pctForLine(paymentCategory);
+      const quantity = Number(line.quantity);
+      const unitPriceRmb = Number(line.unit_price_rmb);
+
+      return {
+        descriptionChinese: line.description_chinese ?? null,
+        descriptionEnglish: line.description_english ?? null,
+        paymentCategory,
+        paymentPct,
+        quantity,
+        totalRmb: roundMoney(quantity * unitPriceRmb * (paymentPct / 100)),
+        unitPriceRmb,
+      };
+    });
+
+  const totalRmb = roundMoney(pdfLines.reduce((sum, line) => sum + line.totalRmb, 0));
+  const exchangeRateRow = Array.isArray(invoice.exchange_rate) ? invoice.exchange_rate[0] : invoice.exchange_rate;
+  const exchangeRate = exchangeRateRow?.rate_rmb_per_usd ?? trade.working_exchange_rate ?? null;
+  const totalUsd = exchangeRate ? roundMoney(totalRmb / Number(exchangeRate)) : null;
+
+  const html = buildSupplierInvoiceOutgoingHtml({
+    exchangeRate,
+    invoiceDate: invoice.invoice_date,
+    invoiceNumber: invoice.invoice_number,
+    invoiceType: invoice.invoice_type,
+    lines: pdfLines,
+    notes: invoice.notes ?? null,
+    supplierAddress,
+    supplierBanking,
+    supplierCode,
+    supplierName,
+    supplierNameChinese,
+    totalRmb,
+    totalUsd,
+  });
+  const pdfBuffer = await generatePdf(html);
+  const fileName = `${invoice.invoice_number}.pdf`;
+  const uploaded = await uploadToOneDrive({
+    category: "invoice",
+    fileBuffer: pdfBuffer,
+    fileName,
+    mimeType: "application/pdf",
+    tradeCode: trade.trade_id,
+  });
+
+  if (invoice.pdf_onedrive_url) {
+    const { data: oldDocument, error: oldDocumentError } = await supabase
+      .from("trade_documents")
+      .select("id, onedrive_file_id")
+      .eq("onedrive_url", invoice.pdf_onedrive_url)
+      .maybeSingle();
+
+    if (oldDocumentError) {
+      return { error: oldDocumentError.message };
+    }
+
+    if (oldDocument?.onedrive_file_id && oldDocument.onedrive_file_id !== uploaded.fileId) {
+      await deleteFromOneDrive(oldDocument.onedrive_file_id);
+    }
+
+    if (oldDocument?.id) {
+      const { error: deleteDocumentError } = await supabase.from("trade_documents").delete().eq("id", oldDocument.id);
+
+      if (deleteDocumentError) {
+        return { error: deleteDocumentError.message };
+      }
+    }
+  }
+
+  const { error: updateError } = await supabase
+    .from("supplier_invoices_outgoing")
+    .update({ pdf_onedrive_url: uploaded.webUrl, total_rmb: totalRmb, total_usd: totalUsd })
+    .eq("id", invoiceId);
+
+  if (updateError) {
+    return { error: updateError.message };
+  }
+
+  const nextDocumentVersion = await getNextTradeDocumentVersion({
+    category: "invoice",
+    supabase,
+    tradeId: invoice.trade_id,
+  });
+
+  const { error: documentError } = await supabase.from("trade_documents").insert({
+    document_category: "invoice",
+    document_type: invoice.invoice_type,
+    file_name: fileName,
+    file_size_bytes: pdfBuffer.length,
+    notes: invoice.notes ?? null,
+    onedrive_file_id: uploaded.fileId,
+    onedrive_url: uploaded.webUrl,
+    related_party: "supplier",
+    status: invoice.status,
+    trade_id: invoice.trade_id,
+    uploaded_by: access.user.id,
+    version: nextDocumentVersion,
+  });
+
+  if (documentError) {
+    return { error: documentError.message };
+  }
+
+  revalidatePath(`/trades/${invoice.trade_id}`);
+  return { success: true, downloadUrl: uploaded.webUrl, invoiceId };
 }
 
 export async function deleteSupplierInvoice(invoiceId: string): Promise<ActionResult> {

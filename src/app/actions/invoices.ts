@@ -73,6 +73,13 @@ type InvoiceSourceData = {
   };
 };
 
+type StoredClientInvoiceLine = {
+  description: string | null;
+  quantity: number | string;
+  sort_order: number | string | null;
+  unit_price_usd: number | string;
+};
+
 const invoiceStatusSchema = z.enum(["draft", "sent", "paid"]);
 const editableInvoiceLineSchema = z.object({
   description: z.string().trim().min(1, "Line description is required"),
@@ -1127,6 +1134,179 @@ export async function updateClientInvoice(invoiceId: string, formData: FormData)
 
   revalidatePath(`/trades/${invoice.trade_id}`);
   return { success: true };
+}
+
+export async function regenerateClientInvoicePdf(invoiceId: string): Promise<ActionResult> {
+  const access = await requireInvoiceManager();
+
+  if ("error" in access) {
+    return { error: access.error };
+  }
+
+  const parsed = z.string().uuid().safeParse(invoiceId);
+
+  if (!parsed.success) {
+    return { error: "Invalid invoice" };
+  }
+
+  const supabase = createServerSupabaseClient();
+  const { data: invoice, error: invoiceError } = await supabase
+    .from("client_invoices")
+    .select(
+      `*,
+       trade:trades(id, trade_id, client:clients(id, name, address, currency, shipping_address)),
+       lines:client_invoice_lines(*)`
+    )
+    .eq("id", invoiceId)
+    .maybeSingle();
+
+  if (invoiceError) {
+    return { error: invoiceError.message };
+  }
+
+  if (!invoice) {
+    return { error: "Invoice not found" };
+  }
+
+  const trade = Array.isArray(invoice.trade) ? invoice.trade[0] : invoice.trade;
+  const client = Array.isArray(trade?.client) ? trade.client[0] : trade?.client;
+
+  if (!trade) {
+    return { error: "Trade not found" };
+  }
+
+  if (!client) {
+    return { error: "Client not found" };
+  }
+
+  const lines = (Array.isArray(invoice.lines) ? invoice.lines : []) as StoredClientInvoiceLine[];
+
+  if (!lines.length) {
+    return { error: "Invoice has no detail lines to regenerate." };
+  }
+
+  const [{ data: companySettings }, { data: bankingAccounts }] = await Promise.all([
+    supabase.from("company_settings").select("*").limit(1).maybeSingle(),
+    supabase.from("company_banking_accounts").select("*").eq("is_active", true).order("sort_order").limit(1),
+  ]);
+
+  const invoiceLines = lines
+    .slice()
+    .sort((a, b) => Number(a.sort_order ?? 0) - Number(b.sort_order ?? 0))
+    .map((line) => {
+      const quantity = Number(line.quantity);
+      const unitPrice = Number(line.unit_price_usd);
+      return {
+        components: [],
+        dbQuantity: quantity,
+        description: line.description ?? "Item",
+        itemCode: null,
+        quantity,
+        sortOrder: Number(line.sort_order ?? 0),
+        total: roundMoney(quantity * unitPrice),
+        unitPrice,
+      };
+    });
+  const subtotal = roundMoney(invoiceLines.reduce((sum, line) => sum + line.total, 0));
+  const adjustmentLines = Array.isArray(invoice.adjustment_lines)
+    ? (invoice.adjustment_lines as InvoiceAdjustmentLine[])
+    : [];
+  const totalUsd = roundMoney(
+    subtotal + adjustmentLines.reduce((sum, adjustment) => sum + Number(adjustment.amount_usd), 0)
+  );
+  const logoBase64 = loadLogoBase64();
+
+  const html = buildProFormaHtml({
+    adjustmentLines,
+    bankingAccount: Array.isArray(bankingAccounts) ? (bankingAccounts[0] ?? null) : (bankingAccounts ?? null),
+    billToAddress: client.address ?? null,
+    billToName: client.name,
+    companyInfo: companySettings ?? null,
+    currency: client.currency ?? "USD",
+    depositDueDate: invoice.due_date ? normalizeDate(invoice.due_date) : null,
+    depositPct: Number(invoice.deposit_pct ?? 50),
+    invoiceDate: normalizeDate(invoice.invoice_date),
+    invoiceNumber: invoice.invoice_number,
+    invoiceType: invoice.invoice_type,
+    lines: invoiceLines,
+    logoBase64,
+    notes: invoice.notes ?? null,
+    paymentTerms: invoice.payment_terms ?? null,
+    shipToAddress: client.shipping_address ?? null,
+    shipToName: client.name,
+    subtotal,
+  });
+
+  const pdfBuffer = await generatePdf(html);
+  const fileName = `${invoice.invoice_number}.pdf`;
+  const uploaded = await uploadToOneDrive({
+    category: "invoice",
+    fileBuffer: pdfBuffer,
+    fileName,
+    mimeType: "application/pdf",
+    tradeCode: trade.trade_id,
+  });
+
+  if (invoice.pdf_onedrive_url) {
+    const { data: oldDocument, error: oldDocumentError } = await supabase
+      .from("trade_documents")
+      .select("id, onedrive_file_id")
+      .eq("onedrive_url", invoice.pdf_onedrive_url)
+      .maybeSingle();
+
+    if (oldDocumentError) {
+      return { error: oldDocumentError.message };
+    }
+
+    if (oldDocument?.onedrive_file_id && oldDocument.onedrive_file_id !== uploaded.fileId) {
+      await deleteFromOneDrive(oldDocument.onedrive_file_id);
+    }
+
+    if (oldDocument?.id) {
+      const { error: deleteDocumentError } = await supabase.from("trade_documents").delete().eq("id", oldDocument.id);
+
+      if (deleteDocumentError) {
+        return { error: deleteDocumentError.message };
+      }
+    }
+  }
+
+  const { error: updateError } = await supabase
+    .from("client_invoices")
+    .update({ pdf_onedrive_url: uploaded.webUrl, subtotal_usd: subtotal, total_usd: totalUsd })
+    .eq("id", invoiceId);
+
+  if (updateError) {
+    return { error: updateError.message };
+  }
+
+  const nextDocumentVersion = await getNextTradeDocumentVersion({
+    category: "invoice",
+    supabase,
+    tradeId: invoice.trade_id,
+  });
+
+  const { error: documentError } = await supabase.from("trade_documents").insert({
+    document_category: "invoice",
+    document_type: invoice.invoice_type,
+    file_name: fileName,
+    file_size_bytes: pdfBuffer.length,
+    notes: invoice.notes ?? null,
+    onedrive_file_id: uploaded.fileId,
+    onedrive_url: uploaded.webUrl,
+    related_party: "client",
+    status: invoice.status,
+    trade_id: invoice.trade_id,
+    uploaded_by: access.user.id,
+    version: nextDocumentVersion,
+  });
+
+  if (documentError) {
+    return { error: documentError.message };
+  }
+
+  revalidatePath(`/trades/${invoice.trade_id}`);
+  return { success: true, downloadUrl: uploaded.webUrl, invoiceId };
 }
 
 export async function deleteClientInvoice(invoiceId: string): Promise<ActionResult> {

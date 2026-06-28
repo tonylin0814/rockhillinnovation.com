@@ -13,6 +13,10 @@ import { buildVendorInvoiceHtml } from "@/lib/templates/vendor-invoice";
 import { buildVendorOutgoingInvoiceHtml } from "@/lib/templates/vendor-invoices/dispatcher";
 
 export type ActionResult = { success?: true; error?: string; invoiceId?: string; downloadUrl?: string };
+type StoredVendorInvoiceLine = {
+  amount_usd: number | string;
+  description: string;
+};
 
 function emptyToNull(value: FormDataEntryValue | null): string | null {
   if (typeof value !== "string") {
@@ -546,6 +550,170 @@ export async function updateVendorOutgoingInvoice(invoiceId: string, formData: F
   }
 
   return { success: true };
+}
+
+export async function regenerateVendorOutgoingInvoicePdf(invoiceId: string): Promise<ActionResult> {
+  const access = await requireManager();
+
+  if ("error" in access) {
+    return { error: access.error };
+  }
+
+  const parsed = z.string().uuid().safeParse(invoiceId);
+
+  if (!parsed.success) {
+    return { error: "Invalid invoice" };
+  }
+
+  const supabase = createServerSupabaseClient();
+  const [{ data: invoice, error: invoiceError }, { data: companySettings }] = await Promise.all([
+    supabase
+      .from("expense_vendor_invoices")
+      .select(
+        `*,
+         trade:trades(id, trade_id),
+         vendor:expense_vendors(
+           id, code, name, address,
+           bank_account_name, bank_account_number, bank_name, bank_address,
+           bank_swift_code, bank_aba_routing, bank_currency, banking_instructions
+         )`
+      )
+      .eq("id", invoiceId)
+      .maybeSingle(),
+    supabase
+      .from("company_settings")
+      .select("company_name_full, company_name, address_line1, address_line2, city_state, country")
+      .limit(1)
+      .maybeSingle(),
+  ]);
+
+  if (invoiceError) {
+    return { error: invoiceError.message };
+  }
+
+  if (!invoice) {
+    return { error: "Invoice not found" };
+  }
+
+  const trade = Array.isArray(invoice.trade) ? invoice.trade[0] : invoice.trade;
+  const vendor = Array.isArray(invoice.vendor) ? invoice.vendor[0] : invoice.vendor;
+
+  if (!trade) {
+    return { error: "Trade not found" };
+  }
+
+  if (!vendor) {
+    return { error: "Vendor not found" };
+  }
+
+  const storedLines = (Array.isArray(invoice.lines) ? invoice.lines : []) as StoredVendorInvoiceLine[];
+  const lines = storedLines.length
+    ? storedLines.map((line) => ({
+        amountUsd: Number(line.amount_usd),
+        description: line.description,
+      }))
+    : [{ amountUsd: Number(invoice.amount_usd), description: invoice.description ?? "Service" }];
+
+  if (!lines.length) {
+    return { error: "Invoice has no detail lines to regenerate." };
+  }
+
+  const totalUsd = lines.reduce((sum, line) => sum + Number(line.amountUsd), 0);
+  const billToName =
+    companySettings?.company_name_full ?? companySettings?.company_name ?? "Rock Hill Innovation Co., Ltd";
+  const html = buildVendorOutgoingInvoiceHtml({
+    billToAddress: buildCompanyAddress(companySettings),
+    billToName,
+    invoiceDate: invoice.invoice_date,
+    invoiceNumber: invoice.invoice_number,
+    lines,
+    notes: invoice.notes ?? null,
+    totalUsd,
+    vendorAddress: vendor.address ?? null,
+    vendorBanking: {
+      abaRouting: vendor.bank_aba_routing ?? null,
+      accountName: vendor.bank_account_name ?? null,
+      accountNumber: vendor.bank_account_number ?? null,
+      bankAddress: vendor.bank_address ?? null,
+      bankName: vendor.bank_name ?? null,
+      bankingInstructions: vendor.banking_instructions ?? null,
+      currency: vendor.bank_currency ?? null,
+      swiftCode: vendor.bank_swift_code ?? null,
+    },
+    vendorCode: vendor.code,
+    vendorName: vendor.name,
+  });
+  const pdfBuffer = await generatePdf(html);
+  const safeInvoiceNum = `${vendor.name} - ${invoice.invoice_number ?? invoice.invoice_date}`;
+  const fileName = `${safeInvoiceNum.replace(/[^\w\-.]/g, "-")}.pdf`;
+  const uploaded = await uploadToOneDrive({
+    category: "invoice",
+    fileBuffer: pdfBuffer,
+    fileName,
+    mimeType: "application/pdf",
+    tradeCode: trade.trade_id,
+  });
+
+  if (invoice.pdf_onedrive_url) {
+    const { data: oldDocument, error: oldDocumentError } = await supabase
+      .from("trade_documents")
+      .select("id, onedrive_file_id")
+      .eq("onedrive_url", invoice.pdf_onedrive_url)
+      .maybeSingle();
+
+    if (oldDocumentError) {
+      return { error: oldDocumentError.message };
+    }
+
+    if (oldDocument?.onedrive_file_id && oldDocument.onedrive_file_id !== uploaded.fileId) {
+      await deleteFromOneDrive(oldDocument.onedrive_file_id);
+    }
+
+    if (oldDocument?.id) {
+      const { error: deleteDocumentError } = await supabase.from("trade_documents").delete().eq("id", oldDocument.id);
+
+      if (deleteDocumentError) {
+        return { error: deleteDocumentError.message };
+      }
+    }
+  }
+
+  const { error: updateError } = await supabase
+    .from("expense_vendor_invoices")
+    .update({ amount_usd: totalUsd, pdf_onedrive_url: uploaded.webUrl })
+    .eq("id", invoiceId);
+
+  if (updateError) {
+    return { error: updateError.message };
+  }
+
+  const nextDocumentVersion = await getNextTradeDocumentVersion({
+    category: "invoice",
+    supabase,
+    tradeId: invoice.trade_id,
+  });
+
+  const { error: documentError } = await supabase.from("trade_documents").insert({
+    document_category: "invoice",
+    document_type: "vendor",
+    file_name: fileName,
+    file_size_bytes: pdfBuffer.length,
+    notes: invoice.notes ?? null,
+    onedrive_file_id: uploaded.fileId,
+    onedrive_url: uploaded.webUrl,
+    related_party: "internal",
+    status: invoice.status,
+    trade_id: invoice.trade_id,
+    uploaded_by: access.user.id,
+    version: nextDocumentVersion,
+  });
+
+  if (documentError) {
+    return { error: documentError.message };
+  }
+
+  revalidatePath(`/trades/${invoice.trade_id}`);
+  return { success: true, downloadUrl: uploaded.webUrl, invoiceId };
 }
 
 export async function deleteVendorOutgoingInvoice(invoiceId: string): Promise<ActionResult> {

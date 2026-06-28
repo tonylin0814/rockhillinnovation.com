@@ -1,14 +1,15 @@
 "use client";
 
-import { ChevronDown, FileText, Loader2, Mail, MoreHorizontal, Pencil, Plus, Trash2 } from "lucide-react";
+import { ChevronDown, FileText, Loader2, Mail, MoreHorizontal, Pencil, Plus, RefreshCw, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { FormEvent, Fragment, useState, useTransition } from "react";
 import { toast } from "sonner";
 
-import { deleteClientInvoice, updateClientInvoice, updateInvoiceStatus } from "@/app/actions/invoices";
+import { deleteClientInvoice, regenerateClientInvoicePdf, updateClientInvoice, updateInvoiceStatus } from "@/app/actions/invoices";
 import { draftClientInvoiceEmail } from "@/app/actions/send-invoice";
 import {
   deleteSupplierInvoice,
+  regenerateSupplierInvoicePdf,
   updateSupplierInvoice,
   updateSupplierInvoiceStatus,
 } from "@/app/actions/supplier-invoices-outgoing";
@@ -321,6 +322,8 @@ function EditClientInvoiceDialog({ invoice }: { invoice: ClientInvoice }) {
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError(null);
+    const submitter = (event.nativeEvent as SubmitEvent).submitter as HTMLButtonElement | null;
+    const shouldRegenerate = submitter?.value === "regenerate";
     const formData = new FormData(event.currentTarget);
     formData.set(
       "invoice_lines_json",
@@ -342,7 +345,19 @@ function EditClientInvoiceDialog({ invoice }: { invoice: ClientInvoice }) {
         return;
       }
 
-      toast.success("Client invoice updated");
+      if (shouldRegenerate) {
+        const regenerateResult = await regenerateClientInvoicePdf(invoice.id);
+
+        if (regenerateResult.error) {
+          setError(regenerateResult.error);
+          return;
+        }
+
+        toast.success("Client invoice saved and PDF regenerated");
+      } else {
+        toast.success("Client invoice updated");
+      }
+
       setOpen(false);
       router.refresh();
     });
@@ -524,7 +539,11 @@ function EditClientInvoiceDialog({ invoice }: { invoice: ClientInvoice }) {
             </div>
           </div>
           {error ? <p className="text-sm font-medium text-red-600">{error}</p> : null}
-          <div className="flex justify-end gap-2">
+          <div className="flex flex-wrap justify-end gap-2">
+            <Button disabled={isPending} name="intent" type="submit" value="regenerate" variant="outline">
+              {isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}
+              Regenerate PDF
+            </Button>
             <Button disabled={isPending} onClick={() => setOpen(false)} type="button" variant="outline">
               Cancel
             </Button>
@@ -802,6 +821,8 @@ function EditSupplierInvoiceDialog({ invoice }: { invoice: SupplierInvoiceOutgoi
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError(null);
+    const submitter = (event.nativeEvent as SubmitEvent).submitter as HTMLButtonElement | null;
+    const shouldRegenerate = submitter?.value === "regenerate";
     const formData = new FormData(event.currentTarget);
     formData.set(
       "supplier_invoice_lines_json",
@@ -827,7 +848,19 @@ function EditSupplierInvoiceDialog({ invoice }: { invoice: SupplierInvoiceOutgoi
         return;
       }
 
-      toast.success("Supplier invoice updated");
+      if (shouldRegenerate) {
+        const regenerateResult = await regenerateSupplierInvoicePdf(invoice.id);
+
+        if (regenerateResult.error) {
+          setError(regenerateResult.error);
+          return;
+        }
+
+        toast.success("Supplier invoice saved and PDF regenerated");
+      } else {
+        toast.success("Supplier invoice updated");
+      }
+
       setOpen(false);
       router.refresh();
     });
@@ -1011,7 +1044,11 @@ function EditSupplierInvoiceDialog({ invoice }: { invoice: SupplierInvoiceOutgoi
             </div>
           </div>
           {error ? <p className="text-sm font-medium text-red-600">{error}</p> : null}
-          <div className="flex justify-end gap-2">
+          <div className="flex flex-wrap justify-end gap-2">
+            <Button disabled={isPending} name="intent" type="submit" value="regenerate" variant="outline">
+              {isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}
+              Regenerate PDF
+            </Button>
             <Button disabled={isPending} onClick={() => setOpen(false)} type="button" variant="outline">
               Cancel
             </Button>
