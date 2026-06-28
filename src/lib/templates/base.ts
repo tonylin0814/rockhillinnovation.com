@@ -235,38 +235,6 @@ export function buildBaseHtml({
       .payment-schedule .milestone-amount { font-weight: 700; color: #0d1b34; text-align: right; }
       .payment-schedule .milestone-due { color: #555; font-size: 8.5pt; text-align: right; }
 
-      .adjustments-table {
-        width: 100%;
-        border-collapse: collapse;
-        margin: 0 0 4px;
-      }
-
-      .adjustments-table th {
-        background: #f5f6f8;
-        border: none;
-        border-top: 1px solid #e4e6ea;
-        border-bottom: 1px solid #e4e6ea;
-        color: #5a6270;
-        font-size: 8pt;
-        font-weight: 600;
-        letter-spacing: 0.08em;
-        padding: 6px 10px;
-        text-align: left;
-        text-transform: uppercase;
-        -webkit-print-color-adjust: exact;
-        print-color-adjust: exact;
-      }
-
-      .adjustments-table th.amount { text-align: right; }
-
-      .adjustments-table td {
-        border: none;
-        border-top: 1px solid #eee;
-        font-size: 9pt;
-        padding: 6px 10px;
-        vertical-align: top;
-      }
-
       .info-block {
         background: #f5f6f8;
         border-left: 3px solid #0d1b34;
