@@ -29,6 +29,7 @@ export default async function AppLayout({
             <TopBar
               initialNotifications={initialNotifications}
               initialUnreadCount={initialUnreadCount}
+              userEmail={user.email}
               userId={user.id}
               userName={user.name}
               userRole={user.role}
