@@ -28,6 +28,7 @@ import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
 import { useLanguage } from "@/context/LanguageContext";
+import { buildDownloadUrl } from "@/lib/download";
 import type { PayoutInvoice } from "@/types";
 
 export type PayoutShareholder = {
@@ -532,7 +533,13 @@ export function PayoutPage({
                         <TableCell>
                           {invoice?.invoice_url ? (
                             <Button asChild size="sm" variant="outline">
-                              <a href={invoice.invoice_url} rel="noreferrer" target="_blank">
+                              <a
+                                download
+                                href={buildDownloadUrl(
+                                  invoice.invoice_url,
+                                  invoice.invoice_filename ?? `payout-${invoice.id}.pdf`
+                                )}
+                              >
                                 <Download className="mr-2 h-4 w-4" />
                                 {t.payout.download}
                               </a>
