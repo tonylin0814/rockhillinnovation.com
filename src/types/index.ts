@@ -664,7 +664,14 @@ export type TradeExpense = {
   description: string;
   amount_usd: number;
   expense_date: string;
-  category: "bank_fee" | "reimbursement_tony" | "reimbursement_michael" | "shipping" | "duty" | "misc";
+  category:
+    | "bank_fee"
+    | "reimbursement_tony"
+    | "reimbursement_michael"
+    | "reimbursement_amish"
+    | "shipping"
+    | "duty"
+    | "misc";
   notes: string | null;
   created_by: string | null;
   created_at: string;

@@ -117,7 +117,11 @@ export function FinancialTab({
     return sum;
   }, 0);
   const totalExpenses = tradeExpenses.reduce((sum, expense) => {
-    if (expense.category === "reimbursement_tony" || expense.category === "reimbursement_michael") {
+    if (
+      expense.category === "reimbursement_tony" ||
+      expense.category === "reimbursement_michael" ||
+      expense.category === "reimbursement_amish"
+    ) {
       return sum;
     }
 

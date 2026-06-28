@@ -133,13 +133,21 @@ export async function calculateShareholderBook(tradeId: string): Promise<ActionR
       acc.michael = (acc.michael ?? 0) + Number(expense.amount_usd ?? 0);
     }
 
+    if (expense.category === "reimbursement_amish") {
+      acc.amish = (acc.amish ?? 0) + Number(expense.amount_usd ?? 0);
+    }
+
     return acc;
   }, {});
 
   const expenseDeductions = roundMoney(
     (vendorInvoices ?? []).reduce((sum, invoice) => sum + Number(invoice.amount_usd ?? 0), 0) +
       (tradeExpenses ?? []).reduce((sum, expense) => {
-        if (expense.category === "reimbursement_tony" || expense.category === "reimbursement_michael") {
+        if (
+          expense.category === "reimbursement_tony" ||
+          expense.category === "reimbursement_michael" ||
+          expense.category === "reimbursement_amish"
+        ) {
           return sum;
         }
 
@@ -191,7 +199,9 @@ export async function calculateShareholderBook(tradeId: string): Promise<ActionR
         ? (reimbursementByPerson.tony ?? 0)
         : normalizedName.includes("michael")
           ? (reimbursementByPerson.michael ?? 0)
-          : 0;
+          : normalizedName.includes("amish")
+            ? (reimbursementByPerson.amish ?? 0)
+            : 0;
     const netShare = roundMoney(grossShare - taxContribution + reimbursement);
     const vendor = Array.isArray(shareholder.expense_vendor)
       ? shareholder.expense_vendor[0]
