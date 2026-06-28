@@ -425,15 +425,16 @@ function PayoutActions({
           {invoice?.invoice_url ? "Regenerate" : t.payout.generateInvoice}
         </Button>
       </GeneratePayoutInvoiceDialog>
-      {invoice ? (
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button disabled={isPending} size="sm" type="button" variant="outline">
-              <MoreHorizontal className="mr-2 h-4 w-4" />
-              {t.payout.actions}
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button disabled={isPending} size="sm" type="button" variant="outline">
+            <MoreHorizontal className="mr-2 h-4 w-4" />
+            {t.payout.actions}
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
+          {invoice ? (
+            <>
             <DropdownMenuItem disabled={status === "outstanding"} onClick={() => setStatus("outstanding")}>
               {t.payout.markOutstanding}
             </DropdownMenuItem>
@@ -448,9 +449,12 @@ function PayoutActions({
               <Trash2 className="mr-2 h-4 w-4" />
               Delete Download
             </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      ) : null}
+            </>
+          ) : (
+            <DropdownMenuItem disabled>Generate invoice first</DropdownMenuItem>
+          )}
+        </DropdownMenuContent>
+      </DropdownMenu>
     </div>
   );
 }
