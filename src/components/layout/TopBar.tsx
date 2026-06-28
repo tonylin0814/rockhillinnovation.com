@@ -1,22 +1,31 @@
 "use client";
 
+import { Calculator, Package2, Wrench } from "lucide-react";
 import Link from "next/link";
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { BellButton } from "@/components/layout/BellButton";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { LanguageSwitcher } from "@/components/layout/LanguageSwitcher";
 import { useLanguage } from "@/context/LanguageContext";
-import type { TradeNotification } from "@/types";
+import type { CurrentUser, TradeNotification } from "@/types";
 
 type TopBarProps = {
   userName: string;
   userId: string;
+  userRole: CurrentUser["role"];
   initialUnreadCount: number;
   initialNotifications: TradeNotification[];
 };
 
-export function TopBar({ userName, userId, initialUnreadCount, initialNotifications }: TopBarProps) {
+export function TopBar({ userName, userId, userRole, initialUnreadCount, initialNotifications }: TopBarProps) {
   const { t } = useLanguage();
+  const canUseTools = userRole === "admin" || userRole === "manager";
   const initial = userName
     .split(" ")
     .find(Boolean)
@@ -27,6 +36,28 @@ export function TopBar({ userName, userId, initialUnreadCount, initialNotificati
     <header className="sticky top-0 z-40 flex h-16 min-w-0 items-center justify-between gap-4 border-b border-slate-200/80 bg-white/95 px-4 backdrop-blur sm:px-6 lg:px-8">
       <p className="min-w-0 truncate text-sm font-semibold text-[#0d1b34]">Rock Hill Innovation</p>
       <div className="flex shrink-0 items-center gap-2">
+        {canUseTools ? (
+          <DropdownMenu>
+            <DropdownMenuTrigger className="inline-flex h-9 items-center gap-2 rounded-md border border-slate-200 bg-white px-3 text-sm font-medium text-[#0d1b34] shadow-sm transition-colors hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-[#0d1b34]/20">
+              <Wrench className="h-4 w-4" />
+              <span className="hidden sm:inline">{t.nav.tools}</span>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56">
+              <DropdownMenuItem asChild>
+                <Link className="flex items-center gap-2" href="/tools/pallet-calculator">
+                  <Calculator className="h-4 w-4" />
+                  {t.nav.palletCalculator}
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link className="flex items-center gap-2" href="/tools/pallet-profiles">
+                  <Package2 className="h-4 w-4" />
+                  {t.nav.palletProfiles}
+                </Link>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        ) : null}
         <LanguageSwitcher />
         <BellButton
           initialNotifications={initialNotifications}

@@ -553,7 +553,7 @@ export default async function TradeWorkspacePage({ params }: { params: { id: str
       </div>
 
       <Tabs className="space-y-4" defaultValue="summary">
-        <TabsList className="flex h-auto flex-wrap justify-start gap-1 rounded-lg bg-slate-100/80 p-1 [&_[role=tab]]:transition-colors [&_[role=tab]]:duration-150 [&_[role=tab]]:hover:bg-white [&_[role=tab]]:hover:text-[#0d1b34] [&_[role=tab]]:hover:shadow-sm">
+        <TabsList className="flex h-auto flex-wrap justify-start gap-1 rounded-lg bg-slate-100/80 p-1 [&_[role=tab]]:transition-all [&_[role=tab]]:duration-150 [&_[role=tab][data-state=inactive]]:hover:bg-white [&_[role=tab][data-state=inactive]]:hover:text-[#0d1b34] [&_[role=tab][data-state=inactive]]:hover:shadow-sm [&_[role=tab][data-state=inactive]]:hover:ring-1 [&_[role=tab][data-state=inactive]]:hover:ring-slate-200">
           <TabsTrigger value="summary"><T k="trades.summary" fallback="Summary" /></TabsTrigger>
           <TabsTrigger value="development"><T k="tabs.development" fallback="Development" /></TabsTrigger>
           <TabsTrigger value="quotes"><T k="tabs.quotes" fallback="Quotes" /></TabsTrigger>

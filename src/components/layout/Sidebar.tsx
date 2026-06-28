@@ -15,8 +15,6 @@ import {
   LayoutDashboard,
   LogOut,
   Package,
-  Package2,
-  Settings,
   ShieldCheck,
 } from "lucide-react";
 
@@ -37,7 +35,6 @@ export function Sidebar({ currentUser }: { currentUser: SidebarUser }) {
   const isUser = role === "user";
   const isAdminOrManager = isAdmin || isManager;
   const isHistoryActive = pathname.startsWith("/history");
-  const isToolsActive = pathname.startsWith("/tools");
   const navItems = [
     { label: t.nav.dashboard, href: "/dashboard", icon: LayoutDashboard },
     { label: t.nav.trades, href: "/trades", icon: ArrowLeftRight },
@@ -50,13 +47,8 @@ export function Sidebar({ currentUser }: { currentUser: SidebarUser }) {
     { label: t.nav.costHistory, href: "/history/cost", icon: DollarSign },
     { label: t.nav.quoteHistory, href: "/history/quote", icon: FileText },
   ];
-  const toolsNavItems = [
-    { label: t.nav.palletCalculator, href: "/tools/pallet-calculator", icon: Package2 },
-    { label: t.nav.palletProfiles, href: "/tools/pallet-profiles", icon: Package2 },
-  ];
   const adminNavItems = [
     { label: t.nav.admin, href: "/admin/users", icon: ShieldCheck },
-    { label: t.nav.settings, href: "/admin/settings", icon: Settings },
     { label: t.nav.finance, href: "/finance", icon: BarChart3 },
   ];
   const visibleNavItems = navItems.filter((item) => {
@@ -127,23 +119,6 @@ export function Sidebar({ currentUser }: { currentUser: SidebarUser }) {
               {t.nav.history}
             </div>
             {historySubItems.map((item) => (
-              <NavLink href={item.href} icon={item.icon} indent key={item.href} label={item.label} />
-            ))}
-          </>
-        ) : null}
-
-        {isAdminOrManager ? (
-          <>
-            <div
-              className={cn(
-                "mt-1 flex h-10 items-center gap-3 px-3 text-sm font-medium",
-                isToolsActive ? "text-white" : "text-slate-500"
-              )}
-            >
-              <Package2 className="h-4 w-4" />
-              {t.nav.tools}
-            </div>
-            {toolsNavItems.map((item) => (
               <NavLink href={item.href} icon={item.icon} indent key={item.href} label={item.label} />
             ))}
           </>

@@ -31,6 +31,7 @@ export default async function AppLayout({
               initialUnreadCount={initialUnreadCount}
               userId={user.id}
               userName={user.name}
+              userRole={user.role}
             />
             <main className="min-h-0 min-w-0 flex-1 overflow-y-auto px-4 py-5 sm:px-6 lg:px-8 lg:py-7">{children}</main>
           </div>
