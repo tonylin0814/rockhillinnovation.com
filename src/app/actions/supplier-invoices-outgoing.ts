@@ -164,6 +164,12 @@ function parseSupplierExtraLines(formData: FormData): Array<{
   }
 }
 
+function invoiceStatusToDocumentStatus(status: string): "approved" | "draft" | "sent" {
+  if (status === "paid") return "approved";
+  if (status === "sent") return "sent";
+  return "draft";
+}
+
 export async function generateSupplierInvoiceOutgoing(
   tradeId: string,
   formData: FormData,
@@ -947,7 +953,7 @@ export async function regenerateSupplierInvoicePdf(invoiceId: string): Promise<A
     onedrive_file_id: uploaded.fileId,
     onedrive_url: uploaded.webUrl,
     related_party: "supplier",
-    status: invoice.status,
+    status: invoiceStatusToDocumentStatus(invoice.status),
     trade_id: invoice.trade_id,
     uploaded_by: access.user.id,
     version: nextDocumentVersion,

@@ -167,6 +167,12 @@ function parseEditableInvoiceLines(formData: FormData) {
   }
 }
 
+function invoiceStatusToDocumentStatus(status: string): "approved" | "draft" | "sent" {
+  if (status === "paid") return "approved";
+  if (status === "sent") return "sent";
+  return "draft";
+}
+
 function loadLogoBase64(): string | null {
   try {
     const logoPath = path.join(process.cwd(), "public", "brand", "rockhill-logo-nav-cropped.png");
@@ -1295,7 +1301,7 @@ export async function regenerateClientInvoicePdf(invoiceId: string): Promise<Act
     onedrive_file_id: uploaded.fileId,
     onedrive_url: uploaded.webUrl,
     related_party: "client",
-    status: invoice.status,
+    status: invoiceStatusToDocumentStatus(invoice.status),
     trade_id: invoice.trade_id,
     uploaded_by: access.user.id,
     version: nextDocumentVersion,

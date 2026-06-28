@@ -290,6 +290,12 @@ function parseEditableVendorInvoiceLines(value: FormDataEntryValue | null) {
   }
 }
 
+function invoiceStatusToDocumentStatus(status: string): "approved" | "draft" | "sent" {
+  if (status === "paid") return "approved";
+  if (status === "sent") return "sent";
+  return "draft";
+}
+
 function buildCompanyAddress(company: {
   address_line1?: string | null;
   address_line2?: string | null;
@@ -702,7 +708,7 @@ export async function regenerateVendorOutgoingInvoicePdf(invoiceId: string): Pro
     onedrive_file_id: uploaded.fileId,
     onedrive_url: uploaded.webUrl,
     related_party: "internal",
-    status: invoice.status,
+    status: invoiceStatusToDocumentStatus(invoice.status),
     trade_id: invoice.trade_id,
     uploaded_by: access.user.id,
     version: nextDocumentVersion,
