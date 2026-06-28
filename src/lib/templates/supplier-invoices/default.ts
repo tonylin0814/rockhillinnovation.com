@@ -73,7 +73,6 @@ export function buildDefaultSupplierInvoiceHtml({
   const showPct = invoiceType !== "commercial";
   const bankingPage = supplierBanking
     ? `
-    <div class="page-break"></div>
     <div class="def-banking">
       <div class="def-bk-header">
         <div class="def-bk-title">${supplierNameDisplay} - Banking Information</div>
@@ -208,7 +207,7 @@ export function buildDefaultSupplierInvoiceHtml({
       ${bankingPage}
     `,
     styles: `
-      .def-shell { display: flex; flex-direction: column; min-height: 9.4in; }
+      .def-shell { display: flex; flex-direction: column; min-height: 8.85in; }
       .def-header { display: flex; justify-content: space-between; align-items: flex-start; padding-bottom: 10px; }
       .def-issuer { color: #111827; font-size: 13pt; font-weight: 700; }
       .def-doctype { color: #0f766e; font-size: 8pt; font-weight: 700; letter-spacing: 0.14em; margin-top: 4px; text-transform: uppercase; }
@@ -252,7 +251,7 @@ export function buildDefaultSupplierInvoiceHtml({
       .def-notes-label { color: #9ca3af; font-size: 7.5pt; font-weight: 700; letter-spacing: 0.1em; margin-bottom: 4px; text-transform: uppercase; }
       .def-notes p { color: #374151; font-size: 8.5pt; margin: 0; }
       .def-footer { border-top: 1px solid #e5e7eb; color: #9ca3af; font-size: 7.5pt; margin-top: auto; padding-top: 28px; text-align: center; }
-      .def-banking { padding-top: 8px; }
+      .def-banking { break-before: page; page-break-before: always; padding-top: 8px; }
       .def-bk-header { border-bottom: 3px solid #0f766e; margin-bottom: 20px; padding-bottom: 10px; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
       .def-bk-title { color: #111827; font-size: 14pt; font-weight: 700; }
       .def-bk-sub { color: #6b7280; font-size: 8.5pt; margin-top: 3px; }

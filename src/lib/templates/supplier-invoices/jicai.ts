@@ -94,7 +94,6 @@ export function buildJicaiInvoiceHtml({
     .join("");
   const bankingPage = supplierBanking
     ? `
-    <div class="page-break"></div>
     <div class="banking-page">
       <div class="banking-header">
         <div class="banking-title">${supplierBankingNameDisplay} 银行信息</div>
@@ -141,8 +140,7 @@ export function buildJicaiInvoiceHtml({
         line-height: 1.5;
       }
       .no-break { page-break-inside: avoid; }
-      .page-break { page-break-after: always; }
-      .si-shell { display: flex; flex-direction: column; min-height: 9.4in; }
+      .si-shell { display: flex; flex-direction: column; min-height: 8.85in; }
       .si-top-bar { align-items: flex-start; display: flex; justify-content: space-between; padding-bottom: 10px; }
       .si-issuer-name { color: #111827; font-size: 13pt; font-weight: 700; }
       .si-doctype-zh { color: #c2410c; font-size: 11pt; font-weight: 700; margin-top: 3px; }
@@ -188,7 +186,7 @@ export function buildJicaiInvoiceHtml({
       .si-notes-label { color: #9ca3af; font-size: 7.5pt; font-weight: 700; letter-spacing: 0.1em; margin-bottom: 4px; text-transform: uppercase; }
       .si-notes p { color: #374151; font-size: 8.5pt; margin: 0; }
       .si-footer { border-top: 1px solid #e5e7eb; color: #9ca3af; font-size: 7.5pt; margin-top: auto; padding-top: 28px; text-align: center; }
-      .banking-page { padding-top: 8px; }
+      .banking-page { break-before: page; page-break-before: always; padding-top: 8px; }
       .banking-header { border-bottom: 3px solid #c2410c; margin-bottom: 20px; padding-bottom: 10px; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
       .banking-title { color: #111827; font-size: 14pt; font-weight: 700; }
       .banking-subtitle { color: #6b7280; font-size: 8.5pt; margin-top: 3px; }
