@@ -34,7 +34,10 @@ export function TopBar({ userName, userId, userRole, initialUnreadCount, initial
 
   return (
     <header className="sticky top-0 z-40 flex h-16 min-w-0 items-center justify-between gap-4 border-b border-slate-200/80 bg-white/95 px-4 backdrop-blur sm:px-6 lg:px-8">
-      <p className="min-w-0 truncate text-sm font-semibold text-[#0d1b34]">Rock Hill Innovation</p>
+      <div className="min-w-0 truncate text-sm font-semibold text-[#0d1b34]">
+        <span>Rock Hill Innovation</span>
+        <span className="ml-3 hidden text-slate-500 sm:inline">洛夕爾創新有限公司</span>
+      </div>
       <div className="flex shrink-0 items-center gap-2">
         {canUseTools ? (
           <DropdownMenu>
