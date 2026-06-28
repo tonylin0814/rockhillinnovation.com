@@ -40,6 +40,45 @@ function safeFileName(value: string) {
   return value.replace(/[^\w\-.]/g, "-");
 }
 
+function looksLikeBankingNotes(value: string | null | undefined) {
+  if (!value) return false;
+  return /\b(account|bank|swift|bic|aba|routing|transit|institution|wire|branch)\b/i.test(value);
+}
+
+function vendorBankingFromRecord(vendor: {
+  bank_aba_routing?: string | null;
+  bank_account_name?: string | null;
+  bank_account_number?: string | null;
+  bank_address?: string | null;
+  bank_currency?: string | null;
+  bank_name?: string | null;
+  bank_swift_code?: string | null;
+  banking_instructions?: string | null;
+  notes?: string | null;
+}) {
+  const hasStructuredBanking =
+    vendor.bank_aba_routing ||
+    vendor.bank_account_name ||
+    vendor.bank_account_number ||
+    vendor.bank_address ||
+    vendor.bank_currency ||
+    vendor.bank_name ||
+    vendor.bank_swift_code ||
+    vendor.banking_instructions;
+
+  return {
+    abaRouting: vendor.bank_aba_routing ?? null,
+    accountName: vendor.bank_account_name ?? null,
+    accountNumber: vendor.bank_account_number ?? null,
+    bankAddress: vendor.bank_address ?? null,
+    bankName: vendor.bank_name ?? null,
+    bankingInstructions:
+      vendor.banking_instructions ?? (!hasStructuredBanking && looksLikeBankingNotes(vendor.notes) ? vendor.notes ?? null : null),
+    currency: vendor.bank_currency ?? null,
+    swiftCode: vendor.bank_swift_code ?? null,
+  };
+}
+
 function parseLines(formData: FormData) {
   const raw = formData.get("lines");
   if (typeof raw !== "string") {
@@ -116,15 +155,7 @@ export async function generatePayoutInvoice(
             id,
             code,
             name,
-            address,
-            bank_account_name,
-            bank_account_number,
-            bank_name,
-            bank_address,
-            bank_swift_code,
-            bank_aba_routing,
-            bank_currency,
-            banking_instructions
+            address
           )
         )`
       )
@@ -148,7 +179,39 @@ export async function generatePayoutInvoice(
     return { error: "Shareholder not found" };
   }
 
-  const vendor = Array.isArray(shareholder.expense_vendor) ? shareholder.expense_vendor[0] : shareholder.expense_vendor;
+  const nestedVendor = Array.isArray(shareholder.expense_vendor)
+    ? shareholder.expense_vendor[0]
+    : shareholder.expense_vendor;
+
+  const vendorId = shareholder.expense_vendor_id ?? nestedVendor?.id;
+
+  if (!vendorId) {
+    return { error: "This shareholder does not have an invoice vendor selected." };
+  }
+
+  const { data: vendor, error: vendorError } = await supabase
+    .from("expense_vendors")
+    .select(
+      `id,
+       code,
+       name,
+       address,
+       notes,
+       bank_account_name,
+       bank_account_number,
+       bank_name,
+       bank_address,
+       bank_swift_code,
+       bank_aba_routing,
+       bank_currency,
+       banking_instructions`
+    )
+    .eq("id", vendorId)
+    .maybeSingle();
+
+  if (vendorError) {
+    return { error: vendorError.message };
+  }
 
   if (!vendor) {
     return { error: "This shareholder does not have an invoice vendor selected." };
@@ -181,16 +244,7 @@ export async function generatePayoutInvoice(
     notes: parsed.data.notes ?? null,
     totalUsd,
     vendorAddress: vendor.address ?? null,
-    vendorBanking: {
-      abaRouting: vendor.bank_aba_routing ?? null,
-      accountName: vendor.bank_account_name ?? null,
-      accountNumber: vendor.bank_account_number ?? null,
-      bankAddress: vendor.bank_address ?? null,
-      bankName: vendor.bank_name ?? null,
-      bankingInstructions: vendor.banking_instructions ?? null,
-      currency: vendor.bank_currency ?? null,
-      swiftCode: vendor.bank_swift_code ?? null,
-    },
+    vendorBanking: vendorBankingFromRecord(vendor),
     vendorCode: vendor.code,
     vendorName: vendor.name,
   });
