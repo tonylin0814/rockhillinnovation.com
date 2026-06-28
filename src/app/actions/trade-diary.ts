@@ -43,27 +43,33 @@ async function uploadAttachments(
   const attachments: DiaryAttachment[] = [];
 
   for (let index = 0; index < 10; index += 1) {
-    const file = formData.get(`${prefix}_${index}`);
+    const files = formData.getAll(`${prefix}_${index}`);
 
-    if (!(file instanceof File) || file.size === 0) {
-      continue;
+    for (const file of files) {
+      if (!(file instanceof File) || file.size === 0) {
+        continue;
+      }
+
+      if (attachments.length >= 10) {
+        return attachments;
+      }
+
+      const fileName = buildAttachmentName(tradeCode, milestoneKey, file.name);
+      const fileBuffer = Buffer.from(await file.arrayBuffer());
+      const uploaded = await uploadToOneDrive({
+        category: "diary",
+        fileBuffer,
+        fileName,
+        mimeType: file.type || "application/octet-stream",
+        tradeCode,
+      });
+
+      attachments.push({
+        file_size_bytes: file.size,
+        name: fileName,
+        onedrive_url: uploaded.webUrl,
+      });
     }
-
-    const fileName = buildAttachmentName(tradeCode, milestoneKey, file.name);
-    const fileBuffer = Buffer.from(await file.arrayBuffer());
-    const uploaded = await uploadToOneDrive({
-      category: "diary",
-      fileBuffer,
-      fileName,
-      mimeType: file.type || "application/octet-stream",
-      tradeCode,
-    });
-
-    attachments.push({
-      file_size_bytes: file.size,
-      name: fileName,
-      onedrive_url: uploaded.webUrl,
-    });
   }
 
   return attachments;

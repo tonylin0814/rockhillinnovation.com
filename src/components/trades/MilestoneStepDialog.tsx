@@ -45,8 +45,8 @@ export function MilestoneStepDialog({
     language === "zh"
       ? {
           addNote: "新增備註",
-          attachments: "附件（最多 10 個檔案）",
-          attachmentsHelp: "檔案會自動重新命名並加入文件。",
+          attachments: "附件",
+          attachmentsHelp: "每次最多上傳 10 個檔案。之後可以再新增更多。",
           cancel: "取消",
           complete: "標記完成",
           completed: "已完成",
@@ -61,8 +61,8 @@ export function MilestoneStepDialog({
         }
       : {
           addNote: "Add Note",
-          attachments: "Attachments (up to 10 files)",
-          attachmentsHelp: "Files are automatically renamed and added to documents.",
+          attachments: "Attachments",
+          attachmentsHelp: "Upload up to 10 files at once. You can add more later.",
           cancel: "Cancel",
           complete: "Mark Complete",
           completed: "Completed",
@@ -78,6 +78,7 @@ export function MilestoneStepDialog({
   const router = useRouter();
   const [note, setNote] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [selectedFileCount, setSelectedFileCount] = useState(0);
   const [pending, startTransition] = useTransition();
   const isComplete = Boolean(milestone?.completed_at);
 
@@ -115,6 +116,7 @@ export function MilestoneStepDialog({
 
       toast.success(text.saveNote);
       setNote("");
+      setSelectedFileCount(0);
       router.refresh();
     });
   }
@@ -152,17 +154,29 @@ export function MilestoneStepDialog({
               <div className="space-y-2">
                 <Label>{text.attachments}</Label>
                 <p className="text-xs text-slate-500">{text.attachmentsHelp}</p>
-                <div className="space-y-1">
-                  {Array.from({ length: 10 }).map((_, index) => (
-                    <input
-                      accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.xlsx,.xls"
-                      className="block w-full text-xs text-slate-500 file:mr-3 file:rounded file:border-0 file:bg-slate-100 file:px-3 file:py-1 file:text-xs file:font-medium"
-                      key={index}
-                      name={`attachment_${index}`}
-                      type="file"
-                    />
-                  ))}
-                </div>
+                <input
+                  accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.xlsx,.xls"
+                  className="block w-full text-xs text-slate-500 file:mr-3 file:rounded file:border-0 file:bg-slate-100 file:px-3 file:py-1 file:text-xs file:font-medium"
+                  multiple
+                  name="attachment_0"
+                  onChange={(event) => {
+                    const count = event.target.files?.length ?? 0;
+                    if (count > 10) {
+                      event.target.value = "";
+                      setSelectedFileCount(0);
+                      setError(language === "zh" ? "一次最多只能選 10 個檔案。" : "You can select up to 10 files at once.");
+                      return;
+                    }
+                    setError(null);
+                    setSelectedFileCount(count);
+                  }}
+                  type="file"
+                />
+                {selectedFileCount ? (
+                  <p className="text-xs text-slate-500">
+                    {selectedFileCount} {language === "zh" ? "個檔案已選取" : "files selected"}
+                  </p>
+                ) : null}
               </div>
               {error ? <p className="text-sm text-red-600">{error}</p> : null}
               <div className="flex justify-between gap-2">
