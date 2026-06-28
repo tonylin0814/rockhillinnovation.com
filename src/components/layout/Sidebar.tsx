@@ -3,11 +3,13 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useState } from "react";
 import {
   ArrowLeftRight,
   BarChart3,
   Briefcase,
   Building2,
+  ChevronDown,
   DollarSign,
   Factory,
   FileText,
@@ -35,6 +37,7 @@ export function Sidebar({ currentUser }: { currentUser: SidebarUser }) {
   const isUser = role === "user";
   const isAdminOrManager = isAdmin || isManager;
   const isHistoryActive = pathname.startsWith("/history");
+  const [historyOpen, setHistoryOpen] = useState(isHistoryActive);
   const navItems = [
     { label: t.nav.dashboard, href: "/dashboard", icon: LayoutDashboard },
     { label: t.nav.trades, href: "/trades", icon: ArrowLeftRight },
@@ -109,18 +112,23 @@ export function Sidebar({ currentUser }: { currentUser: SidebarUser }) {
 
         {isAdminOrManager || isPartner ? (
           <>
-            <div
+            <button
               className={cn(
-                "mt-1 flex h-10 items-center gap-3 px-3 text-sm font-medium",
-                isHistoryActive ? "text-white" : "text-slate-500"
+                "mt-1 flex h-10 items-center gap-3 rounded-md px-3 text-sm font-medium transition-colors hover:bg-white/10 hover:text-white",
+                isHistoryActive ? "text-white" : "text-slate-400"
               )}
+              onClick={() => setHistoryOpen((open) => !open)}
+              type="button"
             >
               <History className="h-4 w-4" />
-              {t.nav.history}
-            </div>
-            {historySubItems.map((item) => (
-              <NavLink href={item.href} icon={item.icon} indent key={item.href} label={item.label} />
-            ))}
+              <span className="flex-1 text-left">{t.nav.history}</span>
+              <ChevronDown className={cn("h-4 w-4 transition-transform", historyOpen && "rotate-180")} />
+            </button>
+            {historyOpen
+              ? historySubItems.map((item) => (
+                  <NavLink href={item.href} icon={item.icon} indent key={item.href} label={item.label} />
+                ))
+              : null}
           </>
         ) : null}
 
