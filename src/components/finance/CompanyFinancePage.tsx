@@ -33,7 +33,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
-import type { PayoutInvoice, ShareholderPayout } from "@/types";
+import type { ShareholderPayout } from "@/types";
 
 type BookLine = {
   id: string;
@@ -285,13 +285,11 @@ function DeletePayoutButton({ payoutId }: { payoutId: string }) {
 export function CompanyFinancePage({
   activeTrades,
   canEdit = true,
-  payoutInvoices,
   payouts,
   settledTrades,
 }: {
   settledTrades: SettledTrade[];
   activeTrades: ActiveTrade[];
-  payoutInvoices: PayoutInvoice[];
   payouts: ShareholderPayout[];
   canEdit?: boolean;
 }) {
@@ -317,7 +315,6 @@ export function CompanyFinancePage({
     (sum, trade) => sum + (trade.book?.status === "confirmed" ? Number(trade.book.corporate_tax_usd ?? 0) : 0),
     0
   );
-  const paidPayoutInvoices = payoutInvoices.filter((invoice) => invoice.status === "paid");
   const payableRowMap = settled.reduce<
     Record<string, { name: string; totalShare: number; paid: number; payable: number }>
   >((acc, trade) => {
@@ -325,14 +322,6 @@ export function CompanyFinancePage({
 
     for (const line of trade.book.lines ?? []) {
       const key = line.person_name.trim().toLowerCase();
-      const paidByInvoice = paidPayoutInvoices
-        .filter(
-          (invoice) =>
-            invoice.trade_id === trade.id &&
-            (invoice.trade_shareholder_id === line.trade_shareholder_id ||
-              invoice.person_name.trim().toLowerCase() === key)
-        )
-        .reduce((sum, invoice) => sum + Number(invoice.dividend_usd), 0);
       const paidByManual = payouts
         .filter((payout) => payout.trade_id === trade.id && payout.person_name.trim().toLowerCase() === key)
         .reduce((sum, payout) => sum + Number(payout.amount_usd), 0);
@@ -342,7 +331,7 @@ export function CompanyFinancePage({
       }
 
       acc[key].totalShare += Number(line.net_share_usd ?? 0);
-      acc[key].paid += paidByInvoice + paidByManual;
+      acc[key].paid += paidByManual;
       acc[key].payable = acc[key].totalShare - acc[key].paid;
     }
 
@@ -353,17 +342,14 @@ export function CompanyFinancePage({
   const tonyShare = roundMoney(totalNetProfit - allocatedShareTotal);
 
   if (!hasTonyPayable && tonyShare > 0) {
-    const tonyPaidByInvoice = paidPayoutInvoices
-      .filter((invoice) => isTonyName(invoice.person_name))
-      .reduce((sum, invoice) => sum + Number(invoice.dividend_usd), 0);
     const tonyPaidByManual = payouts
       .filter((payout) => isTonyName(payout.person_name))
       .reduce((sum, payout) => sum + Number(payout.amount_usd), 0);
 
     payableRowMap["tony lin"] = {
       name: "Tony Lin",
-      paid: tonyPaidByInvoice + tonyPaidByManual,
-      payable: tonyShare - tonyPaidByInvoice - tonyPaidByManual,
+      paid: tonyPaidByManual,
+      payable: tonyShare - tonyPaidByManual,
       totalShare: tonyShare,
     };
   }
