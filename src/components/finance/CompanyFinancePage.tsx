@@ -348,8 +348,8 @@ export function CompanyFinancePage({
       return acc;
     }, {})
   ).sort((a, b) => a.name.localeCompare(b.name));
-  const totalPayouts = payableRows.reduce((sum, row) => sum + row.paid, 0);
-  const recordedPaymentCount = paidPayoutInvoices.length + payouts.length;
+  const totalPayouts = payouts.reduce((sum, payout) => sum + Number(payout.amount_usd), 0);
+  const recordedPaymentCount = payouts.length;
   const retained = totalNetProfit - totalPayouts;
 
   function toggleExpand(id: string) {
