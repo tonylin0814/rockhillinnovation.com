@@ -245,7 +245,7 @@ function GeneratePayoutInvoiceDialog({
       <DialogTrigger asChild>{children}</DialogTrigger>
       <DialogContent className="max-h-[88vh] overflow-y-auto sm:max-w-3xl">
         <DialogHeader>
-          <DialogTitle>{invoice?.invoice_url ? "Regenerate Payout Invoice" : "Generate Payout Invoice"}</DialogTitle>
+          <DialogTitle>Generate Payout Invoice</DialogTitle>
           <DialogDescription>
             Uses the {vendor?.code ?? "selected vendor"} template and uploads the PDF to OneDrive.
           </DialogDescription>
@@ -419,7 +419,7 @@ function PayoutActions({
 
   return (
     <div className="flex justify-end gap-2">
-      {!invoice?.invoice_url ? (
+      {!invoice ? (
         <GeneratePayoutInvoiceDialog dividend={dividend} invoice={invoice} shareholder={shareholder} trade={trade}>
           <Button disabled={isPending} size="sm" type="button">
             <FileText className="mr-2 h-4 w-4" />
