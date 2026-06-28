@@ -314,10 +314,6 @@ export function CompanyFinancePage({
     0
   );
   const paidPayoutInvoices = payoutInvoices.filter((invoice) => invoice.status === "paid");
-  const invoicePayoutTotal = paidPayoutInvoices.reduce((sum, invoice) => sum + Number(invoice.dividend_usd), 0);
-  const manualPayoutTotal = payouts.reduce((sum, payout) => sum + Number(payout.amount_usd), 0);
-  const totalPayouts = manualPayoutTotal + invoicePayoutTotal;
-  const retained = totalNetProfit - totalPayouts - totalTax;
   const payableRows = Object.values(
     settled.reduce<
       Record<string, { name: string; totalShare: number; paid: number; payable: number }>
@@ -352,6 +348,9 @@ export function CompanyFinancePage({
       return acc;
     }, {})
   ).sort((a, b) => a.name.localeCompare(b.name));
+  const totalPayouts = payableRows.reduce((sum, row) => sum + row.paid, 0);
+  const recordedPaymentCount = paidPayoutInvoices.length + payouts.length;
+  const retained = totalNetProfit - totalPayouts;
 
   function toggleExpand(id: string) {
     setExpandedTrades((previous) => {
@@ -381,8 +380,8 @@ export function CompanyFinancePage({
           value={usd(totalNetProfit)}
         />
         <StatCard label="Tax Obligation" sub="Corporate tax across settled trades" value={usd(totalTax)} />
-        <StatCard label="Total Payouts" sub={`${payouts.length} recorded payments`} value={usd(totalPayouts)} />
-        <StatCard highlight={retained >= 0} label="Company Retained" sub="Net profit minus payouts and tax" value={usd(retained)} />
+        <StatCard label="Total Payouts" sub={`${recordedPaymentCount} recorded payments`} value={usd(totalPayouts)} />
+        <StatCard highlight={retained >= 0} label="Company Retained" sub="Net profit minus payouts" value={usd(retained)} />
       </div>
 
       <Card className="border-slate-200 shadow-sm">
