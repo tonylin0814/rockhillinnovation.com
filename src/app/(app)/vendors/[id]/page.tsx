@@ -134,6 +134,9 @@ export default async function VendorDetailPage({ params }: { params: { id: strin
                 <DetailRow label={<T k="table.currency" fallback="Currency" />} value={vendor.bank_currency} />
                 <DetailRow label={<T k="table.swiftBic" fallback="SWIFT / BIC" />} value={vendor.bank_swift_code} />
                 <DetailRow label={<T k="table.abaRouting" fallback="ABA Routing" />} value={vendor.bank_aba_routing} />
+                <DetailRow label={<T k="table.institutionNo" fallback="Institution No." />} value={vendor.bank_institution_no} />
+                <DetailRow label={<T k="table.transitBranchNo" fallback="Transit / Branch No." />} value={vendor.bank_transit_no} />
+                <DetailRow label={<T k="table.bankTel" fallback="Bank TEL" />} value={vendor.bank_tel} />
               </div>
               <DetailRow label={<T k="table.bankAddress" fallback="Bank Address" />} value={vendor.bank_address} />
               <DetailRow label={<T k="vendors.specialInstructions" fallback="Special Instructions" />} value={vendor.banking_instructions} />

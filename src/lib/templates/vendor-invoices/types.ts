@@ -5,6 +5,9 @@ export interface VendorBanking {
   bankAddress: string | null;
   swiftCode: string | null;
   abaRouting: string | null;
+  institutionNo: string | null;
+  transitNo: string | null;
+  bankTel: string | null;
   currency: string | null;
   bankingInstructions: string | null;
 }

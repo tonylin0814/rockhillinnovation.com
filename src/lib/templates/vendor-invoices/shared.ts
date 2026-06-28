@@ -35,6 +35,9 @@ export function hasBankingDetails(banking: VendorBanking | null) {
         banking.bankAddress ||
         banking.swiftCode ||
         banking.abaRouting ||
+        banking.institutionNo ||
+        banking.transitNo ||
+        banking.bankTel ||
         banking.currency ||
         banking.bankingInstructions)
   );
@@ -50,6 +53,9 @@ export function bankingRows(banking: VendorBanking | null) {
     ["Bank Address", banking.bankAddress],
     ["SWIFT / BIC", banking.swiftCode],
     ["ABA Routing", banking.abaRouting],
+    ["Institution No.", banking.institutionNo],
+    ["Transit / Branch No.", banking.transitNo],
+    ["Bank TEL", banking.bankTel],
     ["Currency", banking.currency],
     ["Special Instructions", banking.bankingInstructions],
   ].filter((row): row is [string, string] => Boolean(row[1]));

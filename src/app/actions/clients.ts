@@ -38,6 +38,8 @@ const clientSchema = z.object({
   shipping_address: z.string().trim().nullable(),
   bank_name: z.string().trim().nullable(),
   bank_branch: z.string().trim().nullable(),
+  bank_institution_no: z.string().trim().nullable(),
+  bank_transit_no: z.string().trim().nullable(),
   bank_account_name: z.string().trim().nullable(),
   bank_account_number: z.string().trim().nullable(),
   bank_swift_code: z.string().trim().nullable(),
@@ -94,6 +96,12 @@ function valuesFromForm(formData: FormData, fallback?: Client) {
       : fallback?.shipping_address,
     bank_name: formData.has("bank_name") ? emptyToNull(formData.get("bank_name")) : fallback?.bank_name,
     bank_branch: formData.has("bank_branch") ? emptyToNull(formData.get("bank_branch")) : fallback?.bank_branch,
+    bank_institution_no: formData.has("bank_institution_no")
+      ? emptyToNull(formData.get("bank_institution_no"))
+      : fallback?.bank_institution_no,
+    bank_transit_no: formData.has("bank_transit_no")
+      ? emptyToNull(formData.get("bank_transit_no"))
+      : fallback?.bank_transit_no,
     bank_account_name: formData.has("bank_account_name")
       ? emptyToNull(formData.get("bank_account_name"))
       : fallback?.bank_account_name,

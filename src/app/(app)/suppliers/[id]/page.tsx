@@ -156,8 +156,8 @@ export default async function SupplierDetailPage({ params }: { params: { id: str
                 <DetailRow label={<T k="table.accountNumber" fallback="Account Number" />} value={supplier.bank_account_number} />
                 <DetailRow label={<T k="table.currency" fallback="Currency" />} value={supplier.bank_currency} />
                 <DetailRow label={<T k="table.bankName" fallback="Bank Name" />} value={supplier.bank_name} />
-                <DetailRow label="Institution No." value={supplier.bank_institution_no} />
-                <DetailRow label="Transit / Branch No." value={supplier.bank_transit_no} />
+                <DetailRow label={<T k="table.institutionNo" fallback="Institution No." />} value={supplier.bank_institution_no} />
+                <DetailRow label={<T k="table.transitBranchNo" fallback="Transit / Branch No." />} value={supplier.bank_transit_no} />
                 <DetailRow label="CNAPS No." value={supplier.bank_cnaps_no} />
                 <DetailRow label={<T k="table.swiftCode" fallback="SWIFT Code" />} value={supplier.bank_swift_code} />
                 <DetailRow label={<T k="table.bankTel" fallback="Bank TEL" />} value={supplier.bank_tel} />

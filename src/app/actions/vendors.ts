@@ -35,6 +35,9 @@ const vendorSchema = z.object({
   bank_address: z.string().trim().nullable(),
   bank_swift_code: z.string().trim().nullable(),
   bank_aba_routing: z.string().trim().nullable(),
+  bank_institution_no: z.string().trim().nullable(),
+  bank_transit_no: z.string().trim().nullable(),
+  bank_tel: z.string().trim().nullable(),
   bank_currency: z.string().trim().nullable(),
   banking_instructions: z.string().trim().nullable(),
 });
@@ -93,6 +96,13 @@ function valuesFromForm(formData: FormData, fallback?: ExpenseVendor) {
     bank_aba_routing: formData.has("bank_aba_routing")
       ? emptyToNull(formData.get("bank_aba_routing"))
       : fallback?.bank_aba_routing,
+    bank_institution_no: formData.has("bank_institution_no")
+      ? emptyToNull(formData.get("bank_institution_no"))
+      : fallback?.bank_institution_no,
+    bank_transit_no: formData.has("bank_transit_no")
+      ? emptyToNull(formData.get("bank_transit_no"))
+      : fallback?.bank_transit_no,
+    bank_tel: formData.has("bank_tel") ? emptyToNull(formData.get("bank_tel")) : fallback?.bank_tel,
     bank_currency: formData.has("bank_currency") ? emptyToNull(formData.get("bank_currency")) : fallback?.bank_currency,
     banking_instructions: formData.has("banking_instructions")
       ? emptyToNull(formData.get("banking_instructions"))

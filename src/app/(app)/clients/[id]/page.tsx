@@ -111,6 +111,8 @@ export default async function ClientDetailPage({ params }: { params: { id: strin
               <div className="grid gap-x-6 sm:grid-cols-2">
                 <DetailRow label={<T k="table.bankName" fallback="Bank Name" />} value={client.bank_name} />
                 <DetailRow label={<T k="table.bankBranch" fallback="Bank Branch" />} value={client.bank_branch} />
+                <DetailRow label={<T k="table.institutionNo" fallback="Institution No." />} value={client.bank_institution_no} />
+                <DetailRow label={<T k="table.transitBranchNo" fallback="Transit / Branch No." />} value={client.bank_transit_no} />
                 <DetailRow label={<T k="table.accountName" fallback="Account Name" />} value={client.bank_account_name} />
                 <DetailRow label={<T k="table.accountNumber" fallback="Account Number" />} value={client.bank_account_number} />
                 <DetailRow label={<T k="table.swiftCode" fallback="SWIFT Code" />} value={client.bank_swift_code} />

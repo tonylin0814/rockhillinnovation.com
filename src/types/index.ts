@@ -106,6 +106,8 @@ export type Client = {
   shipping_address: string | null;
   bank_name: string | null;
   bank_branch: string | null;
+  bank_institution_no: string | null;
+  bank_transit_no: string | null;
   bank_account_name: string | null;
   bank_account_number: string | null;
   bank_swift_code: string | null;
@@ -180,6 +182,9 @@ export type ExpenseVendor = {
   bank_address: string | null;
   bank_swift_code: string | null;
   bank_aba_routing: string | null;
+  bank_institution_no: string | null;
+  bank_transit_no: string | null;
+  bank_tel: string | null;
   bank_currency: string | null;
   banking_instructions: string | null;
 };

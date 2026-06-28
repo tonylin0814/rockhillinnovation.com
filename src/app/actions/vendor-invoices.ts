@@ -351,7 +351,7 @@ export async function generateVendorOutgoingInvoice(tradeId: string, formData: F
       supabase
         .from("expense_vendors")
         .select(
-          "id, code, name, address, status, bank_account_name, bank_account_number, bank_name, bank_address, bank_swift_code, bank_aba_routing, bank_currency, banking_instructions"
+          "id, code, name, address, status, bank_account_name, bank_account_number, bank_name, bank_address, bank_swift_code, bank_aba_routing, bank_institution_no, bank_transit_no, bank_tel, bank_currency, banking_instructions"
         )
         .eq("id", parsed.data.invoice.vendor_id)
         .maybeSingle(),
@@ -404,9 +404,12 @@ export async function generateVendorOutgoingInvoice(tradeId: string, formData: F
       accountNumber: vendor.bank_account_number ?? null,
       bankAddress: vendor.bank_address ?? null,
       bankName: vendor.bank_name ?? null,
+      bankTel: vendor.bank_tel ?? null,
       bankingInstructions: vendor.banking_instructions ?? null,
       currency: vendor.bank_currency ?? null,
+      institutionNo: vendor.bank_institution_no ?? null,
       swiftCode: vendor.bank_swift_code ?? null,
+      transitNo: vendor.bank_transit_no ?? null,
     },
     vendorCode: vendor.code,
     vendorName: vendor.name,
@@ -581,7 +584,8 @@ export async function regenerateVendorOutgoingInvoicePdf(invoiceId: string): Pro
          vendor:expense_vendors(
            id, code, name, address,
            bank_account_name, bank_account_number, bank_name, bank_address,
-           bank_swift_code, bank_aba_routing, bank_currency, banking_instructions
+           bank_swift_code, bank_aba_routing, bank_institution_no, bank_transit_no,
+           bank_tel, bank_currency, banking_instructions
          )`
       )
       .eq("id", invoiceId)
@@ -642,9 +646,12 @@ export async function regenerateVendorOutgoingInvoicePdf(invoiceId: string): Pro
       accountNumber: vendor.bank_account_number ?? null,
       bankAddress: vendor.bank_address ?? null,
       bankName: vendor.bank_name ?? null,
+      bankTel: vendor.bank_tel ?? null,
       bankingInstructions: vendor.banking_instructions ?? null,
       currency: vendor.bank_currency ?? null,
+      institutionNo: vendor.bank_institution_no ?? null,
       swiftCode: vendor.bank_swift_code ?? null,
+      transitNo: vendor.bank_transit_no ?? null,
     },
     vendorCode: vendor.code,
     vendorName: vendor.name,

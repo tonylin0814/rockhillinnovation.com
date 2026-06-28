@@ -51,8 +51,11 @@ function vendorBankingFromRecord(vendor: {
   bank_account_number?: string | null;
   bank_address?: string | null;
   bank_currency?: string | null;
+  bank_institution_no?: string | null;
   bank_name?: string | null;
   bank_swift_code?: string | null;
+  bank_tel?: string | null;
+  bank_transit_no?: string | null;
   banking_instructions?: string | null;
   notes?: string | null;
 }) {
@@ -62,8 +65,11 @@ function vendorBankingFromRecord(vendor: {
     vendor.bank_account_number ||
     vendor.bank_address ||
     vendor.bank_currency ||
+    vendor.bank_institution_no ||
     vendor.bank_name ||
     vendor.bank_swift_code ||
+    vendor.bank_tel ||
+    vendor.bank_transit_no ||
     vendor.banking_instructions;
 
   return {
@@ -72,10 +78,13 @@ function vendorBankingFromRecord(vendor: {
     accountNumber: vendor.bank_account_number ?? null,
     bankAddress: vendor.bank_address ?? null,
     bankName: vendor.bank_name ?? null,
+    bankTel: vendor.bank_tel ?? null,
     bankingInstructions:
       vendor.banking_instructions ?? (!hasStructuredBanking && looksLikeBankingNotes(vendor.notes) ? vendor.notes ?? null : null),
     currency: vendor.bank_currency ?? null,
+    institutionNo: vendor.bank_institution_no ?? null,
     swiftCode: vendor.bank_swift_code ?? null,
+    transitNo: vendor.bank_transit_no ?? null,
   };
 }
 
@@ -203,6 +212,9 @@ export async function generatePayoutInvoice(
        bank_address,
        bank_swift_code,
        bank_aba_routing,
+       bank_institution_no,
+       bank_transit_no,
+       bank_tel,
        bank_currency,
        banking_instructions`
     )

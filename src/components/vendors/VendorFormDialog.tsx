@@ -199,6 +199,33 @@ export function VendorFormDialog({ mode, initialData, trigger }: VendorFormDialo
                   name="bank_aba_routing"
                 />
               </div>
+              <div className="space-y-2">
+                <Label htmlFor="bank_institution_no">Institution No.</Label>
+                <Input
+                  defaultValue={initialData?.bank_institution_no ?? ""}
+                  disabled={isPending}
+                  id="bank_institution_no"
+                  name="bank_institution_no"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="bank_transit_no">Transit / Branch No.</Label>
+                <Input
+                  defaultValue={initialData?.bank_transit_no ?? ""}
+                  disabled={isPending}
+                  id="bank_transit_no"
+                  name="bank_transit_no"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="bank_tel">Bank TEL</Label>
+                <Input
+                  defaultValue={initialData?.bank_tel ?? ""}
+                  disabled={isPending}
+                  id="bank_tel"
+                  name="bank_tel"
+                />
+              </div>
             </div>
             <div className="mt-4 space-y-2">
               <Label htmlFor="bank_address">Bank Address</Label>
