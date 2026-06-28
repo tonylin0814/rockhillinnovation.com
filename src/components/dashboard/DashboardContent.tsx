@@ -40,7 +40,7 @@ const STATUS_CLASSES: Record<TradeStatus, string> = {
 };
 
 function getGreeting() {
-  const hour = new Date().getUTCHours();
+  const hour = new Date().getHours();
 
   if (hour < 12) return "goodMorning";
   if (hour < 17) return "goodAfternoon";
