@@ -25,7 +25,9 @@ export default async function FinancePayoutPage() {
         id,
         person_name,
         split_pct,
-        user_id
+        user_id,
+        expense_vendor_id,
+        expense_vendor:expense_vendors(id, code, name)
       ),
       book:shareholder_book(
         net_profit_usd,

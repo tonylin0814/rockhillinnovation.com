@@ -4,11 +4,17 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
 import { getCurrentUser } from "@/lib/auth";
-import { uploadToOneDrive } from "@/lib/onedrive";
+import { deleteFromOneDrive, uploadToOneDrive } from "@/lib/onedrive";
 import { generatePdf } from "@/lib/pdf";
-import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { createServerSupabaseAdmin } from "@/lib/supabase/server";
+import { buildVendorOutgoingInvoiceHtml } from "@/lib/templates/vendor-invoices/dispatcher";
 
 export type ActionResult = { success?: true; error?: string };
+
+const lineSchema = z.object({
+  amount_usd: z.coerce.number(),
+  description: z.string().trim().min(1, "Description is required"),
+});
 
 async function requireAdminOrController() {
   const user = await getCurrentUser();
@@ -19,66 +25,117 @@ async function requireAdminOrController() {
   return { user };
 }
 
-function escapeHtml(value: string) {
-  return value
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#39;");
+function buildCompanyAddress(company: {
+  address_line1?: string | null;
+  address_line2?: string | null;
+  city_state?: string | null;
+  country?: string | null;
+} | null) {
+  return [company?.address_line1, company?.address_line2, company?.city_state, company?.country]
+    .filter(Boolean)
+    .join("\n");
 }
 
-function formatUsd(value: number) {
-  return new Intl.NumberFormat("en-US", {
-    currency: "USD",
-    minimumFractionDigits: 2,
-    style: "currency",
-  }).format(value);
+function safeFileName(value: string) {
+  return value.replace(/[^\w\-.]/g, "-");
+}
+
+function parseLines(formData: FormData) {
+  const raw = formData.get("lines");
+  if (typeof raw !== "string") {
+    throw new Error("Invoice lines are required");
+  }
+
+  const parsed = JSON.parse(raw);
+  return z.array(lineSchema).min(1, "Add at least one invoice line").parse(parsed);
 }
 
 export async function generatePayoutInvoice(
   tradeId: string,
-  tradeShareholderId: string
+  tradeShareholderId: string,
+  formData: FormData
 ): Promise<ActionResult & { invoiceUrl?: string }> {
   const access = await requireAdminOrController();
   if ("error" in access) return { error: access.error };
 
+  let lines: z.infer<typeof lineSchema>[];
+
+  try {
+    lines = parseLines(formData);
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return { error: error.issues[0]?.message ?? "Invalid invoice lines" };
+    }
+    return { error: "Invoice lines must be valid JSON" };
+  }
+
   const parsed = z
     .object({
+      invoiceDate: z.string().trim().min(1, "Invoice date is required"),
+      invoiceNumber: z.string().trim().min(1, "Invoice number is required"),
+      notes: z.string().trim().optional(),
       tradeId: z.string().uuid(),
       tradeShareholderId: z.string().uuid(),
     })
-    .safeParse({ tradeId, tradeShareholderId });
+    .safeParse({
+      invoiceDate: formData.get("invoice_date"),
+      invoiceNumber: formData.get("invoice_number"),
+      notes: formData.get("notes"),
+      tradeId,
+      tradeShareholderId,
+    });
 
   if (!parsed.success) {
-    return { error: "Invalid payout invoice request" };
+    return { error: parsed.error.issues[0]?.message ?? "Invalid payout invoice request" };
   }
 
-  const supabase = createServerSupabaseClient();
-  const { data: trade, error: tradeError } = await supabase
-    .from("trades")
-    .select(
-      `id,
-      trade_id,
-      book:shareholder_book(
-        net_profit_usd,
-        lines:shareholder_book_lines(
+  const supabase = createServerSupabaseAdmin();
+  const [{ data: trade, error: tradeError }, { data: companySettings }] = await Promise.all([
+    supabase
+      .from("trades")
+      .select(
+        `id,
+        trade_id,
+        book:shareholder_book(
+          net_profit_usd,
+          lines:shareholder_book_lines(
+            id,
+            trade_shareholder_id,
+            person_name,
+            split_pct,
+            net_share_usd
+          )
+        ),
+        shareholders:trade_shareholders(
           id,
-          trade_shareholder_id,
           person_name,
           split_pct,
-          net_share_usd
-        )
-      ),
-      shareholders:trade_shareholders(
-        id,
-        person_name,
-        split_pct,
-        user_id
-      )`
-    )
-    .eq("id", parsed.data.tradeId)
-    .maybeSingle();
+          user_id,
+          expense_vendor_id,
+          expense_vendor:expense_vendors(
+            id,
+            code,
+            name,
+            address,
+            bank_account_name,
+            bank_account_number,
+            bank_name,
+            bank_address,
+            bank_swift_code,
+            bank_aba_routing,
+            bank_currency,
+            banking_instructions
+          )
+        )`
+      )
+      .eq("id", parsed.data.tradeId)
+      .maybeSingle(),
+    supabase
+      .from("company_settings")
+      .select("company_name_full, company_name, address_line1, address_line2, city_state, country")
+      .limit(1)
+      .maybeSingle(),
+  ]);
 
   if (tradeError || !trade) {
     return { error: tradeError?.message ?? "Trade not found" };
@@ -91,6 +148,16 @@ export async function generatePayoutInvoice(
     return { error: "Shareholder not found" };
   }
 
+  const vendor = Array.isArray(shareholder.expense_vendor) ? shareholder.expense_vendor[0] : shareholder.expense_vendor;
+
+  if (!vendor) {
+    return { error: "This shareholder does not have an invoice vendor selected." };
+  }
+
+  if (!["LM", "SGRACO"].includes(String(vendor.code).toUpperCase())) {
+    return { error: `No payout template is registered for vendor code ${vendor.code}.` };
+  }
+
   const bookArr = Array.isArray(trade.book) ? trade.book : [trade.book];
   const book = bookArr[0] ?? null;
   const netProfitUsd = Number(book?.net_profit_usd ?? 0);
@@ -98,88 +165,38 @@ export async function generatePayoutInvoice(
   const bookLine = bookLines.find((line) => line?.trade_shareholder_id === parsed.data.tradeShareholderId);
   const fallbackDividend = (netProfitUsd * Number(shareholder.split_pct ?? 0)) / 100;
   const dividendUsd = Math.round(Number(bookLine?.net_share_usd ?? fallbackDividend) * 100) / 100;
+  const totalUsd = Math.round(lines.reduce((sum, line) => sum + Number(line.amount_usd), 0) * 100) / 100;
+  const billToName =
+    companySettings?.company_name_full ?? companySettings?.company_name ?? "Rock Hill Innovation Co., Ltd";
 
-  const today = new Date();
-  const datePart = today.toISOString().slice(0, 10).replace(/-/g, "");
-  const refNum = `PAY-${trade.trade_id}-${datePart}-${parsed.data.tradeShareholderId.slice(-4).toUpperCase()}`;
-  const invoiceDate = today.toLocaleDateString("en-US", {
-    day: "numeric",
-    month: "long",
-    year: "numeric",
+  const html = buildVendorOutgoingInvoiceHtml({
+    billToAddress: buildCompanyAddress(companySettings),
+    billToName,
+    invoiceDate: parsed.data.invoiceDate,
+    invoiceNumber: parsed.data.invoiceNumber,
+    lines: lines.map((line) => ({
+      amountUsd: Number(line.amount_usd),
+      description: line.description,
+    })),
+    notes: parsed.data.notes ?? null,
+    totalUsd,
+    vendorAddress: vendor.address ?? null,
+    vendorBanking: {
+      abaRouting: vendor.bank_aba_routing ?? null,
+      accountName: vendor.bank_account_name ?? null,
+      accountNumber: vendor.bank_account_number ?? null,
+      bankAddress: vendor.bank_address ?? null,
+      bankName: vendor.bank_name ?? null,
+      bankingInstructions: vendor.banking_instructions ?? null,
+      currency: vendor.bank_currency ?? null,
+      swiftCode: vendor.bank_swift_code ?? null,
+    },
+    vendorCode: vendor.code,
+    vendorName: vendor.name,
   });
 
-  const html = `<!DOCTYPE html>
-    <html>
-    <head>
-      <meta charset="utf-8" />
-      <style>
-        body { font-family: Arial, sans-serif; font-size: 13px; color: #1a1a2e; margin: 0; padding: 0; }
-        .header { background: #0d1b34; color: #fff; padding: 28px 40px 20px; }
-        .header h1 { margin: 0; font-size: 22px; letter-spacing: 1px; }
-        .header p { margin: 4px 0 0; font-size: 12px; opacity: 0.8; }
-        .body { padding: 32px 40px; }
-        .meta { display: flex; justify-content: space-between; margin-bottom: 32px; }
-        .meta-block h3 { margin: 0 0 6px; font-size: 11px; text-transform: uppercase; color: #888; letter-spacing: 1px; }
-        .meta-block p { margin: 0; font-size: 13px; font-weight: 600; }
-        table { width: 100%; border-collapse: collapse; margin-top: 24px; }
-        thead tr { background: #f4f6fb; }
-        th { text-align: left; padding: 10px 14px; font-size: 11px; text-transform: uppercase; color: #555; letter-spacing: .5px; border-bottom: 2px solid #e2e8f0; }
-        td { padding: 12px 14px; border-bottom: 1px solid #e2e8f0; }
-        .total-row td { font-weight: 700; font-size: 15px; background: #f8fafc; }
-        .footer { margin-top: 48px; padding-top: 16px; border-top: 1px solid #e2e8f0; font-size: 11px; color: #999; text-align: center; }
-      </style>
-    </head>
-    <body>
-      <div class="header">
-        <h1>Rock Hill Innovation</h1>
-        <p>Profit Distribution Invoice</p>
-      </div>
-      <div class="body">
-        <div class="meta">
-          <div class="meta-block">
-            <h3>Invoice To</h3>
-            <p>${escapeHtml(shareholder.person_name)}</p>
-          </div>
-          <div class="meta-block" style="text-align:right">
-            <h3>Invoice Reference</h3>
-            <p>${escapeHtml(refNum)}</p>
-            <h3 style="margin-top:12px">Date</h3>
-            <p>${escapeHtml(invoiceDate)}</p>
-          </div>
-        </div>
-        <table>
-          <thead>
-            <tr>
-              <th>Description</th>
-              <th>Trade</th>
-              <th>Share %</th>
-              <th style="text-align:right">Amount (USD)</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td>Profit Distribution</td>
-              <td>${escapeHtml(trade.trade_id)}</td>
-              <td>${Number(shareholder.split_pct ?? 0)}%</td>
-              <td style="text-align:right">${formatUsd(dividendUsd)}</td>
-            </tr>
-          </tbody>
-          <tfoot>
-            <tr class="total-row">
-              <td colspan="3">Total Payable</td>
-              <td style="text-align:right">${formatUsd(dividendUsd)}</td>
-            </tr>
-          </tfoot>
-        </table>
-        <div class="footer">
-          Rock Hill Innovation &nbsp;-&nbsp; This document is generated automatically and is for reference only.
-        </div>
-      </div>
-    </body>
-    </html>`;
-
   const pdfBuffer = await generatePdf(html);
-  const fileName = `${refNum}.pdf`;
+  const fileName = `${safeFileName(`${vendor.name} - ${parsed.data.invoiceNumber}`)}.pdf`;
   const uploaded = await uploadToOneDrive({
     category: "payouts",
     fileBuffer: pdfBuffer,
@@ -191,7 +208,7 @@ export async function generatePayoutInvoice(
   const generatedAt = new Date().toISOString();
   const { data: existing, error: existingError } = await supabase
     .from("payout_invoices")
-    .select("id")
+    .select("id, invoice_file_id")
     .eq("trade_id", parsed.data.tradeId)
     .eq("trade_shareholder_id", parsed.data.tradeShareholderId)
     .maybeSingle();
@@ -200,12 +217,22 @@ export async function generatePayoutInvoice(
     return { error: existingError.message };
   }
 
+  if (existing?.invoice_file_id) {
+    await deleteFromOneDrive(existing.invoice_file_id);
+  }
+
   const payload = {
     dividend_usd: dividendUsd,
+    expense_vendor_id: shareholder.expense_vendor_id ?? null,
     generated_at: generatedAt,
     generated_by: access.user.id,
+    invoice_date: parsed.data.invoiceDate,
+    invoice_file_id: uploaded.fileId,
     invoice_filename: fileName,
+    invoice_number: parsed.data.invoiceNumber,
     invoice_url: uploaded.webUrl,
+    lines,
+    notes: parsed.data.notes ?? null,
     person_name: shareholder.person_name,
   };
 
@@ -226,6 +253,46 @@ export async function generatePayoutInvoice(
   return { success: true, invoiceUrl: uploaded.webUrl };
 }
 
+export async function deletePayoutInvoiceDownload(payoutInvoiceId: string): Promise<ActionResult> {
+  const access = await requireAdminOrController();
+  if ("error" in access) return { error: access.error };
+
+  const parsed = z.string().uuid().safeParse(payoutInvoiceId);
+
+  if (!parsed.success) {
+    return { error: "Invalid payout invoice" };
+  }
+
+  const supabase = createServerSupabaseAdmin();
+  const { data: invoice, error: fetchError } = await supabase
+    .from("payout_invoices")
+    .select("id, invoice_file_id")
+    .eq("id", parsed.data)
+    .maybeSingle();
+
+  if (fetchError) return { error: fetchError.message };
+  if (!invoice) return { error: "Payout invoice not found" };
+
+  if (invoice.invoice_file_id) {
+    await deleteFromOneDrive(invoice.invoice_file_id);
+  }
+
+  const { error } = await supabase
+    .from("payout_invoices")
+    .update({
+      generated_at: null,
+      invoice_file_id: null,
+      invoice_filename: null,
+      invoice_url: null,
+    })
+    .eq("id", parsed.data);
+
+  if (error) return { error: error.message };
+
+  revalidatePath("/finance/payout");
+  return { success: true };
+}
+
 export async function updatePayoutStatus(
   payoutInvoiceId: string,
   status: "outstanding" | "paid"
@@ -244,7 +311,7 @@ export async function updatePayoutStatus(
     return { error: "Invalid payout status" };
   }
 
-  const supabase = createServerSupabaseClient();
+  const supabase = createServerSupabaseAdmin();
   const { error } = await supabase
     .from("payout_invoices")
     .update({

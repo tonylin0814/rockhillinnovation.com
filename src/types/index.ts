@@ -549,14 +549,25 @@ export type ExpenseVendorInvoice = {
 
 export type PayoutInvoiceStatus = "outstanding" | "paid";
 
+export type PayoutInvoiceLine = {
+  description: string;
+  amount_usd: number;
+};
+
 export type PayoutInvoice = {
   id: string;
   trade_id: string;
   trade_shareholder_id: string | null;
+  expense_vendor_id: string | null;
   person_name: string;
   dividend_usd: number;
   invoice_url: string | null;
+  invoice_file_id: string | null;
   invoice_filename: string | null;
+  invoice_date: string | null;
+  invoice_number: string | null;
+  notes: string | null;
+  lines: PayoutInvoiceLine[];
   status: PayoutInvoiceStatus;
   status_changed_at: string | null;
   generated_at: string | null;
