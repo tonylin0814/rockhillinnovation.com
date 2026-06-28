@@ -35,16 +35,48 @@ export async function GET(request: Request) {
   }
 
   const supabase = createServerSupabaseClient();
+  const { data: session, error: sessionError } = await supabase
+    .from("supplier_quote_sessions")
+    .select("trade_id")
+    .eq("id", parsed.data)
+    .maybeSingle();
+
+  if (sessionError) {
+    return NextResponse.json({ error: sessionError.message }, { status: 500 });
+  }
+
+  if (!session) {
+    return NextResponse.json({ error: "Quote session not found" }, { status: 404 });
+  }
+
+  const { data: trade, error: tradeError } = await supabase
+    .from("trades")
+    .select("client:clients(code)")
+    .eq("id", session.trade_id)
+    .maybeSingle();
+
+  if (tradeError) {
+    return NextResponse.json({ error: tradeError.message }, { status: 500 });
+  }
+
+  const tradeClient = Array.isArray(trade?.client) ? trade.client[0] : trade?.client;
+  const clientCode = typeof tradeClient?.code === "string" ? tradeClient.code : null;
+  let productsQuery = supabase
+    .from("products")
+    .select("id, code, supplier_product_code, name_english, product_type")
+    .eq("status", "active");
+
+  if (clientCode) {
+    productsQuery = productsQuery.ilike("code", `${clientCode}-%`);
+  }
+
   const [{ data: lines, error: linesError }, { data: products, error: productsError }] = await Promise.all([
     supabase
       .from("supplier_quote_lines")
       .select("*, product:products(id, code, supplier_product_code, name_english)")
       .eq("session_id", parsed.data)
       .order("sort_order", { ascending: true }),
-    supabase
-      .from("products")
-      .select("id, code, supplier_product_code, name_english, product_type")
-      .eq("status", "active")
+    productsQuery
       .order("name_english", { ascending: true })
       .order("code", { ascending: true }),
   ]);

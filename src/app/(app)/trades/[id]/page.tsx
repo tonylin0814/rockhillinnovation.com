@@ -334,7 +334,11 @@ export default async function TradeWorkspacePage({ params }: { params: { id: str
     notFound();
   }
 
-  const activeProductRows = (activeProducts ?? []) as Product[];
+  const trade = data as Trade;
+  const clientProductPrefix = trade.client?.code ? `${trade.client.code}-` : null;
+  const activeProductRows = ((activeProducts ?? []) as Product[]).filter((product) =>
+    clientProductPrefix ? product.code.startsWith(clientProductPrefix) : true
+  );
   const activeProductIds = activeProductRows.map((product) => product.id);
   const latestCostByProductId = new Map<string, number>();
   const previousCostByProductId = new Map<string, number>();
@@ -421,7 +425,6 @@ export default async function TradeWorkspacePage({ params }: { params: { id: str
     return totalCost;
   }
 
-  const trade = data as Trade;
   const canEdit = canManage;
 
   const tradeParticipants = (participants ?? []) as TradeParticipant[];
