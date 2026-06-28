@@ -24,7 +24,7 @@ export function TopBar({ userName, userId, initialUnreadCount, initialNotificati
     .toUpperCase();
 
   return (
-    <header className="flex h-16 min-w-0 items-center justify-between gap-4 border-b border-slate-200/80 bg-white/95 px-4 backdrop-blur sm:px-6 lg:px-8">
+    <header className="sticky top-0 z-40 flex h-16 min-w-0 items-center justify-between gap-4 border-b border-slate-200/80 bg-white/95 px-4 backdrop-blur sm:px-6 lg:px-8">
       <p className="min-w-0 truncate text-sm font-semibold text-[#0d1b34]">Rock Hill Innovation</p>
       <div className="flex shrink-0 items-center gap-2">
         <LanguageSwitcher />
