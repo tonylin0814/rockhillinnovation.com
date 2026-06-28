@@ -232,28 +232,19 @@ export function buildProFormaHtml({
   const addressLines = companyAddressLines(companyInfo);
   const contactLine = companyContactLine(companyInfo);
 
-  const adjustmentsHtml = adjustmentLines.length
-    ? `<table class="adjustments-table no-break">
-        <thead>
-          <tr>
-            <th>Adjustment</th>
-            <th class="amount" style="width:1.8in;">Amount (${escapeHtml(currency)})</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${adjustmentLines
-            .map(
-              (adjustment) => `<tr>
-                <td>${escapeHtml(adjustment.description)}</td>
-                <td class="amount" style="${adjustment.amount_usd < 0 ? "color:#c0392b;" : "color:#0d1b34;"}font-weight:600;">
-                  ${adjustment.amount_usd >= 0 ? "+" : ""}${formatUsd(adjustment.amount_usd)}
-                </td>
-              </tr>`
-            )
-            .join("")}
-        </tbody>
-      </table>`
-    : "";
+  const adjustmentRowsHtml = adjustmentLines
+    .map(
+      (adjustment) => `<tr class="no-break">
+        <td class="item-code"></td>
+        <td>${escapeHtml(adjustment.description)}</td>
+        <td class="amount">1</td>
+        <td class="amount">${formatUsd(adjustment.amount_usd)}</td>
+        <td class="amount" style="${adjustment.amount_usd < 0 ? "color:#c0392b;" : "color:#0d1b34;"}font-weight:700;">
+          ${formatUsd(adjustment.amount_usd)}
+        </td>
+      </tr>`
+    )
+    .join("");
 
   const paymentScheduleHtml = showSchedule
     ? `<div class="payment-schedule no-break">
@@ -456,10 +447,9 @@ export function buildProFormaHtml({
                 )
                 .join("")
         }
+        ${adjustmentRowsHtml}
       </tbody>
     </table>
-
-    ${adjustmentsHtml}
 
     <div class="totals-block no-break">
       ${
