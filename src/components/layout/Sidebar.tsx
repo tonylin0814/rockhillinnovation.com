@@ -35,6 +35,7 @@ export function Sidebar({ currentUser }: { currentUser: SidebarUser }) {
   const isManager = role === "manager";
   const isController = role === "controller";
   const isAdminOrManager = isAdmin || isManager || isController;
+  const canViewFinance = isAdmin || isController;
   const isHistoryActive = pathname.startsWith("/history");
   const [historyOpen, setHistoryOpen] = useState(isHistoryActive);
   const navItems = [
@@ -131,7 +132,7 @@ export function Sidebar({ currentUser }: { currentUser: SidebarUser }) {
         ) : null}
 
         {isAdmin ? <NavLink href="/admin/activity" icon={History} label={t.nav.activity} /> : null}
-        {isAdminOrManager ? <NavLink href="/finance" icon={BarChart3} label={t.nav.finance} /> : null}
+        {canViewFinance ? <NavLink href="/finance" icon={BarChart3} label={t.nav.finance} /> : null}
 
         {isAdmin
           ? adminNavItems.map((item) => <NavLink href={item.href} icon={item.icon} key={item.href} label={item.label} />)

@@ -8,7 +8,7 @@ import type { ShareholderPayout } from "@/types";
 export default async function FinancePage() {
   const user = await getCurrentUser();
 
-  if (!user || !["admin", "manager", "controller"].includes(user.role)) {
+  if (!user || !["admin", "controller"].includes(user.role)) {
     redirect("/dashboard");
   }
 
