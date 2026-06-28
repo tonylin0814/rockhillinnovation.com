@@ -262,6 +262,7 @@ function EditClientInvoiceDialog({ invoice }: { invoice: ClientInvoice }) {
       .map((line, index) => ({
         _key: line.id ?? `${invoice.id}-${index}`,
         description: line.description ?? "",
+        item_code: line.item_code ?? "",
         quantity: String(line.quantity ?? 0),
         sort_order: index,
         unit_price_usd: String(line.unit_price_usd ?? 0),
@@ -279,6 +280,7 @@ function EditClientInvoiceDialog({ invoice }: { invoice: ClientInvoice }) {
           .map((line, index) => ({
             _key: line.id ?? `${invoice.id}-${index}`,
             description: line.description ?? "",
+            item_code: line.item_code ?? "",
             quantity: String(line.quantity ?? 0),
             sort_order: index,
             unit_price_usd: String(line.unit_price_usd ?? 0),
@@ -287,7 +289,7 @@ function EditClientInvoiceDialog({ invoice }: { invoice: ClientInvoice }) {
     }
   }
 
-  function updateLine(index: number, field: "description" | "quantity" | "unit_price_usd", value: string) {
+  function updateLine(index: number, field: "description" | "item_code" | "quantity" | "unit_price_usd", value: string) {
     setLines((currentLines) =>
       currentLines.map((line, lineIndex) => (lineIndex === index ? { ...line, [field]: value } : line))
     );
@@ -299,6 +301,7 @@ function EditClientInvoiceDialog({ invoice }: { invoice: ClientInvoice }) {
       {
         _key: crypto.randomUUID(),
         description: "",
+        item_code: "",
         quantity: "1",
         sort_order: currentLines.length,
         unit_price_usd: "0",
@@ -330,6 +333,7 @@ function EditClientInvoiceDialog({ invoice }: { invoice: ClientInvoice }) {
       JSON.stringify(
         lines.map((line, index) => ({
           description: line.description,
+          item_code: line.item_code || null,
           quantity: Number(line.quantity) || 0,
           sort_order: index,
           unit_price_usd: Number(line.unit_price_usd) || 0,
@@ -469,6 +473,7 @@ function EditClientInvoiceDialog({ invoice }: { invoice: ClientInvoice }) {
               <Table>
                 <TableHeader>
                   <TableRow>
+                    <TableHead className="w-40">Item #</TableHead>
                     <TableHead className="min-w-[260px]">Description</TableHead>
                     <TableHead className="w-28">Qty</TableHead>
                     <TableHead className="w-36">Unit Price</TableHead>
@@ -482,6 +487,13 @@ function EditClientInvoiceDialog({ invoice }: { invoice: ClientInvoice }) {
 
                     return (
                       <TableRow key={line._key}>
+                        <TableCell>
+                          <Input
+                            disabled={isPending}
+                            onChange={(event) => updateLine(index, "item_code", event.currentTarget.value)}
+                            value={line.item_code}
+                          />
+                        </TableCell>
                         <TableCell>
                           <Input
                             disabled={isPending}
@@ -528,7 +540,7 @@ function EditClientInvoiceDialog({ invoice }: { invoice: ClientInvoice }) {
                     );
                   })}
                   <TableRow>
-                    <TableCell className="font-semibold" colSpan={3}>
+                    <TableCell className="font-semibold" colSpan={4}>
                       Subtotal
                     </TableCell>
                     <TableCell className="text-right font-semibold">{formatUsd(lineSubtotal)}</TableCell>

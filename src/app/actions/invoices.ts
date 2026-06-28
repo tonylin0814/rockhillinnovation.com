@@ -75,6 +75,7 @@ type InvoiceSourceData = {
 
 type StoredClientInvoiceLine = {
   description: string | null;
+  item_code: string | null;
   quantity: number | string;
   sort_order: number | string | null;
   unit_price_usd: number | string;
@@ -83,6 +84,7 @@ type StoredClientInvoiceLine = {
 const invoiceStatusSchema = z.enum(["draft", "sent", "paid"]);
 const editableInvoiceLineSchema = z.object({
   description: z.string().trim().min(1, "Line description is required"),
+  item_code: z.string().trim().nullable().optional(),
   quantity: z.coerce.number().min(0, "Quantity cannot be negative"),
   sort_order: z.coerce.number().int().min(0).default(0),
   unit_price_usd: z.coerce.number().min(0, "Unit price cannot be negative"),
@@ -551,6 +553,7 @@ export async function generateCommercialInvoice(tradeId: string, formData: FormD
   const { error: linesError } = await supabase.from("client_invoice_lines").insert(
     invoiceLines.map((line) => ({
       description: line.description,
+      item_code: line.itemCode,
       invoice_id: invoice.id,
       quantity: line.dbQuantity,
       sort_order: line.sortOrder,
@@ -704,6 +707,7 @@ export async function generateDepositInvoice(tradeId: string, formData: FormData
   const { error: linesError } = await supabase.from("client_invoice_lines").insert(
     source.invoiceLines.map((line) => ({
       description: line.description,
+      item_code: line.itemCode,
       invoice_id: invoice.id,
       quantity: line.dbQuantity,
       sort_order: line.sortOrder,
@@ -918,6 +922,7 @@ export async function generateFinalInvoice(tradeId: string, formData: FormData):
 
   const { error: linesError } = await supabase.from("client_invoice_lines").insert({
     description: "Order Balance Due",
+    item_code: null,
     invoice_id: invoice.id,
     quantity: 1,
     sort_order: 0,
@@ -1126,6 +1131,7 @@ export async function updateClientInvoice(invoiceId: string, formData: FormData)
     const { error: insertLinesError } = await supabase.from("client_invoice_lines").insert(
       invoiceLines.map((line) => ({
         description: line.description,
+        item_code: line.item_code ?? null,
         invoice_id: invoiceId,
         quantity: line.quantity,
         sort_order: line.sort_order,
@@ -1191,10 +1197,17 @@ export async function regenerateClientInvoicePdf(invoiceId: string): Promise<Act
     return { error: "Invoice has no detail lines to regenerate." };
   }
 
-  const [{ data: companySettings }, { data: bankingAccounts }] = await Promise.all([
+  const [{ data: companySettings }, { data: bankingAccounts }, { data: products }] = await Promise.all([
     supabase.from("company_settings").select("*").limit(1).maybeSingle(),
     supabase.from("company_banking_accounts").select("*").eq("is_active", true).order("sort_order").limit(1),
+    supabase.from("products").select("code, name_english"),
   ]);
+
+  const productCodeByName = new Map(
+    (products ?? [])
+      .filter((product) => product.name_english && product.code)
+      .map((product) => [String(product.name_english).trim().toLowerCase(), product.code as string])
+  );
 
   const invoiceLines = lines
     .slice()
@@ -1206,7 +1219,7 @@ export async function regenerateClientInvoicePdf(invoiceId: string): Promise<Act
         components: [],
         dbQuantity: quantity,
         description: line.description ?? "Item",
-        itemCode: null,
+        itemCode: line.item_code ?? productCodeByName.get(String(line.description ?? "").trim().toLowerCase()) ?? null,
         quantity,
         sortOrder: Number(line.sort_order ?? 0),
         total: roundMoney(quantity * unitPrice),

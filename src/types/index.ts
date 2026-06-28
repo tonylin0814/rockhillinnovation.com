@@ -463,6 +463,7 @@ export type ClientInvoiceLine = {
   id: string;
   invoice_id: string;
   order_line_id: string | null;
+  item_code: string | null;
   description: string | null;
   quantity: number;
   unit_price_usd: number;
