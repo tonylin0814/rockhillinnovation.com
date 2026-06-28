@@ -31,7 +31,7 @@ export function buildSgracoInvoiceHtml(params: VendorOutgoingInvoiceParams): str
     </table>
     <div class="total-box"><span>Total</span><strong>${formatUsd(params.totalUsd)}</strong></div>
     ${params.notes ? `<div class="notes"><strong>Notes:</strong><br />${multiline(params.notes)}</div>` : ""}
-    ${buildVendorBankingPage(params)}
+    ${buildVendorBankingPage({ ...params, showPaymentNotice: false })}
   `;
 
   return buildBaseHtml({

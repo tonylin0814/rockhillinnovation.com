@@ -75,12 +75,14 @@ export function lineRows(lines: VendorOutgoingInvoiceLine[]) {
 export function buildVendorBankingPage({
   billToName,
   invoiceNumber,
+  showPaymentNotice = true,
   vendorAddress,
   vendorBanking,
   vendorName,
 }: {
   billToName: string;
   invoiceNumber: string | null;
+  showPaymentNotice?: boolean;
   vendorAddress: string | null;
   vendorBanking: VendorBanking | null;
   vendorName: string;
@@ -117,11 +119,15 @@ export function buildVendorBankingPage({
         ${invoiceNumber ? escapeHtml(invoiceNumber) : "Vendor Invoice"}
         <span style="font-weight:400;font-size:9pt;color:#5a6270;">- ${escapeHtml(billToName)}</span>
       </div>
-      <div style="margin-top:12px;background:#f5f6f8;border-left:3px solid #0d1b34;padding:10px 16px;font-size:9pt;color:#444;-webkit-print-color-adjust:exact;print-color-adjust:exact;">
+      ${
+        showPaymentNotice
+          ? `<div style="margin-top:12px;background:#f5f6f8;border-left:3px solid #0d1b34;padding:10px 16px;font-size:9pt;color:#444;-webkit-print-color-adjust:exact;print-color-adjust:exact;">
         Use the vendor banking information below for payment.
         <strong style="color:#0d1b34;">Always include the invoice number as the wire reference</strong>
         so the payment can be matched immediately.
-      </div>
+      </div>`
+          : ""
+      }
     </div>
 
     <div style="border:1px solid #e4e6ea;border-radius:4px;overflow:hidden;-webkit-print-color-adjust:exact;print-color-adjust:exact;">
