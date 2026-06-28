@@ -419,7 +419,7 @@ function PayoutActions({
 
   return (
     <div className="flex justify-end gap-2">
-      {!invoice ? (
+      {!invoice?.invoice_url ? (
         <GeneratePayoutInvoiceDialog dividend={dividend} invoice={invoice} shareholder={shareholder} trade={trade}>
           <Button disabled={isPending} size="sm" type="button">
             <FileText className="mr-2 h-4 w-4" />
