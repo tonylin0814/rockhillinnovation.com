@@ -99,7 +99,6 @@ const MILESTONE_GROUPS: { title: string; titleZh: string; items: MilestoneKey[] 
   },
 ];
 
-const ALL_MILESTONES = MILESTONE_GROUPS.flatMap((group) => group.items);
 const DEVELOPMENT_MILESTONES = MILESTONE_GROUPS[0].items;
 
 export function getMilestoneLabel(key: MilestoneKey, language: "en" | "zh") {
@@ -201,7 +200,7 @@ export function TradeMilestoneChecklist({
               <div className="grid gap-0 lg:grid-cols-[150px_minmax(0,1fr)]">
                 <div className="border-b border-slate-100 bg-slate-50 px-3 py-2 lg:border-b-0 lg:border-r">
                   <h3 className="text-xs font-semibold text-[#0d1b34]">
-                  {language === "zh" ? group.titleZh : group.title}
+                    {language === "zh" ? group.titleZh : group.title}
                   </h3>
                   <p className="mt-1 text-[11px] text-slate-500">
                     {group.items.filter((key) => milestoneMap.get(key)?.completed_at).length} / {group.items.length}

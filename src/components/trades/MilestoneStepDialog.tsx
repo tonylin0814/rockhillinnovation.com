@@ -58,6 +58,8 @@ export function MilestoneStepDialog({
           reopen: "標記未完成",
           reopenedToast: "里程碑已重新開啟",
           saveNote: "儲存備註",
+          selectedFiles: "個檔案已選取",
+          tooManyFiles: "一次最多只能選 10 個檔案。",
         }
       : {
           addNote: "Add Note",
@@ -74,6 +76,8 @@ export function MilestoneStepDialog({
           reopen: "Mark Incomplete",
           reopenedToast: "Milestone reopened",
           saveNote: "Save Note",
+          selectedFiles: "files selected",
+          tooManyFiles: "You can select up to 10 files at once.",
         };
   const router = useRouter();
   const [note, setNote] = useState("");
@@ -164,7 +168,7 @@ export function MilestoneStepDialog({
                     if (count > 10) {
                       event.target.value = "";
                       setSelectedFileCount(0);
-                      setError(language === "zh" ? "一次最多只能選 10 個檔案。" : "You can select up to 10 files at once.");
+                      setError(text.tooManyFiles);
                       return;
                     }
                     setError(null);
@@ -174,7 +178,7 @@ export function MilestoneStepDialog({
                 />
                 {selectedFileCount ? (
                   <p className="text-xs text-slate-500">
-                    {selectedFileCount} {language === "zh" ? "個檔案已選取" : "files selected"}
+                    {selectedFileCount} {text.selectedFiles}
                   </p>
                 ) : null}
               </div>
