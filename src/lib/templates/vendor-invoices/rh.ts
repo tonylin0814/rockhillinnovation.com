@@ -24,7 +24,6 @@ function buildRhBankingPage(params: VendorOutgoingInvoiceParams) {
     .join("");
 
   return `
-    <div class="page-break"></div>
     <section class="rh-bank-page">
       <div class="rh-bank-header">
         <strong>${escapeHtml(params.vendorName)}</strong>
@@ -93,6 +92,7 @@ export function buildRhInvoiceHtml(params: VendorOutgoingInvoiceParams): string 
       .rh-total span { color:#94A3B8; font-size:8pt; letter-spacing:4px; }
       .rh-total strong { color:#F59E0B; font-size:16pt; font-weight:900; }
       .rh-notes { color:#475569; margin:18px 0; }
+      .rh-bank-page { break-before:page; page-break-before:always; }
       .rh-bank-header { align-items:center; background:#0D1B34; color:#fff; display:flex; justify-content:space-between; margin-bottom:28px; padding:18px 24px; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
       .rh-bank-header strong { color:#fff; font-size:14pt; }
       .rh-bank-header span { color:#F59E0B; font-size:9pt; font-weight:700; letter-spacing:3px; }

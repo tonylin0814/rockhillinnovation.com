@@ -28,7 +28,6 @@ function buildChenlawBankingPage(params: VendorOutgoingInvoiceParams) {
     .join("");
 
   return `
-    <div class="page-break"></div>
     <section class="chenlaw-shell chenlaw-bank-page">
       <div class="chenlaw-bank-heading">
         <div class="chenlaw-bank-vendor">${escapeHtml(params.vendorName)}</div>
@@ -85,7 +84,7 @@ export function buildChenlawInvoiceHtml(params: VendorOutgoingInvoiceParams): st
     content,
     styles: `
       body { background:#FFFEF5; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
-      .chenlaw-shell { background:#FFFEF5; color:#2C2C2C; min-height:10in; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+      .chenlaw-shell { background:#FFFEF5; color:#2C2C2C; min-height:8.85in; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
       .chenlaw-header { padding:28px 0 18px; text-align:center; }
       .chenlaw-vendor-name { color:#1A2744; font-size:20pt; font-weight:700; letter-spacing:1px; }
       .chenlaw-ornament { align-items:center; display:flex; gap:10px; justify-content:center; margin:10px auto 8px; max-width:3.2in; }
@@ -112,6 +111,7 @@ export function buildChenlawInvoiceHtml(params: VendorOutgoingInvoiceParams): st
       .chenlaw-notes { color:#6B7280; margin:18px 0; }
       .chenlaw-footer { border-top:1px solid #E8E4D0; color:#9CA3AF; font-size:8pt; margin-top:24px; padding-top:12px; text-align:center; }
       .chenlaw-bank-heading { text-align:center; }
+      .chenlaw-bank-page { break-before:page; page-break-before:always; }
       .chenlaw-bank-vendor { color:#1A2744; font-size:16pt; font-weight:700; text-align:center; }
       .chenlaw-bank-title { color:#1A2744; font-size:10pt; letter-spacing:2px; margin-bottom:4px; text-align:center; }
       .chenlaw-bank-reference { color:#6B7280; font-size:8.5pt; margin-bottom:28px; text-align:center; }

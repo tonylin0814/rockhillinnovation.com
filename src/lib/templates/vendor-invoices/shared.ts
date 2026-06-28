@@ -103,8 +103,7 @@ export function buildVendorBankingPage({
   const currencyLabel = vendorBanking?.currency ? `${vendorBanking.currency} Wire Transfer` : "Wire Transfer";
 
   return `
-    <div class="page-break"></div>
-
+    <div class="vendor-banking-page" style="break-before:page;page-break-before:always;">
     <div class="doc-header">
       <div>
         <div style="color:#0d1b34;font-size:16pt;font-weight:800;margin-bottom:6px;">${escapeHtml(vendorName)}</div>
@@ -143,5 +142,6 @@ export function buildVendorBankingPage({
       <strong>Important:</strong>
       Bank fees are the sender's responsibility. If a bank deducts a fee that results in a shortfall,
       please arrange an additional transfer to cover the difference.
+    </div>
     </div>`;
 }

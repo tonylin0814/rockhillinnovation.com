@@ -24,7 +24,6 @@ function buildSgracoBankingPage(params: VendorOutgoingInvoiceParams) {
     .join("");
 
   return `
-    <div class="page-break"></div>
     <section class="sgraco-bank-page">
       <div class="sgraco-bank-header">
         <div><strong>SGRACO</strong><span> CONSULTING INC.</span></div>
@@ -93,6 +92,7 @@ export function buildSgracoInvoiceHtml(params: VendorOutgoingInvoiceParams): str
       .sgraco-total span { font-size:8pt; font-weight:700; letter-spacing:3px; }
       .sgraco-total strong { font-size:14pt; font-weight:800; }
       .sgraco-notes { color:#64748B; margin-bottom:16px; }
+      .sgraco-bank-page { break-before:page; page-break-before:always; }
       .sgraco-bank-header { align-items:center; background:#0D9488; color:#fff; display:flex; justify-content:space-between; margin-bottom:24px; padding:14px 20px; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
       .sgraco-bank-header strong { font-size:16pt; letter-spacing:-0.5px; }
       .sgraco-bank-header span { font-size:8pt; letter-spacing:3px; opacity:0.85; }

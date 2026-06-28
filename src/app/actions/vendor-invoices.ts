@@ -27,6 +27,16 @@ function emptyToNull(value: FormDataEntryValue | null): string | null {
   return trimmed.length ? trimmed : null;
 }
 
+function buildVendorInvoiceFileName(vendorName: string, invoiceNumber: string | null, fallbackDate: string) {
+  const baseName = `${vendorName} - ${invoiceNumber ?? fallbackDate}`;
+  const safeName = baseName
+    .replace(/[<>:"/\\|?*\x00-\x1F]/g, "-")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  return `${safeName || "Vendor Invoice"}.pdf`;
+}
+
 const invoiceSchema = z.object({
   amount_usd: z.coerce.number().positive("Amount must be greater than zero"),
   description: z.string().trim().nullable(),
@@ -158,8 +168,7 @@ export async function generateVendorInvoice(tradeId: string, formData: FormData)
     vendorName: vendor.name,
   });
   const pdfBuffer = await generatePdf(html);
-  const safeInvoiceNum = `${vendor.name} - ${invoiceNumber ?? parsed.data.invoice.invoice_date}`;
-  const fileName = `${safeInvoiceNum.replace(/[^\w\-.]/g, "-")}.pdf`;
+  const fileName = buildVendorInvoiceFileName(vendor.name, invoiceNumber, parsed.data.invoice.invoice_date);
   const uploaded = await uploadToOneDrive({
     category: "invoice",
     fileBuffer: pdfBuffer,
@@ -416,8 +425,7 @@ export async function generateVendorOutgoingInvoice(tradeId: string, formData: F
   });
 
   const pdfBuffer = await generatePdf(html);
-  const safeInvoiceNum = `${vendor.name} - ${invoiceNumber ?? parsed.data.invoice.invoice_date}`;
-  const fileName = `${safeInvoiceNum.replace(/[^\w\-.]/g, "-")}.pdf`;
+  const fileName = buildVendorInvoiceFileName(vendor.name, invoiceNumber, parsed.data.invoice.invoice_date);
   const uploaded = await uploadToOneDrive({
     category: "invoice",
     fileBuffer: pdfBuffer,
@@ -657,8 +665,7 @@ export async function regenerateVendorOutgoingInvoicePdf(invoiceId: string): Pro
     vendorName: vendor.name,
   });
   const pdfBuffer = await generatePdf(html);
-  const safeInvoiceNum = `${vendor.name} - ${invoice.invoice_number ?? invoice.invoice_date}`;
-  const fileName = `${safeInvoiceNum.replace(/[^\w\-.]/g, "-")}.pdf`;
+  const fileName = buildVendorInvoiceFileName(vendor.name, invoice.invoice_number, invoice.invoice_date);
   const uploaded = await uploadToOneDrive({
     category: "invoice",
     fileBuffer: pdfBuffer,

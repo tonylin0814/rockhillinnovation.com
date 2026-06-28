@@ -24,7 +24,6 @@ function buildLmBankingPage(params: VendorOutgoingInvoiceParams) {
     .join("");
 
   return `
-    <div class="page-break"></div>
     <section class="lm-bank-page">
       <div class="lm-bank-heading">
         <strong>${escapeHtml(params.vendorName)}</strong>
@@ -101,6 +100,7 @@ export function buildLmInvoiceHtml(params: VendorOutgoingInvoiceParams): string 
       .lm-total-row { color:#1A1A1A; display:flex; font-size:12pt; font-weight:700; gap:32px; justify-content:space-between; width:100%; }
       .lm-total-row strong { color:#7B2D42; }
       .lm-notes { color:#6B7280; margin:18px 0; }
+      .lm-bank-page { break-before:page; page-break-before:always; }
       .lm-bank-heading { align-items:flex-start; display:flex; justify-content:space-between; }
       .lm-bank-heading strong { color:#1A1A1A; font-size:13pt; font-weight:700; }
       .lm-bank-heading span { color:#7B2D42; font-size:8pt; font-weight:700; letter-spacing:4px; text-transform:uppercase; }
