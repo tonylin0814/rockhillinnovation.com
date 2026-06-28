@@ -263,15 +263,6 @@ export async function generatePayoutInvoice(
 
   const pdfBuffer = await generatePdf(html);
   const fileName = `${safeFileName(`${vendor.name} - ${parsed.data.invoiceNumber}`)}.pdf`;
-  const uploaded = await uploadToOneDrive({
-    category: "payouts",
-    fileBuffer: pdfBuffer,
-    fileName,
-    mimeType: "application/pdf",
-    tradeCode: trade.trade_id,
-  });
-
-  const generatedAt = new Date().toISOString();
   const { data: existing, error: existingError } = await supabase
     .from("payout_invoices")
     .select("id, invoice_file_id")
@@ -286,6 +277,16 @@ export async function generatePayoutInvoice(
   if (existing?.invoice_file_id) {
     await deleteFromOneDrive(existing.invoice_file_id);
   }
+
+  const uploaded = await uploadToOneDrive({
+    category: "payouts",
+    fileBuffer: pdfBuffer,
+    fileName,
+    mimeType: "application/pdf",
+    tradeCode: trade.trade_id,
+  });
+
+  const generatedAt = new Date().toISOString();
 
   const payload = {
     dividend_usd: dividendUsd,
