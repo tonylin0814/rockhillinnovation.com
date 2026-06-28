@@ -13,7 +13,7 @@ import {
   updateSupplierInvoice,
   updateSupplierInvoiceStatus,
 } from "@/app/actions/supplier-invoices-outgoing";
-import { deleteVendorOutgoingInvoice } from "@/app/actions/vendor-invoices";
+import { deleteVendorOutgoingInvoice, updateVendorInvoiceStatus } from "@/app/actions/vendor-invoices";
 import { useLanguage } from "@/context/LanguageContext";
 import {
   AlertDialog,
@@ -1225,6 +1225,43 @@ function DeleteVendorOutgoingInvoiceButton({ invoice }: { invoice: ExpenseVendor
   );
 }
 
+function VendorInvoiceStatusDropdown({ invoice }: { invoice: ExpenseVendorInvoice }) {
+  const router = useRouter();
+  const [isPending, startTransition] = useTransition();
+
+  function setStatus(status: ExpenseVendorInvoice["status"]) {
+    startTransition(async () => {
+      const result = await updateVendorInvoiceStatus(invoice.id, status);
+
+      if (result.error) {
+        toast.error(result.error);
+        return;
+      }
+
+      toast.success("Vendor invoice status updated");
+      router.refresh();
+    });
+  }
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button disabled={isPending} size="icon" title="Update vendor invoice status" type="button" variant="ghost">
+          <MoreHorizontal className="h-4 w-4" />
+          <span className="sr-only">Update vendor invoice status</span>
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end">
+        {(["draft", "sent", "paid"] as ExpenseVendorInvoice["status"][]).map((status) => (
+          <DropdownMenuItem disabled={status === invoice.status} key={status} onClick={() => setStatus(status)}>
+            Mark {statusLabels[status]}
+          </DropdownMenuItem>
+        ))}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
 export function InvoicesTab({
   canManage,
   initialInvoices,
@@ -1474,6 +1511,7 @@ export function InvoicesTab({
                       <TableCell>
                         <div className="flex items-center justify-end gap-1">
                           {canManage ? <EditVendorOutgoingInvoiceDialog invoice={invoice} /> : null}
+                          {canManage ? <VendorInvoiceStatusDropdown invoice={invoice} /> : null}
                           {canManage ? <DeleteVendorOutgoingInvoiceButton invoice={invoice} /> : null}
                         </div>
                       </TableCell>
