@@ -113,6 +113,11 @@ function vendorForShareholder(shareholder: PayoutShareholder) {
   return normalizeOne(shareholder.expense_vendor);
 }
 
+function isTonyShareholder(shareholder: PayoutShareholder) {
+  const normalizedName = shareholder.person_name.trim().toLowerCase();
+  return normalizedName === "tony" || normalizedName === "tony lin";
+}
+
 function defaultInvoiceNumber(trade: PayoutTrade, shareholder: PayoutShareholder, invoice: PayoutInvoice | null) {
   if (invoice?.invoice_number) return invoice.invoice_number;
   const vendor = vendorForShareholder(shareholder);
@@ -515,6 +520,7 @@ export function PayoutPage({
                       ) ?? null;
                     const status = invoice?.status ?? "outstanding";
                     const dividend = invoice ? Number(invoice.dividend_usd) : resolveDividend(shareholder, trade.book);
+                    const canActOnShareholder = canEdit && !isTonyShareholder(shareholder);
 
                     return (
                       <TableRow key={shareholder.id}>
@@ -538,13 +544,17 @@ export function PayoutPage({
                         <TableCell>{formatDate(invoice?.status_changed_at ?? null)}</TableCell>
                         {canEdit ? (
                           <TableCell>
-                            <PayoutActions
-                              canEdit={canEdit}
-                              dividend={dividend}
-                              invoice={invoice}
-                              shareholder={shareholder}
-                              trade={trade}
-                            />
+                            {canActOnShareholder ? (
+                              <PayoutActions
+                                canEdit={canEdit}
+                                dividend={dividend}
+                                invoice={invoice}
+                                shareholder={shareholder}
+                                trade={trade}
+                              />
+                            ) : (
+                              <span className="text-sm text-slate-400">-</span>
+                            )}
                           </TableCell>
                         ) : null}
                       </TableRow>
