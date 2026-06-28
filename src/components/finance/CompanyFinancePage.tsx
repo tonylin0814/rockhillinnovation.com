@@ -121,11 +121,6 @@ function todayInputValue() {
   return new Date().toISOString().slice(0, 10);
 }
 
-function isTonyName(name: string) {
-  const normalized = name.trim().toLowerCase();
-  return normalized === "tony" || normalized === "tony lin";
-}
-
 function StatCard({
   highlight,
   label,
@@ -321,8 +316,6 @@ export function CompanyFinancePage({
       if (trade.book?.status !== "confirmed") return acc;
 
       for (const line of trade.book.lines ?? []) {
-        if (isTonyName(line.person_name)) continue;
-
         const key = line.person_name.trim().toLowerCase();
         const paidByInvoice = paidPayoutInvoices
           .filter(
