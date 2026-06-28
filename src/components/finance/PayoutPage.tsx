@@ -419,12 +419,14 @@ function PayoutActions({
 
   return (
     <div className="flex justify-end gap-2">
-      <GeneratePayoutInvoiceDialog dividend={dividend} invoice={invoice} shareholder={shareholder} trade={trade}>
-        <Button disabled={isPending} size="sm" type="button">
-          <FileText className="mr-2 h-4 w-4" />
-          {invoice?.invoice_url ? "Regenerate" : t.payout.generateInvoice}
-        </Button>
-      </GeneratePayoutInvoiceDialog>
+      {!invoice?.invoice_url ? (
+        <GeneratePayoutInvoiceDialog dividend={dividend} invoice={invoice} shareholder={shareholder} trade={trade}>
+          <Button disabled={isPending} size="sm" type="button">
+            <FileText className="mr-2 h-4 w-4" />
+            {t.payout.generateInvoice}
+          </Button>
+        </GeneratePayoutInvoiceDialog>
+      ) : null}
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button disabled={isPending} size="sm" type="button" variant="outline">
