@@ -116,7 +116,13 @@ export function FinancialTab({
 
     return sum;
   }, 0);
-  const totalExpenses = tradeExpenses.reduce((sum, expense) => sum + Number(expense.amount_usd ?? 0), 0);
+  const totalExpenses = tradeExpenses.reduce((sum, expense) => {
+    if (expense.category === "reimbursement_tony" || expense.category === "reimbursement_michael") {
+      return sum;
+    }
+
+    return sum + Number(expense.amount_usd ?? 0);
+  }, 0);
   const grossProfit = totalRevenue - totalCost;
   const taxableBase = grossProfit - totalExpenses;
 

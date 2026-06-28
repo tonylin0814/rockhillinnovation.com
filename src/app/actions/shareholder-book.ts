@@ -117,16 +117,34 @@ export async function calculateShareholderBook(tradeId: string): Promise<ActionR
 
   const { data: tradeExpenses, error: tradeExpensesError } = await supabase
     .from("trade_expenses")
-    .select("amount_usd")
+    .select("amount_usd, category")
     .eq("trade_id", tradeId);
 
   if (tradeExpensesError) {
     return { error: tradeExpensesError.message };
   }
 
+  const reimbursementByPerson = (tradeExpenses ?? []).reduce<Record<string, number>>((acc, expense) => {
+    if (expense.category === "reimbursement_tony") {
+      acc.tony = (acc.tony ?? 0) + Number(expense.amount_usd ?? 0);
+    }
+
+    if (expense.category === "reimbursement_michael") {
+      acc.michael = (acc.michael ?? 0) + Number(expense.amount_usd ?? 0);
+    }
+
+    return acc;
+  }, {});
+
   const expenseDeductions = roundMoney(
     (vendorInvoices ?? []).reduce((sum, invoice) => sum + Number(invoice.amount_usd ?? 0), 0) +
-      (tradeExpenses ?? []).reduce((sum, expense) => sum + Number(expense.amount_usd ?? 0), 0)
+      (tradeExpenses ?? []).reduce((sum, expense) => {
+        if (expense.category === "reimbursement_tony" || expense.category === "reimbursement_michael") {
+          return sum;
+        }
+
+        return sum + Number(expense.amount_usd ?? 0);
+      }, 0)
   );
 
   const taxRate = shareholders.length === 1 ? 0 : Number(trade.corporate_tax_rate ?? 0);
@@ -167,7 +185,14 @@ export async function calculateShareholderBook(tradeId: string): Promise<ActionR
     const splitPct = Number(shareholder.split_pct);
     const grossShare = roundMoney(taxableBase * (splitPct / 100));
     const taxContribution = roundMoney(grossShare * taxRate);
-    const netShare = roundMoney(grossShare - taxContribution);
+    const normalizedName = shareholder.person_name.trim().toLowerCase();
+    const reimbursement =
+      normalizedName.includes("tony")
+        ? (reimbursementByPerson.tony ?? 0)
+        : normalizedName.includes("michael")
+          ? (reimbursementByPerson.michael ?? 0)
+          : 0;
+    const netShare = roundMoney(grossShare - taxContribution + reimbursement);
     const vendor = Array.isArray(shareholder.expense_vendor)
       ? shareholder.expense_vendor[0]
       : shareholder.expense_vendor;

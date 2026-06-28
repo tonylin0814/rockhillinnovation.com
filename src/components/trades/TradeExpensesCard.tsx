@@ -31,7 +31,8 @@ const CATEGORY_LABELS: Record<TradeExpense["category"], string> = {
   bank_fee: "Bank Fee",
   duty: "Duty / Tax",
   misc: "Misc",
-  reimbursement: "Reimbursement",
+  reimbursement_michael: "Reimbursement - Michael",
+  reimbursement_tony: "Reimbursement - Tony",
   shipping: "Shipping",
 };
 
@@ -39,7 +40,8 @@ const CATEGORY_CLASSES: Record<TradeExpense["category"], string> = {
   bank_fee: "border-blue-200 bg-blue-50 text-blue-700",
   duty: "border-orange-200 bg-orange-50 text-orange-700",
   misc: "border-slate-200 bg-slate-100 text-slate-700",
-  reimbursement: "border-amber-200 bg-amber-50 text-amber-700",
+  reimbursement_michael: "border-amber-200 bg-amber-50 text-amber-700",
+  reimbursement_tony: "border-amber-200 bg-amber-50 text-amber-700",
   shipping: "border-violet-200 bg-violet-50 text-violet-700",
 };
 

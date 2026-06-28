@@ -30,7 +30,7 @@ function emptyToNull(value: FormDataEntryValue | null): string | null {
 
 const expenseSchema = z.object({
   amount_usd: z.coerce.number().positive("Amount must be greater than 0"),
-  category: z.enum(["bank_fee", "reimbursement", "shipping", "duty", "misc"]),
+  category: z.enum(["bank_fee", "reimbursement_tony", "reimbursement_michael", "shipping", "duty", "misc"]),
   description: z.string().trim().min(1, "Description is required"),
   expense_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Date is required"),
   notes: z.string().trim().nullable(),
