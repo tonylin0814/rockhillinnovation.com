@@ -1,12 +1,12 @@
 "use client";
 
-import { MoreHorizontal, Trash2 } from "lucide-react";
+import { Download, MoreHorizontal, Search, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useMemo, useTransition } from "react";
+import { useMemo, useState, useTransition } from "react";
 import { toast } from "sonner";
 
 import { deleteDocument, updateDocumentStatus } from "@/app/actions/documents";
-import { useLanguage } from "@/context/LanguageContext";
+import { UploadDocumentDialog } from "@/components/trades/UploadDocumentDialog";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -28,6 +28,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Input } from "@/components/ui/input";
 import {
   Table,
   TableBody,
@@ -36,44 +37,18 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { useLanguage } from "@/context/LanguageContext";
 import { buildDownloadUrl } from "@/lib/download";
 import type { TradeDocument } from "@/types";
-import { UploadDocumentDialog } from "./UploadDocumentDialog";
-
-const categoryOrder: TradeDocument["document_category"][] = [
-  "design",
-  "supplier_quote",
-  "client_quotation",
-  "invoice",
-  "shipping",
-  "approval",
-  "other",
-];
 
 const categoryLabels: Record<TradeDocument["document_category"], string> = {
-  design: "Design",
-  supplier_quote: "Supplier Quotes",
-  client_quotation: "Client Quotations",
-  invoice: "Invoices",
-  shipping: "Shipping",
   approval: "Approvals",
+  client_quotation: "Client Quotations",
+  design: "Design",
+  invoice: "Invoices",
   other: "Other",
-};
-
-const statusLabels: Record<TradeDocument["status"], string> = {
-  draft: "Draft",
-  sent: "Sent",
-  approved: "Approved",
-  sent_to_printer: "Sent to Printer",
-  archived: "Archived",
-};
-
-const statusClasses: Record<TradeDocument["status"], string> = {
-  draft: "border-slate-200 bg-slate-100 text-slate-700",
-  sent: "border-blue-200 bg-blue-50 text-blue-700",
-  approved: "border-green-200 bg-green-50 text-green-700",
-  sent_to_printer: "border-violet-200 bg-violet-50 text-violet-700",
-  archived: "border-red-200 bg-red-50 text-red-700",
+  shipping: "Shipping",
+  supplier_quote: "Supplier Quotes",
 };
 
 const zhCategoryLabels: Record<TradeDocument["document_category"], string> = {
@@ -86,6 +61,14 @@ const zhCategoryLabels: Record<TradeDocument["document_category"], string> = {
   supplier_quote: "供應商報價",
 };
 
+const statusLabels: Record<TradeDocument["status"], string> = {
+  approved: "Approved",
+  archived: "Archived",
+  draft: "Draft",
+  sent: "Sent",
+  sent_to_printer: "Sent to Printer",
+};
+
 const zhStatusLabels: Record<TradeDocument["status"], string> = {
   approved: "已核准",
   archived: "已封存",
@@ -94,19 +77,28 @@ const zhStatusLabels: Record<TradeDocument["status"], string> = {
   sent_to_printer: "已送印",
 };
 
+const statusClasses: Record<TradeDocument["status"], string> = {
+  approved: "border-green-200 bg-green-50 text-green-700",
+  archived: "border-red-200 bg-red-50 text-red-700",
+  draft: "border-slate-200 bg-slate-100 text-slate-700",
+  sent: "border-blue-200 bg-blue-50 text-blue-700",
+  sent_to_printer: "border-violet-200 bg-violet-50 text-violet-700",
+};
+
 function formatDate(value: string) {
   return new Intl.DateTimeFormat("en-US", {
-    month: "short",
     day: "numeric",
-    year: "numeric",
     hour: "numeric",
     minute: "2-digit",
+    month: "short",
+    year: "numeric",
   }).format(new Date(value));
 }
 
 function StatusBadge({ status }: { status: TradeDocument["status"] }) {
   const { language } = useLanguage();
   const labels = language === "zh" ? zhStatusLabels : statusLabels;
+
   return (
     <Badge className={statusClasses[status]} variant="outline">
       {labels[status]}
@@ -117,23 +109,24 @@ function StatusBadge({ status }: { status: TradeDocument["status"] }) {
 function DocumentStatusDropdown({ document }: { document: TradeDocument }) {
   const { language } = useLanguage();
   const labels = language === "zh" ? zhStatusLabels : statusLabels;
-  const text = language === "zh"
-    ? {
-        delete: "刪除",
-        deleteDocument: "刪除文件",
-        deleteDescription: "這會從交易中移除此文件紀錄。此動作無法復原。",
-        deleteTitle: "刪除文件？",
-        updateStatus: "更新狀態",
-        cancel: "取消",
-      }
-    : {
-        delete: "Delete",
-        deleteDocument: "Delete Document",
-        deleteDescription: "This removes the document record from the trade. This cannot be undone.",
-        deleteTitle: "Delete document?",
-        updateStatus: "Update status",
-        cancel: "Cancel",
-      };
+  const text =
+    language === "zh"
+      ? {
+          cancel: "取消",
+          delete: "刪除",
+          deleteDescription: "這會從交易中移除此文件紀錄。此動作無法復原。",
+          deleteDocument: "刪除文件",
+          deleteTitle: "刪除文件？",
+          updateStatus: "更新狀態",
+        }
+      : {
+          cancel: "Cancel",
+          delete: "Delete",
+          deleteDescription: "This removes the document record from the trade. This cannot be undone.",
+          deleteDocument: "Delete Document",
+          deleteTitle: "Delete document?",
+          updateStatus: "Update status",
+        };
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
 
@@ -189,12 +182,10 @@ function DocumentStatusDropdown({ document }: { document: TradeDocument }) {
           </AlertDialogTrigger>
         </DropdownMenuContent>
       </DropdownMenu>
-      <AlertDialogContent>
+      <AlertDialogContent className="sm:max-w-md">
         <AlertDialogHeader>
           <AlertDialogTitle>{text.deleteTitle}</AlertDialogTitle>
-          <AlertDialogDescription>
-            {text.deleteDescription}
-          </AlertDialogDescription>
+          <AlertDialogDescription>{text.deleteDescription}</AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel disabled={isPending}>{text.cancel}</AlertDialogCancel>
@@ -218,106 +209,164 @@ export function DocumentsTab({
 }) {
   const { language } = useLanguage();
   const labels = language === "zh" ? zhCategoryLabels : categoryLabels;
-  const text = language === "zh"
-    ? {
-        actions: "操作",
-        date: "日期",
-        fileName: "檔案名稱",
-        noDocuments: "尚無文件。請上傳第一個文件。",
-        relatedParty: "相關對象",
-        status: "狀態",
-        version: "版本",
-      }
-    : {
-        actions: "Actions",
-        date: "Date",
-        fileName: "File Name",
-        noDocuments: "No documents yet. Upload the first document.",
-        relatedParty: "Related Party",
-        status: "Status",
-        version: "Version",
-      };
-  const groupedDocuments = useMemo(
+  const [search, setSearch] = useState("");
+  const text =
+    language === "zh"
+      ? {
+          actions: "操作",
+          category: "分類",
+          date: "日期",
+          download: "下載",
+          fileLibrary: "文件庫",
+          fileName: "檔案名稱",
+          matches: "筆文件",
+          noDocuments: "尚無文件。請上傳第一個文件。",
+          noMatches: "沒有符合搜尋的文件。",
+          relatedParty: "相關對象",
+          search: "搜尋檔名、分類、狀態、備註...",
+          status: "狀態",
+          type: "類型",
+          version: "版本",
+        }
+      : {
+          actions: "Actions",
+          category: "Category",
+          date: "Date",
+          download: "Download",
+          fileLibrary: "File Library",
+          fileName: "File Name",
+          matches: "files",
+          noDocuments: "No documents yet. Upload the first document.",
+          noMatches: "No documents match this search.",
+          relatedParty: "Related Party",
+          search: "Search file name, category, status, notes...",
+          status: "Status",
+          type: "Type",
+          version: "Version",
+        };
+  const sortedDocuments = useMemo(
     () =>
-      categoryOrder
-        .map((category) => ({
-          category,
-          documents: initialDocuments.filter((document) => document.document_category === category),
-        }))
-        .filter((group) => group.documents.length),
+      [...initialDocuments].sort(
+        (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      ),
     [initialDocuments]
   );
+  const filteredDocuments = useMemo(() => {
+    const normalizedSearch = search.trim().toLowerCase();
+
+    if (!normalizedSearch) {
+      return sortedDocuments;
+    }
+
+    return sortedDocuments.filter((document) => {
+      const haystack = [
+        document.file_name,
+        document.document_type,
+        labels[document.document_category],
+        document.document_category,
+        document.related_party,
+        statusLabels[document.status],
+        zhStatusLabels[document.status],
+        document.notes,
+        formatDate(document.created_at),
+      ]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase();
+
+      return haystack.includes(normalizedSearch);
+    });
+  }, [labels, search, sortedDocuments]);
 
   return (
     <div className="space-y-4">
-      <div className="flex justify-end">
-        <UploadDocumentDialog tradeCode={tradeCode} tradeId={tradeId} />
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+        <div>
+          <h3 className="text-base font-semibold text-[#0d1b34]">{text.fileLibrary}</h3>
+          <p className="text-sm text-slate-500">
+            {filteredDocuments.length} / {initialDocuments.length} {text.matches}
+          </p>
+        </div>
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+          <div className="relative sm:w-[360px]">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+            <Input
+              className="pl-9"
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder={text.search}
+              value={search}
+            />
+          </div>
+          <UploadDocumentDialog tradeCode={tradeCode} tradeId={tradeId} />
+        </div>
       </div>
 
-      {groupedDocuments.length ? (
-        <div className="space-y-6">
-          {groupedDocuments.map((group) => (
-            <div className="space-y-2" key={group.category}>
-              <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
-                {labels[group.category]}
-              </h3>
-              <Card className="border-slate-200 shadow-sm">
-                <CardContent className="p-0">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>{text.fileName}</TableHead>
-                        <TableHead>{text.version}</TableHead>
-                        <TableHead>{text.status}</TableHead>
-                        <TableHead>{text.relatedParty}</TableHead>
-                        <TableHead>{text.date}</TableHead>
-                        <TableHead className="text-right">{text.actions}</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {group.documents.map((document) => (
-                        <TableRow key={document.id}>
-                          <TableCell>
-                            {document.onedrive_url ? (
-                              <a
-                                download
-                                className="font-medium text-[#0d1b34] underline-offset-4 hover:underline"
-                                href={buildDownloadUrl(document.onedrive_url, document.file_name ?? "document")}
-                              >
-                                {document.file_name}
-                              </a>
-                            ) : (
-                              <span className="font-medium text-[#0d1b34]">{document.file_name}</span>
-                            )}
-                            {document.document_type ? (
-                              <p className="mt-1 text-xs text-slate-500">{document.document_type}</p>
-                            ) : null}
-                          </TableCell>
-                          <TableCell>v{document.version}</TableCell>
-                          <TableCell>
-                            <StatusBadge status={document.status} />
-                          </TableCell>
-                          <TableCell className="capitalize">{document.related_party ?? "-"}</TableCell>
-                          <TableCell>{formatDate(document.created_at)}</TableCell>
-                          <TableCell>
-                            <div className="flex justify-end">
-                              <DocumentStatusDropdown document={document} />
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </CardContent>
-              </Card>
-            </div>
-          ))}
-        </div>
+      {initialDocuments.length ? (
+        <Card className="border-slate-200 shadow-sm">
+          <CardContent className="p-0">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>{text.fileName}</TableHead>
+                  <TableHead>{text.category}</TableHead>
+                  <TableHead>{text.type}</TableHead>
+                  <TableHead>{text.version}</TableHead>
+                  <TableHead>{text.status}</TableHead>
+                  <TableHead>{text.relatedParty}</TableHead>
+                  <TableHead>{text.date}</TableHead>
+                  <TableHead>{text.download}</TableHead>
+                  <TableHead className="text-right">{text.actions}</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredDocuments.length ? (
+                  filteredDocuments.map((document) => (
+                    <TableRow key={document.id}>
+                      <TableCell className="min-w-[260px]">
+                        <span className="font-medium text-[#0d1b34]">{document.file_name}</span>
+                        {document.notes ? <p className="mt-1 text-xs text-slate-500">{document.notes}</p> : null}
+                      </TableCell>
+                      <TableCell>{labels[document.document_category]}</TableCell>
+                      <TableCell className="capitalize">{document.document_type ?? "-"}</TableCell>
+                      <TableCell>v{document.version}</TableCell>
+                      <TableCell>
+                        <StatusBadge status={document.status} />
+                      </TableCell>
+                      <TableCell className="capitalize">{document.related_party ?? "-"}</TableCell>
+                      <TableCell>{formatDate(document.created_at)}</TableCell>
+                      <TableCell>
+                        {document.onedrive_url ? (
+                          <Button asChild size="sm" type="button" variant="outline">
+                            <a download href={buildDownloadUrl(document.onedrive_url, document.file_name ?? "document")}>
+                              <Download className="mr-2 h-4 w-4" />
+                              {text.download}
+                            </a>
+                          </Button>
+                        ) : (
+                          "-"
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex justify-end">
+                          <DocumentStatusDropdown document={document} />
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell className="py-8 text-center text-sm text-slate-500" colSpan={9}>
+                      {text.noMatches}
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
       ) : (
         <Card className="border-slate-200 shadow-sm">
-          <CardContent className="py-10 text-sm text-slate-500">
-            {text.noDocuments}
-          </CardContent>
+          <CardContent className="py-10 text-sm text-slate-500">{text.noDocuments}</CardContent>
         </Card>
       )}
     </div>

@@ -5,8 +5,10 @@ import { z } from "zod";
 
 import { getCurrentUser } from "@/lib/auth";
 import { logActivity } from "@/lib/activity-log";
+import { getNextTradeDocumentVersion } from "@/lib/document-version";
 import { uploadToOneDrive } from "@/lib/onedrive";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
+import type { TradeDocument } from "@/types";
 
 export type ActionResult = { success?: true; error?: string };
 
@@ -36,11 +38,15 @@ function buildAttachmentName(tradeCode: string, milestoneKey: string | null, ori
 
 async function uploadAttachments(
   formData: FormData,
+  tradeId: string,
   tradeCode: string,
   prefix: string,
+  uploadedBy: string,
   milestoneKey: string | null = null
 ): Promise<DiaryAttachment[]> {
   const attachments: DiaryAttachment[] = [];
+  const supabase = createServerSupabaseClient();
+  const documentCategory: TradeDocument["document_category"] = "other";
 
   for (let index = 0; index < 10; index += 1) {
     const files = formData.getAll(`${prefix}_${index}`);
@@ -62,6 +68,26 @@ async function uploadAttachments(
         fileName,
         mimeType: file.type || "application/octet-stream",
         tradeCode,
+      });
+      const version = await getNextTradeDocumentVersion({
+        category: documentCategory,
+        supabase,
+        tradeId,
+      });
+
+      await supabase.from("trade_documents").insert({
+        document_category: documentCategory,
+        document_type: milestoneKey ? "milestone" : "diary",
+        file_name: fileName,
+        file_size_bytes: file.size,
+        notes: milestoneKey,
+        onedrive_file_id: uploaded.fileId,
+        onedrive_url: uploaded.webUrl,
+        related_party: "internal",
+        status: "draft",
+        trade_id: tradeId,
+        uploaded_by: uploadedBy,
+        version,
       });
 
       attachments.push({
@@ -108,7 +134,14 @@ export async function addDiaryEntry(tradeId: string, formData: FormData): Promis
     return { error: tradeError.message };
   }
 
-  const attachments = await uploadAttachments(formData, tradeRow?.trade_id ?? "unknown", "attachment", milestoneKey);
+  const attachments = await uploadAttachments(
+    formData,
+    tradeId,
+    tradeRow?.trade_id ?? "unknown",
+    "attachment",
+    access.user.id,
+    milestoneKey
+  );
   const { data: entry, error } = await supabase
     .from("trade_diary_entries")
     .insert({
@@ -197,8 +230,10 @@ export async function updateDiaryEntry(id: string, tradeId: string, formData: Fo
     ...attachments,
     ...(await uploadAttachments(
       formData,
+      tradeId,
       tradeRow?.trade_id ?? "unknown",
       "new_attachment",
+      access.user.id,
       existing?.milestone_key ?? null
     )),
   ];
