@@ -274,12 +274,14 @@ function DeletePayoutButton({ payoutId }: { payoutId: string }) {
 
 export function CompanyFinancePage({
   activeTrades,
+  canEdit = true,
   payouts,
   settledTrades,
 }: {
   settledTrades: SettledTrade[];
   activeTrades: ActiveTrade[];
   payouts: ShareholderPayout[];
+  canEdit?: boolean;
 }) {
   const [expandedTrades, setExpandedTrades] = useState<Set<string>>(new Set());
   const settled = settledTrades.map((trade) => ({
@@ -396,7 +398,7 @@ export function CompanyFinancePage({
                         </TableCell>
                         <TableCell className="text-right">{payoutTotal > 0 ? usd(payoutTotal) : "-"}</TableCell>
                         <TableCell onClick={(event) => event.stopPropagation()}>
-                          <AddPayoutDialog tradeCode={trade.trade_id} tradeId={trade.id} />
+                          {canEdit ? <AddPayoutDialog tradeCode={trade.trade_id} tradeId={trade.id} /> : null}
                         </TableCell>
                       </TableRow>
 
@@ -461,7 +463,7 @@ export function CompanyFinancePage({
                                           <td className="py-1 text-slate-500">{payout.reference ?? "-"}</td>
                                           <td className="py-1 text-right font-medium">{usd(Number(payout.amount_usd))}</td>
                                           <td className="py-1 text-right">
-                                            <DeletePayoutButton payoutId={payout.id} />
+                                            {canEdit ? <DeletePayoutButton payoutId={payout.id} /> : null}
                                           </td>
                                         </tr>
                                       ))}

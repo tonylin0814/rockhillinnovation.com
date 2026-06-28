@@ -35,7 +35,7 @@ export function Sidebar({ currentUser }: { currentUser: SidebarUser }) {
   const isManager = role === "manager";
   const isController = role === "controller";
   const isAdminOrManager = isAdmin || isManager || isController;
-  const canViewFinance = isAdmin || isController;
+  const canViewFinance = isAdmin || isController || isManager;
   const isHistoryActive = pathname.startsWith("/history");
   const [historyOpen, setHistoryOpen] = useState(isHistoryActive);
   const navItems = [

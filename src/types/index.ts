@@ -547,6 +547,22 @@ export type ExpenseVendorInvoice = {
   vendor?: { id: string; name: string; code: string } | null;
 };
 
+export type PayoutInvoiceStatus = "outstanding" | "paid";
+
+export type PayoutInvoice = {
+  id: string;
+  trade_id: string;
+  trade_shareholder_id: string | null;
+  person_name: string;
+  dividend_usd: number;
+  invoice_url: string | null;
+  invoice_filename: string | null;
+  status: PayoutInvoiceStatus;
+  status_changed_at: string | null;
+  generated_at: string | null;
+  created_at: string;
+};
+
 export type TradeLedgerEntry = {
   id: string;
   trade_id: string;

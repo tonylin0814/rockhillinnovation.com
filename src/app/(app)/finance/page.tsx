@@ -8,10 +8,11 @@ import type { ShareholderPayout } from "@/types";
 export default async function FinancePage() {
   const user = await getCurrentUser();
 
-  if (!user || !["admin", "controller"].includes(user.role)) {
+  if (!user || !["admin", "controller", "manager"].includes(user.role)) {
     redirect("/dashboard");
   }
 
+  const canEdit = user.role === "admin" || user.role === "controller";
   const supabase = createServerSupabaseClient();
   const [{ data: settledTrades }, { data: activeTrades }, { data: payouts }] = await Promise.all([
     supabase
@@ -66,6 +67,7 @@ export default async function FinancePage() {
   return (
     <CompanyFinancePage
       activeTrades={activeTrades ?? []}
+      canEdit={canEdit}
       payouts={(payouts ?? []) as ShareholderPayout[]}
       settledTrades={settledTrades ?? []}
     />
