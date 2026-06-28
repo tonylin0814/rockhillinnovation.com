@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { ChevronsLeft } from "lucide-react";
 import type { ReactNode } from "react";
 
 import { SupplierContactsEditor } from "@/components/suppliers/SupplierContactsEditor";
@@ -90,8 +91,12 @@ export default async function SupplierDetailPage({ params }: { params: { id: str
   return (
     <section className="space-y-6">
       <div>
-        <Link className="text-sm font-medium text-slate-500 transition-colors hover:text-[#0d1b34]" href="/suppliers">
-          ← <T k="suppliers.title" fallback="Suppliers" />
+        <Link
+          className="inline-flex items-center gap-1 text-sm font-medium text-slate-500 transition-colors hover:text-[#0d1b34]"
+          href="/suppliers"
+        >
+          <ChevronsLeft className="h-4 w-4" />
+          <T k="suppliers.title" fallback="Suppliers" />
         </Link>
         <div className="mt-4 flex flex-wrap items-center gap-3">
           <h1 className="text-3xl font-semibold text-[#0d1b34]">{supplier.code}</h1>

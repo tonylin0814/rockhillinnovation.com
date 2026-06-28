@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { ChevronsLeft } from "lucide-react";
 
 import { ClientFormDialog } from "@/components/clients/ClientFormDialog";
 import { ClientStatusButton } from "@/components/clients/ClientStatusButton";
@@ -64,8 +65,12 @@ export default async function ClientDetailPage({ params }: { params: { id: strin
   return (
     <section className="space-y-6">
       <div>
-        <Link className="text-sm font-medium text-slate-500 transition-colors hover:text-[#0d1b34]" href="/clients">
-          ? <T k="clients.title" fallback="Clients" />
+        <Link
+          className="inline-flex items-center gap-1 text-sm font-medium text-slate-500 transition-colors hover:text-[#0d1b34]"
+          href="/clients"
+        >
+          <ChevronsLeft className="h-4 w-4" />
+          <T k="clients.title" fallback="Clients" />
         </Link>
         <div className="mt-4 flex flex-wrap items-center gap-3">
           <h1 className="text-3xl font-semibold text-[#0d1b34]">{client.code}</h1>

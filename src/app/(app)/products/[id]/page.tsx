@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { ChevronsLeft } from "lucide-react";
 import type { ReactNode } from "react";
 
 import { CartonLabelButton } from "@/components/products/CartonLabelButton";
@@ -325,7 +326,11 @@ export default async function ProductDetailPage({
   return (
     <section className="space-y-6">
       <div>
-        <Link className="text-sm font-medium text-slate-500 transition-colors hover:text-[#0d1b34]" href={backHref}>
+        <Link
+          className="inline-flex items-center gap-1 text-sm font-medium text-slate-500 transition-colors hover:text-[#0d1b34]"
+          href={backHref}
+        >
+          <ChevronsLeft className="h-4 w-4" />
           <T k="products.backToProducts" fallback="Back to Products" />
         </Link>
         <div className="mt-4 flex flex-wrap items-center gap-3">

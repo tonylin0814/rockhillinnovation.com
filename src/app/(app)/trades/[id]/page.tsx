@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { ChevronsLeft } from "lucide-react";
 
 import { ActivityLogTable } from "@/components/admin/ActivityLogTable";
 import { ClientQuotationsTab } from "@/components/trades/ClientQuotationsTab";
@@ -529,7 +530,11 @@ export default async function TradeWorkspacePage({ params }: { params: { id: str
     <section className="space-y-6">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div>
-          <Link className="text-sm font-medium text-slate-500 transition-colors hover:text-[#0d1b34]" href="/trades">
+          <Link
+            className="inline-flex items-center gap-1 text-sm font-medium text-slate-500 transition-colors hover:text-[#0d1b34]"
+            href="/trades"
+          >
+            <ChevronsLeft className="h-4 w-4" />
             <T k="trades.backToTrades" fallback="Back to Trades" />
           </Link>
           <div className="mt-4 flex flex-wrap items-center gap-3">

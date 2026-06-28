@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { ChevronsLeft } from "lucide-react";
 
 import { LetterheadEditor } from "@/components/vendors/LetterheadEditor";
 import { VendorContactsEditor } from "@/components/vendors/VendorContactsEditor";
@@ -80,7 +81,13 @@ export default async function VendorDetailPage({ params }: { params: { id: strin
   return (
     <section className="space-y-6">
       <div>
-        <Link className="text-sm font-medium text-slate-500 transition-colors hover:text-[#0d1b34]" href="/vendors">? <T k="vendors.title" fallback="Vendors" /></Link>
+        <Link
+          className="inline-flex items-center gap-1 text-sm font-medium text-slate-500 transition-colors hover:text-[#0d1b34]"
+          href="/vendors"
+        >
+          <ChevronsLeft className="h-4 w-4" />
+          <T k="vendors.title" fallback="Vendors" />
+        </Link>
         <div className="mt-4 flex flex-wrap items-center gap-3">
           <h1 className="text-3xl font-semibold text-[#0d1b34]">{vendor.code}</h1>
           <StatusBadge status={vendor.status} />
