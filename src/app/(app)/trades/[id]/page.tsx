@@ -6,7 +6,6 @@ import { ClientQuotationsTab } from "@/components/trades/ClientQuotationsTab";
 import { DevelopmentTab } from "@/components/trades/DevelopmentTab";
 import { DiaryTab } from "@/components/trades/DiaryTab";
 import { DocumentsTab } from "@/components/trades/DocumentsTab";
-import { ExchangeRatesCard } from "@/components/trades/ExchangeRatesCard";
 import { FinancialTab } from "@/components/trades/FinancialTab";
 import { InvoicesTab } from "@/components/trades/InvoicesTab";
 import { JudyChat } from "@/components/trades/JudyChat";
@@ -17,7 +16,6 @@ import { ShareholderRulesEditor } from "@/components/trades/ShareholderRulesEdit
 import { SupplierQuotesTab } from "@/components/trades/SupplierQuotesTab";
 import { TradeEditDialog } from "@/components/trades/TradeEditDialog";
 import { TradeMilestoneChecklist } from "@/components/trades/TradeMilestoneChecklist";
-import { TradePnlCard } from "@/components/trades/TradePnlCard";
 import { TradeStatusDropdown } from "@/components/trades/TradeStatusDropdown";
 import { VendorInvoicesCard } from "@/components/trades/VendorInvoicesCard";
 import type { TradeClientOption, TradePartnerOption } from "@/components/trades/NewTradeDialog";
@@ -632,30 +630,6 @@ export default async function TradeWorkspacePage({ params }: { params: { id: str
               </CardContent>
             </Card>
 
-            {canViewFinancials ? (
-              <>
-                <ExchangeRatesCard
-                  canManage={canManage}
-                  initialRates={exchangeRateRows}
-                  tradeId={trade.id}
-                  workingExchangeRate={trade.working_exchange_rate}
-                />
-
-                <TradePnlCard
-                  absorbedDevCostCad={absorbedDevCostCad}
-                  absorbedDevCostRmb={absorbedDevCostRmb}
-                  absorbedDevCostUsd={absorbedDevCostUsd}
-                  costRmb={costRmb}
-                  depositPnl={depositPnl}
-                  depositRateValue={depositRate?.rate_rmb_per_usd ?? null}
-                  finalPnl={finalPnl}
-                  finalRateValue={finalRate?.rate_rmb_per_usd ?? null}
-                  revenueUsd={revenueUsd}
-                  workingPnl={workingPnl}
-                  workingRateValue={trade.working_exchange_rate}
-                />
-              </>
-            ) : null}
             </div>
           </div>
         </TabsContent>
