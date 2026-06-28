@@ -89,6 +89,12 @@ function StatusBadge({ status }: { status: string }) {
   );
 }
 
+function vendorInvoiceDownloadName(invoice: ExpenseVendorInvoice) {
+  const vendorName = invoice.vendor?.name?.trim() || "Vendor";
+  const invoiceNumber = invoice.invoice_number?.trim() || invoice.invoice_date;
+  return `${vendorName} - ${invoiceNumber}.pdf`;
+}
+
 function formatDate(value: string) {
   return new Intl.DateTimeFormat("en-US", {
     day: "numeric",
@@ -1457,7 +1463,7 @@ export function InvoicesTab({
                           <a
                             download
                             className="font-medium text-[#0d1b34] underline-offset-4 hover:underline"
-                            href={buildDownloadUrl(invoice.pdf_onedrive_url, `vendor-invoice-${invoice.id}.pdf`)}
+                            href={buildDownloadUrl(invoice.pdf_onedrive_url, vendorInvoiceDownloadName(invoice))}
                           >
                             {text.download}
                           </a>
