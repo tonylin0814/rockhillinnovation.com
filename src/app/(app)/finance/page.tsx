@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { CompanyFinancePage } from "@/components/finance/CompanyFinancePage";
 import { getCurrentUser } from "@/lib/auth";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
-import type { ShareholderPayout } from "@/types";
+import type { PayoutInvoice, ShareholderPayout } from "@/types";
 
 export default async function FinancePage() {
   const user = await getCurrentUser();
@@ -14,7 +14,7 @@ export default async function FinancePage() {
 
   const canEdit = user.role === "admin" || user.role === "controller";
   const supabase = createServerSupabaseClient();
-  const [{ data: settledTrades }, { data: activeTrades }, { data: payouts }] = await Promise.all([
+  const [{ data: settledTrades }, { data: activeTrades }, { data: payouts }, { data: payoutInvoices }] = await Promise.all([
     supabase
       .from("trades")
       .select(
@@ -36,6 +36,7 @@ export default async function FinancePage() {
           calculated_at,
           lines:shareholder_book_lines(
             id,
+            trade_shareholder_id,
             person_name,
             split_pct,
             net_share_usd,
@@ -62,12 +63,14 @@ export default async function FinancePage() {
       .in("status", ["active", "draft"])
       .order("trade_date", { ascending: false }),
     supabase.from("shareholder_payouts").select("*").order("wire_date", { ascending: false }),
+    supabase.from("payout_invoices").select("*").order("generated_at", { ascending: false }),
   ]);
 
   return (
     <CompanyFinancePage
       activeTrades={activeTrades ?? []}
       canEdit={canEdit}
+      payoutInvoices={(payoutInvoices ?? []) as PayoutInvoice[]}
       payouts={(payouts ?? []) as ShareholderPayout[]}
       settledTrades={settledTrades ?? []}
     />

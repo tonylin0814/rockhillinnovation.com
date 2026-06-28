@@ -33,10 +33,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
-import type { ShareholderPayout } from "@/types";
+import type { PayoutInvoice, ShareholderPayout } from "@/types";
 
 type BookLine = {
   id: string;
+  trade_shareholder_id: string | null;
   person_name: string;
   split_pct: number;
   gross_share_usd: number;
@@ -118,6 +119,11 @@ function formatDate(value: string | null) {
 
 function todayInputValue() {
   return new Date().toISOString().slice(0, 10);
+}
+
+function isTonyName(name: string) {
+  const normalized = name.trim().toLowerCase();
+  return normalized === "tony" || normalized === "tony lin";
 }
 
 function StatCard({
@@ -275,11 +281,13 @@ function DeletePayoutButton({ payoutId }: { payoutId: string }) {
 export function CompanyFinancePage({
   activeTrades,
   canEdit = true,
+  payoutInvoices,
   payouts,
   settledTrades,
 }: {
   settledTrades: SettledTrade[];
   activeTrades: ActiveTrade[];
+  payoutInvoices: PayoutInvoice[];
   payouts: ShareholderPayout[];
   canEdit?: boolean;
 }) {
@@ -305,8 +313,45 @@ export function CompanyFinancePage({
     (sum, trade) => sum + (trade.book?.status === "confirmed" ? Number(trade.book.corporate_tax_usd ?? 0) : 0),
     0
   );
-  const totalPayouts = payouts.reduce((sum, payout) => sum + Number(payout.amount_usd), 0);
+  const paidPayoutInvoices = payoutInvoices.filter((invoice) => invoice.status === "paid");
+  const invoicePayoutTotal = paidPayoutInvoices.reduce((sum, invoice) => sum + Number(invoice.dividend_usd), 0);
+  const manualPayoutTotal = payouts.reduce((sum, payout) => sum + Number(payout.amount_usd), 0);
+  const totalPayouts = manualPayoutTotal + invoicePayoutTotal;
   const retained = totalNetProfit - totalPayouts - totalTax;
+  const payableRows = Object.values(
+    settled.reduce<
+      Record<string, { name: string; totalShare: number; paid: number; payable: number }>
+    >((acc, trade) => {
+      if (trade.book?.status !== "confirmed") return acc;
+
+      for (const line of trade.book.lines ?? []) {
+        if (isTonyName(line.person_name)) continue;
+
+        const key = line.person_name.trim().toLowerCase();
+        const paidByInvoice = paidPayoutInvoices
+          .filter(
+            (invoice) =>
+              invoice.trade_id === trade.id &&
+              (invoice.trade_shareholder_id === line.trade_shareholder_id ||
+                invoice.person_name.trim().toLowerCase() === key)
+          )
+          .reduce((sum, invoice) => sum + Number(invoice.dividend_usd), 0);
+        const paidByManual = payouts
+          .filter((payout) => payout.trade_id === trade.id && payout.person_name.trim().toLowerCase() === key)
+          .reduce((sum, payout) => sum + Number(payout.amount_usd), 0);
+
+        if (!acc[key]) {
+          acc[key] = { name: line.person_name, paid: 0, payable: 0, totalShare: 0 };
+        }
+
+        acc[key].totalShare += Number(line.net_share_usd ?? 0);
+        acc[key].paid += paidByInvoice + paidByManual;
+        acc[key].payable = acc[key].totalShare - acc[key].paid;
+      }
+
+      return acc;
+    }, {})
+  ).sort((a, b) => a.name.localeCompare(b.name));
 
   function toggleExpand(id: string) {
     setExpandedTrades((previous) => {
@@ -339,6 +384,35 @@ export function CompanyFinancePage({
         <StatCard label="Total Payouts" sub={`${payouts.length} recorded payments`} value={usd(totalPayouts)} />
         <StatCard highlight={retained >= 0} label="Company Retained" sub="Net profit minus payouts and tax" value={usd(retained)} />
       </div>
+
+      <Card className="border-slate-200 shadow-sm">
+        <CardHeader>
+          <CardTitle>Payable</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {payableRows.length ? (
+            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+              {payableRows.map((row) => (
+                <div className="rounded-md border border-slate-200 bg-slate-50 p-4" key={row.name}>
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="text-sm font-semibold text-[#0d1b34]">{row.name}</p>
+                      <p className="mt-1 text-xs text-slate-500">
+                        Paid: {usd(row.paid)} / Total: {usd(row.totalShare)}
+                      </p>
+                    </div>
+                    <p className={`text-lg font-bold ${row.payable > 0 ? "text-amber-700" : "text-emerald-700"}`}>
+                      {usd(Math.max(row.payable, 0))}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-slate-500">No partner payable amounts yet.</p>
+          )}
+        </CardContent>
+      </Card>
 
       <Card className="border-slate-200 shadow-sm">
         <CardHeader>
