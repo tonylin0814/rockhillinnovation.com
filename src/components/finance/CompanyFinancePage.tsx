@@ -121,6 +121,15 @@ function todayInputValue() {
   return new Date().toISOString().slice(0, 10);
 }
 
+function isTonyName(name: string) {
+  const normalized = name.trim().toLowerCase();
+  return normalized === "tony" || normalized === "tony lin";
+}
+
+function roundMoney(value: number) {
+  return Math.round((value + Number.EPSILON) * 100) / 100;
+}
+
 function StatCard({
   highlight,
   label,
@@ -309,38 +318,57 @@ export function CompanyFinancePage({
     0
   );
   const paidPayoutInvoices = payoutInvoices.filter((invoice) => invoice.status === "paid");
-  const payableRows = Object.values(
-    settled.reduce<
-      Record<string, { name: string; totalShare: number; paid: number; payable: number }>
-    >((acc, trade) => {
-      if (trade.book?.status !== "confirmed") return acc;
+  const payableRowMap = settled.reduce<
+    Record<string, { name: string; totalShare: number; paid: number; payable: number }>
+  >((acc, trade) => {
+    if (trade.book?.status !== "confirmed") return acc;
 
-      for (const line of trade.book.lines ?? []) {
-        const key = line.person_name.trim().toLowerCase();
-        const paidByInvoice = paidPayoutInvoices
-          .filter(
-            (invoice) =>
-              invoice.trade_id === trade.id &&
-              (invoice.trade_shareholder_id === line.trade_shareholder_id ||
-                invoice.person_name.trim().toLowerCase() === key)
-          )
-          .reduce((sum, invoice) => sum + Number(invoice.dividend_usd), 0);
-        const paidByManual = payouts
-          .filter((payout) => payout.trade_id === trade.id && payout.person_name.trim().toLowerCase() === key)
-          .reduce((sum, payout) => sum + Number(payout.amount_usd), 0);
+    for (const line of trade.book.lines ?? []) {
+      const key = line.person_name.trim().toLowerCase();
+      const paidByInvoice = paidPayoutInvoices
+        .filter(
+          (invoice) =>
+            invoice.trade_id === trade.id &&
+            (invoice.trade_shareholder_id === line.trade_shareholder_id ||
+              invoice.person_name.trim().toLowerCase() === key)
+        )
+        .reduce((sum, invoice) => sum + Number(invoice.dividend_usd), 0);
+      const paidByManual = payouts
+        .filter((payout) => payout.trade_id === trade.id && payout.person_name.trim().toLowerCase() === key)
+        .reduce((sum, payout) => sum + Number(payout.amount_usd), 0);
 
-        if (!acc[key]) {
-          acc[key] = { name: line.person_name, paid: 0, payable: 0, totalShare: 0 };
-        }
-
-        acc[key].totalShare += Number(line.net_share_usd ?? 0);
-        acc[key].paid += paidByInvoice + paidByManual;
-        acc[key].payable = acc[key].totalShare - acc[key].paid;
+      if (!acc[key]) {
+        acc[key] = { name: line.person_name, paid: 0, payable: 0, totalShare: 0 };
       }
 
-      return acc;
-    }, {})
-  ).sort((a, b) => a.name.localeCompare(b.name));
+      acc[key].totalShare += Number(line.net_share_usd ?? 0);
+      acc[key].paid += paidByInvoice + paidByManual;
+      acc[key].payable = acc[key].totalShare - acc[key].paid;
+    }
+
+    return acc;
+  }, {});
+  const hasTonyPayable = Object.values(payableRowMap).some((row) => isTonyName(row.name));
+  const allocatedShareTotal = Object.values(payableRowMap).reduce((sum, row) => sum + row.totalShare, 0);
+  const tonyShare = roundMoney(totalNetProfit - allocatedShareTotal);
+
+  if (!hasTonyPayable && tonyShare > 0) {
+    const tonyPaidByInvoice = paidPayoutInvoices
+      .filter((invoice) => isTonyName(invoice.person_name))
+      .reduce((sum, invoice) => sum + Number(invoice.dividend_usd), 0);
+    const tonyPaidByManual = payouts
+      .filter((payout) => isTonyName(payout.person_name))
+      .reduce((sum, payout) => sum + Number(payout.amount_usd), 0);
+
+    payableRowMap["tony lin"] = {
+      name: "Tony Lin",
+      paid: tonyPaidByInvoice + tonyPaidByManual,
+      payable: tonyShare - tonyPaidByInvoice - tonyPaidByManual,
+      totalShare: tonyShare,
+    };
+  }
+
+  const payableRows = Object.values(payableRowMap).sort((a, b) => a.name.localeCompare(b.name));
   const totalPayouts = payouts.reduce((sum, payout) => sum + Number(payout.amount_usd), 0);
   const recordedPaymentCount = payouts.length;
   const retained = totalNetProfit - totalPayouts;
