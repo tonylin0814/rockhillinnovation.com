@@ -48,6 +48,7 @@ function InvoiceFormatBadge({ format }: { format: Supplier["invoice_format"] }) 
 
 export default async function SuppliersPage() {
   const user = await getCurrentUser();
+  const canEdit = user?.role === "admin";
 
   if (!user || user.role === "partner" || user.role === "user") {
     return (
@@ -86,7 +87,7 @@ export default async function SuppliersPage() {
             <T k="suppliers.title" fallback="Suppliers" />
           </h1>
         </div>
-        <SupplierFormDialog mode="create" />
+        {canEdit ? <SupplierFormDialog mode="create" /> : null}
       </div>
 
       <Card className="border-slate-200 shadow-sm">

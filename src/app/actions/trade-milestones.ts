@@ -42,7 +42,7 @@ async function requireManager() {
     return { error: "Unauthorized" };
   }
 
-  if (user.role === "partner" || user.role === "user") {
+  if (user.role !== "admin") {
     return { error: "Managers and admins only" };
   }
 

@@ -22,7 +22,7 @@ function formatDate(value: string) {
 export async function ActivityLogTable({ tradeId }: { tradeId?: string }) {
   const user = await getCurrentUser();
 
-  if (!user || (user.role !== "admin" && user.role !== "manager")) {
+  if (!user || user.role !== "admin") {
     return null;
   }
 

@@ -12,7 +12,7 @@ export const revalidate = 0;
 export default async function QuoteHistoryPage() {
   const user = await getCurrentUser();
 
-  if (!user || user.role === "user") {
+  if (!user || user.role === "partner" || user.role === "user") {
     return (
       <div className="flex min-h-[calc(100vh-8rem)] items-center justify-center">
         <div className="text-center">
@@ -27,12 +27,11 @@ export default async function QuoteHistoryPage() {
     );
   }
 
-  const isPartner = user.role === "partner";
+  const canManage = user.role === "admin";
   const supabase = createServerSupabaseClient();
   const { data: quoteRows, error: quoteError } = await supabase
     .from("quotation_history")
     .select("*")
-    .ilike("rock_hill_code", isPartner ? "MLP-%" : "%")
     .order("quote_date", { ascending: false })
     .order("created_at", { ascending: false })
     .limit(500);
@@ -57,7 +56,7 @@ export default async function QuoteHistoryPage() {
       </div>
 
       <Suspense fallback={<div className="py-4 text-sm text-slate-500"><T k="common.loading" fallback="Loading..." /></div>}>
-        <QuoteHistoryTable canManage={!isPartner} quoteRows={(quoteRows ?? []) as QuotationHistory[]} />
+        <QuoteHistoryTable canManage={canManage} quoteRows={(quoteRows ?? []) as QuotationHistory[]} />
       </Suspense>
     </section>
   );

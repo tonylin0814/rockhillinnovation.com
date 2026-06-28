@@ -9,7 +9,7 @@ import type { Trade } from "@/types";
 export default async function TradesPage() {
   const user = await getCurrentUser();
   const supabase = createServerSupabaseClient();
-  const canCreateTrades = user?.role === "admin" || user?.role === "manager";
+  const canCreateTrades = user?.role === "admin";
   const isUserRole = user?.role === "user";
   let grantedClientIds: string[] = [];
 
@@ -45,7 +45,7 @@ export default async function TradesPage() {
         ? supabase
             .from("users")
             .select("id, name, email")
-            .in("role", ["partner", "manager"])
+            .in("role", ["partner", "manager", "controller"])
             .eq("is_active", true)
             .order("name", { ascending: true })
         : Promise.resolve({ data: [], error: null }),

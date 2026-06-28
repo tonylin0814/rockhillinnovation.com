@@ -12,12 +12,12 @@ export default async function PalletProfilesPage() {
     redirect("/login");
   }
 
-  if (user.role !== "admin" && user.role !== "manager") {
+  if (!["admin", "manager", "controller"].includes(user.role)) {
     return (
       <div className="flex min-h-[calc(100vh-8rem)] items-center justify-center">
         <div className="text-center">
           <h1 className="text-2xl font-semibold text-[#0d1b34]">Access denied</h1>
-          <p className="mt-2 text-sm text-slate-500">Pallet profiles are available to admins and managers only.</p>
+          <p className="mt-2 text-sm text-slate-500">Pallet profiles are available to admins, managers, and controllers only.</p>
         </div>
       </div>
     );
@@ -34,5 +34,5 @@ export default async function PalletProfilesPage() {
     );
   }
 
-  return <PalletProfilesClient profiles={(data ?? []) as PalletProfile[]} />;
+  return <PalletProfilesClient canManage={user.role === "admin"} profiles={(data ?? []) as PalletProfile[]} />;
 }

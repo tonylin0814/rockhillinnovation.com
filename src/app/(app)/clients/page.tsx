@@ -33,6 +33,7 @@ function StatusBadge({ status }: { status: Client["status"] }) {
 
 export default async function ClientsPage() {
   const user = await getCurrentUser();
+  const canEdit = user?.role === "admin";
 
   if (!user || user.role === "partner" || user.role === "user") {
     return (
@@ -71,7 +72,7 @@ export default async function ClientsPage() {
             <T k="clients.title" fallback="Clients" />
           </h1>
         </div>
-        <ClientFormDialog mode="create" />
+        {canEdit ? <ClientFormDialog mode="create" /> : null}
       </div>
 
       <Card className="border-slate-200 shadow-sm">

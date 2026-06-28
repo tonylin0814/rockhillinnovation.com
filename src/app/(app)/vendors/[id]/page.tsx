@@ -77,6 +77,7 @@ export default async function VendorDetailPage({ params }: { params: { id: strin
   if (!data) notFound();
 
   const vendor = data as ExpenseVendor;
+  const canEdit = user.role === "admin";
 
   return (
     <section className="space-y-6">
@@ -99,7 +100,9 @@ export default async function VendorDetailPage({ params }: { params: { id: strin
           <Card className="border-slate-200 shadow-sm">
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle><T k="common.mainInfo" fallback="Main Info" /></CardTitle>
-              <VendorFormDialog initialData={vendor} mode="edit" trigger={<Button size="sm" variant="outline"><T k="common.edit" fallback="Edit" /></Button>} />
+              {canEdit ? (
+                <VendorFormDialog initialData={vendor} mode="edit" trigger={<Button size="sm" variant="outline"><T k="common.edit" fallback="Edit" /></Button>} />
+              ) : null}
             </CardHeader>
             <CardContent>
               <div className="grid gap-x-6 sm:grid-cols-2">
@@ -118,7 +121,7 @@ export default async function VendorDetailPage({ params }: { params: { id: strin
 
           <Card className="border-slate-200 shadow-sm">
             <CardHeader><CardTitle><T k="vendors.letterhead" fallback="Letterhead" /></CardTitle></CardHeader>
-            <CardContent><LetterheadEditor letterheadUrl={vendor.letterhead_onedrive_url} vendorId={vendor.id} /></CardContent>
+            <CardContent>{canEdit ? <LetterheadEditor letterheadUrl={vendor.letterhead_onedrive_url} vendorId={vendor.id} /> : vendor.letterhead_onedrive_url ? <a className="text-sm font-medium text-[#0d1b34] underline-offset-4 hover:underline" href={vendor.letterhead_onedrive_url} rel="noreferrer" target="_blank">{vendor.letterhead_onedrive_url}</a> : <p className="text-sm text-slate-500">No letterhead linked yet.</p>}</CardContent>
           </Card>
 
           <Card className="border-slate-200 shadow-sm">
@@ -149,7 +152,7 @@ export default async function VendorDetailPage({ params }: { params: { id: strin
             <CardContent className="space-y-5">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-wide text-slate-500"><T k="table.status" fallback="Status" /></p>
-                <div className="mt-2 flex items-center justify-between gap-3"><StatusBadge status={vendor.status} /><VendorStatusButton status={vendor.status} vendorId={vendor.id} /></div>
+                <div className="mt-2 flex items-center justify-between gap-3"><StatusBadge status={vendor.status} />{canEdit ? <VendorStatusButton status={vendor.status} vendorId={vendor.id} /> : null}</div>
               </div>
               <div>
                 <p className="text-xs font-semibold uppercase tracking-wide text-slate-500"><T k="table.created" fallback="Created" /></p>

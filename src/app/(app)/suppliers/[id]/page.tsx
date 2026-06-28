@@ -87,6 +87,7 @@ export default async function SupplierDetailPage({ params }: { params: { id: str
   }
 
   const supplier = data as Supplier;
+  const canEdit = user.role === "admin";
 
   return (
     <section className="space-y-6">
@@ -109,15 +110,17 @@ export default async function SupplierDetailPage({ params }: { params: { id: str
           <Card className="border-slate-200 shadow-sm">
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle><T k="common.mainInfo" fallback="Main Info" /></CardTitle>
-              <SupplierFormDialog
-                initialData={supplier}
-                mode="edit"
-                trigger={
-                  <Button size="sm" variant="outline">
-                    <T k="actions.edit" fallback="Edit" />
-                  </Button>
-                }
-              />
+              {canEdit ? (
+                <SupplierFormDialog
+                  initialData={supplier}
+                  mode="edit"
+                  trigger={
+                    <Button size="sm" variant="outline">
+                      <T k="actions.edit" fallback="Edit" />
+                    </Button>
+                  }
+                />
+              ) : null}
             </CardHeader>
             <CardContent>
               <div className="grid gap-x-6 sm:grid-cols-2">
@@ -188,7 +191,7 @@ export default async function SupplierDetailPage({ params }: { params: { id: str
                 </p>
                 <div className="mt-2 flex items-center justify-between gap-3">
                   <StatusBadge status={supplier.status} />
-                  <SupplierStatusButton status={supplier.status} supplierId={supplier.id} />
+                  {canEdit ? <SupplierStatusButton status={supplier.status} supplierId={supplier.id} /> : null}
                 </div>
               </div>
               <div>

@@ -110,6 +110,7 @@ export function CreateUserDialog({ clients }: { clients: ClientAccessClient[] })
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="admin">Admin</SelectItem>
+                <SelectItem value="controller">Controller</SelectItem>
                 <SelectItem value="manager">Manager</SelectItem>
                 <SelectItem value="partner">Project Partner</SelectItem>
                 <SelectItem value="user">User - Client Access</SelectItem>

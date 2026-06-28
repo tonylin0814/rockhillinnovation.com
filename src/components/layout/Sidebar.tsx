@@ -33,9 +33,8 @@ export function Sidebar({ currentUser }: { currentUser: SidebarUser }) {
   const role = currentUser.role;
   const isAdmin = role === "admin";
   const isManager = role === "manager";
-  const isPartner = role === "partner";
-  const isUser = role === "user";
-  const isAdminOrManager = isAdmin || isManager;
+  const isController = role === "controller";
+  const isAdminOrManager = isAdmin || isManager || isController;
   const isHistoryActive = pathname.startsWith("/history");
   const [historyOpen, setHistoryOpen] = useState(isHistoryActive);
   const navItems = [
@@ -52,13 +51,12 @@ export function Sidebar({ currentUser }: { currentUser: SidebarUser }) {
   ];
   const adminNavItems = [
     { label: t.nav.admin, href: "/admin/users", icon: ShieldCheck },
-    { label: t.nav.finance, href: "/finance", icon: BarChart3 },
   ];
   const visibleNavItems = navItems.filter((item) => {
     if (item.href === "/clients") return isAdminOrManager;
     if (item.href === "/suppliers") return isAdminOrManager;
     if (item.href === "/vendors") return isAdminOrManager;
-    if (item.href === "/products") return isAdminOrManager || isPartner || isUser;
+    if (item.href === "/products") return isAdminOrManager;
     return true;
   });
 
@@ -110,7 +108,7 @@ export function Sidebar({ currentUser }: { currentUser: SidebarUser }) {
           <NavLink href={item.href} icon={item.icon} key={item.href} label={item.label} />
         ))}
 
-        {isAdminOrManager || isPartner ? (
+        {isAdminOrManager ? (
           <>
             <button
               className={cn(
@@ -132,7 +130,8 @@ export function Sidebar({ currentUser }: { currentUser: SidebarUser }) {
           </>
         ) : null}
 
-        {isAdminOrManager ? <NavLink href="/admin/activity" icon={History} label={t.nav.activity} /> : null}
+        {isAdmin ? <NavLink href="/admin/activity" icon={History} label={t.nav.activity} /> : null}
+        {isAdminOrManager ? <NavLink href="/finance" icon={BarChart3} label={t.nav.finance} /> : null}
 
         {isAdmin
           ? adminNavItems.map((item) => <NavLink href={item.href} icon={item.icon} key={item.href} label={item.label} />)

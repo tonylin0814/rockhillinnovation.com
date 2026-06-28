@@ -50,7 +50,7 @@ const shareholderInputSchema = z.object({
 async function requireTradeManager() {
   const user = await getCurrentUser();
 
-  if (!user || (user.role !== "admin" && user.role !== "manager")) {
+  if (!user || user.role !== "admin") {
     return { error: "Access denied" };
   }
 

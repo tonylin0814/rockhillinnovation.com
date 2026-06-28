@@ -117,8 +117,8 @@ function ComingSoonCard({ title }: { title: string }) {
 export default async function TradeWorkspacePage({ params }: { params: { id: string } }) {
   const user = await getCurrentUser();
   const currentRole: UserRole = user?.role ?? "partner";
-  const canManage = currentRole === "admin" || currentRole === "manager";
-  const canViewFinancials = canManage || currentRole === "partner";
+  const canManage = currentRole === "admin";
+  const canViewFinancials = true;
   const supabase = createServerSupabaseClient();
 
   const [
@@ -422,18 +422,7 @@ export default async function TradeWorkspacePage({ params }: { params: { id: str
   }
 
   const trade = data as Trade;
-  let canEdit = canManage;
-
-  if (currentRole === "user" && user) {
-    const { data: grant } = await supabase
-      .from("user_client_access")
-      .select("access_level")
-      .eq("user_id", user.id)
-      .eq("client_id", trade.client_id)
-      .maybeSingle();
-
-    canEdit = grant?.access_level === "edit";
-  }
+  const canEdit = canManage;
 
   const tradeParticipants = (participants ?? []) as TradeParticipant[];
   const clientOptions = (clients ?? []) as TradeClientOption[];

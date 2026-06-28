@@ -49,7 +49,7 @@ const clientSchema = z.object({
 async function requireClientManager() {
   const user = await getCurrentUser();
 
-  if (!user || (user.role !== "admin" && user.role !== "manager")) {
+  if (!user || user.role !== "admin") {
     return { error: "Access denied" };
   }
 

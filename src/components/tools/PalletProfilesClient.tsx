@@ -215,7 +215,7 @@ function DeleteProfileButton({ profile }: { profile: PalletProfile }) {
   );
 }
 
-export function PalletProfilesClient({ profiles }: { profiles: PalletProfile[] }) {
+export function PalletProfilesClient({ canManage, profiles }: { canManage: boolean; profiles: PalletProfile[] }) {
   return (
     <section className="space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-4">
@@ -223,12 +223,14 @@ export function PalletProfilesClient({ profiles }: { profiles: PalletProfile[] }
           <h1 className="text-3xl font-semibold text-[#0d1b34]">Pallet Profiles</h1>
           <p className="mt-2 text-sm text-slate-500">Manage reusable pallet sizes for calculators and packing tools.</p>
         </div>
-        <ProfileDialog>
-          <Button className="bg-[#0d1b34] hover:bg-[#13294d]">
-            <Plus className="mr-2 h-4 w-4" />
-            Add Profile
-          </Button>
-        </ProfileDialog>
+        {canManage ? (
+          <ProfileDialog>
+            <Button className="bg-[#0d1b34] hover:bg-[#13294d]">
+              <Plus className="mr-2 h-4 w-4" />
+              Add Profile
+            </Button>
+          </ProfileDialog>
+        ) : null}
       </div>
 
       <div className="rounded-lg border border-slate-200 bg-white shadow-sm">
@@ -240,7 +242,7 @@ export function PalletProfilesClient({ profiles }: { profiles: PalletProfile[] }
               <TableHead>L x W x H (cm)</TableHead>
               <TableHead>Max Weight</TableHead>
               <TableHead>Default</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
+              {canManage ? <TableHead className="text-right">Actions</TableHead> : null}
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -256,21 +258,23 @@ export function PalletProfilesClient({ profiles }: { profiles: PalletProfile[] }
                   <TableCell>
                     {profile.is_default ? <Badge className="bg-green-600">Default</Badge> : <span className="text-slate-400">-</span>}
                   </TableCell>
-                  <TableCell>
-                    <div className="flex justify-end gap-1">
-                      <ProfileDialog profile={profile}>
-                        <Button aria-label="Edit profile" size="icon" variant="ghost">
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                      </ProfileDialog>
-                      <DeleteProfileButton profile={profile} />
-                    </div>
-                  </TableCell>
+                  {canManage ? (
+                    <TableCell>
+                      <div className="flex justify-end gap-1">
+                        <ProfileDialog profile={profile}>
+                          <Button aria-label="Edit profile" size="icon" variant="ghost">
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                        </ProfileDialog>
+                        <DeleteProfileButton profile={profile} />
+                      </div>
+                    </TableCell>
+                  ) : null}
                 </TableRow>
               ))
             ) : (
               <TableRow>
-                <TableCell className="py-8 text-center text-slate-500" colSpan={6}>
+                <TableCell className="py-8 text-center text-slate-500" colSpan={canManage ? 6 : 5}>
                   No pallet profiles yet. Add your first profile.
                 </TableCell>
               </TableRow>

@@ -12,7 +12,7 @@ export type ActionResult = { success?: true; id?: string; error?: string };
 export type ResetResult = { success?: true; resetLink?: string; error?: string };
 export type CreateUserRole = UserRole;
 
-const roleSchema = z.enum(["admin", "manager", "partner", "user"]);
+const roleSchema = z.enum(["admin", "controller", "manager", "partner", "user"]);
 
 async function requireAdmin() {
   const user = await getCurrentUser();

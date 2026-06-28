@@ -55,9 +55,11 @@ function formatNumber(value: number, digits = 2) {
 }
 
 export function PalletCalculatorClient({
+  canManage,
   palletProfiles,
   products,
 }: {
+  canManage: boolean;
   products: Product[];
   palletProfiles: PalletProfile[];
 }) {
@@ -617,24 +619,26 @@ export function PalletCalculatorClient({
                 </CardContent>
               </Card>
 
-              <Card className="border-slate-200 shadow-sm">
-                <CardHeader><CardTitle>Export to Product</CardTitle></CardHeader>
-                <CardContent className="space-y-3">
-                  <p className="text-sm text-slate-500">Save carton dimensions and qty/carton to a product in your catalog.</p>
-                  <Select onValueChange={setExportProductId} value={exportProductId}>
-                    <SelectTrigger><SelectValue placeholder="Select product to update" /></SelectTrigger>
-                    <SelectContent>
-                      {products.map((product) => (
-                        <SelectItem key={product.id} value={product.id}>{product.name_english}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <Button disabled={!exportProductId || !displayStd || !displayHq || isExporting} onClick={handleExportToProduct} variant="outline">
-                    {isExporting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                    Export Carton Data to Product
-                  </Button>
-                </CardContent>
-              </Card>
+              {canManage ? (
+                <Card className="border-slate-200 shadow-sm">
+                  <CardHeader><CardTitle>Export to Product</CardTitle></CardHeader>
+                  <CardContent className="space-y-3">
+                    <p className="text-sm text-slate-500">Save carton dimensions and qty/carton to a product in your catalog.</p>
+                    <Select onValueChange={setExportProductId} value={exportProductId}>
+                      <SelectTrigger><SelectValue placeholder="Select product to update" /></SelectTrigger>
+                      <SelectContent>
+                        {products.map((product) => (
+                          <SelectItem key={product.id} value={product.id}>{product.name_english}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Button disabled={!exportProductId || !displayStd || !displayHq || isExporting} onClick={handleExportToProduct} variant="outline">
+                      {isExporting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                      Export Carton Data to Product
+                    </Button>
+                  </CardContent>
+                </Card>
+              ) : null}
             </>
           ) : null}
         </div>

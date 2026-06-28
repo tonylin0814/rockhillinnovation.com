@@ -12,7 +12,7 @@ type ActionResult = { success?: true; error?: string };
 async function requireManager() {
   const user = await getCurrentUser();
 
-  if (!user || (user.role !== "admin" && user.role !== "manager")) {
+  if (!user || user.role !== "admin") {
     return { error: "Access denied" };
   }
 

@@ -61,6 +61,7 @@ export default async function ClientDetailPage({ params }: { params: { id: strin
   if (!data) notFound();
 
   const client = data as Client;
+  const canEdit = user.role === "admin";
 
   return (
     <section className="space-y-6">
@@ -83,7 +84,9 @@ export default async function ClientDetailPage({ params }: { params: { id: strin
           <Card className="border-slate-200 shadow-sm">
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle><T k="common.mainInfo" fallback="Main Info" /></CardTitle>
-              <ClientFormDialog initialData={client} mode="edit" trigger={<Button size="sm" variant="outline"><T k="common.edit" fallback="Edit" /></Button>} />
+              {canEdit ? (
+                <ClientFormDialog initialData={client} mode="edit" trigger={<Button size="sm" variant="outline"><T k="common.edit" fallback="Edit" /></Button>} />
+              ) : null}
             </CardHeader>
             <CardContent>
               <div className="grid gap-x-6 sm:grid-cols-2">
@@ -131,7 +134,7 @@ export default async function ClientDetailPage({ params }: { params: { id: strin
                 <p className="text-xs font-semibold uppercase tracking-wide text-slate-500"><T k="table.status" fallback="Status" /></p>
                 <div className="mt-2 flex items-center justify-between gap-3">
                   <StatusBadge status={client.status} />
-                  <ClientStatusButton clientId={client.id} status={client.status} />
+                  {canEdit ? <ClientStatusButton clientId={client.id} status={client.status} /> : null}
                 </div>
               </div>
               <div>

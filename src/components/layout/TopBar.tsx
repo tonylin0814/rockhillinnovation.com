@@ -25,7 +25,7 @@ type TopBarProps = {
 
 export function TopBar({ userName, userId, userRole, initialUnreadCount, initialNotifications }: TopBarProps) {
   const { t } = useLanguage();
-  const canUseTools = userRole === "admin" || userRole === "manager";
+  const canUseTools = userRole === "admin" || userRole === "manager" || userRole === "controller";
   const initial = userName
     .split(" ")
     .find(Boolean)

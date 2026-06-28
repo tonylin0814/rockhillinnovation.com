@@ -15,7 +15,7 @@ function firstJoin<T>(value: T | T[] | null | undefined): T | null {
 export default async function CostHistoryPage() {
   const user = await getCurrentUser();
 
-  if (!user || user.role === "user") {
+  if (!user || user.role === "partner" || user.role === "user") {
     return (
       <div className="flex min-h-[calc(100vh-8rem)] items-center justify-center">
         <div className="text-center">
@@ -30,19 +30,14 @@ export default async function CostHistoryPage() {
     );
   }
 
-  const isPartner = user.role === "partner";
+  const canManage = user.role === "admin";
   const supabase = createServerSupabaseClient();
   const productQuery = supabase
     .from("products")
     .select("id, code, supplier_product_code, name_english, name_chinese")
     .order("code", { ascending: true });
 
-  if (isPartner) {
-    productQuery.ilike("code", "MLP-%");
-  }
-
   const { data: products, error: productsError } = await productQuery;
-  const productIds = (products ?? []).map((product) => product.id);
 
   const costQuery = supabase
     .from("product_cost_history")
@@ -53,15 +48,9 @@ export default async function CostHistoryPage() {
     .order("created_at", { ascending: false })
     .limit(300);
 
-  if (isPartner) {
-    costQuery.in("product_id", productIds.length ? productIds : ["00000000-0000-0000-0000-000000000000"]);
-  }
-
   const [{ data: costRows, error: costError }, { data: suppliers, error: suppliersError }] = await Promise.all([
     costQuery,
-    isPartner
-      ? Promise.resolve({ data: [], error: null })
-      : supabase.from("suppliers").select("id, code, name").order("code", { ascending: true }),
+    supabase.from("suppliers").select("id, code, name").order("code", { ascending: true }),
   ]);
 
   if (costError || productsError || suppliersError) {
@@ -92,7 +81,7 @@ export default async function CostHistoryPage() {
           }))}
           products={products ?? []}
           suppliers={suppliers ?? []}
-          canManage={!isPartner}
+          canManage={canManage}
         />
       </Suspense>
     </section>

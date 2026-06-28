@@ -10,12 +10,14 @@ import { getCurrentUser } from "@/lib/auth";
 import { createServerSupabaseAdmin } from "@/lib/supabase/server";
 import { cn } from "@/lib/utils";
 import type { CurrentUser, UserClientAccess, UserRole } from "@/types";
+import { redirect } from "next/navigation";
 
 type UserRow = CurrentUser & { created_at: string };
 type ClientOption = { id: string; code: string; name: string };
 
 const roleBadgeClasses: Record<UserRole, string> = {
   admin: "border-slate-200 bg-slate-100 text-slate-700",
+  controller: "border-cyan-200 bg-cyan-50 text-cyan-700",
   manager: "border-blue-200 bg-blue-50 text-blue-700",
   partner: "border-violet-200 bg-violet-50 text-violet-700",
   user: "border-amber-200 bg-amber-50 text-amber-700",
@@ -25,14 +27,7 @@ export default async function UserManagementPage() {
   const currentUser = await getCurrentUser();
 
   if (currentUser?.role !== "admin") {
-    return (
-      <div className="flex min-h-[calc(100vh-8rem)] items-center justify-center">
-        <div className="text-center">
-          <h1 className="text-2xl font-semibold text-[#0d1b34]">Access denied</h1>
-          <p className="mt-2 text-sm text-slate-500">Only admins can manage user accounts.</p>
-        </div>
-      </div>
-    );
+    redirect("/dashboard");
   }
 
   let users: UserRow[] = [];

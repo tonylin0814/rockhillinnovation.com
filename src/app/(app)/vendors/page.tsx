@@ -62,6 +62,7 @@ function VendorTypeBadge({ type }: { type: ExpenseVendor["vendor_type"] }) {
 
 export default async function VendorsPage() {
   const user = await getCurrentUser();
+  const canEdit = user?.role === "admin";
 
   if (!user || user.role === "partner" || user.role === "user") {
     return (
@@ -103,7 +104,7 @@ export default async function VendorsPage() {
             <T k="vendors.title" fallback="Vendors" />
           </h1>
         </div>
-        <VendorFormDialog mode="create" />
+        {canEdit ? <VendorFormDialog mode="create" /> : null}
       </div>
 
       <Card className="border-slate-200 shadow-sm">

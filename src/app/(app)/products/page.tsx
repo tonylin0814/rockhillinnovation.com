@@ -15,7 +15,7 @@ export default async function ProductsPage({
 }) {
   const user = await getCurrentUser();
 
-  if (!user) {
+  if (!user || user.role === "partner" || user.role === "user") {
     return (
       <div className="flex min-h-[calc(100vh-8rem)] items-center justify-center">
         <div className="text-center">
@@ -23,7 +23,7 @@ export default async function ProductsPage({
             <T k="common.accessDenied" fallback="Access denied" />
           </h1>
           <p className="mt-2 text-sm text-slate-500">
-            <T k="products.accessDeniedHelp" fallback="Products are available to signed-in users only." />
+            <T k="products.accessDeniedHelp" fallback="Products are available to admins, managers, and controllers only." />
           </p>
         </div>
       </div>
@@ -47,11 +47,8 @@ export default async function ProductsPage({
     );
   }
 
-  const canManage = user.role === "admin" || user.role === "manager";
-  const isPartner = user.role === "partner";
-  const allProducts = ((products ?? []) as Product[]).filter((product) =>
-    isPartner ? product.code.toUpperCase().startsWith("MLP-") : true
-  );
+  const canManage = user.role === "admin";
+  const allProducts = (products ?? []) as Product[];
   const activeProducts = allProducts.filter((product) => product.status === "active");
   const standardProducts = activeProducts.filter((product) => product.product_type === "part");
   const setProducts = activeProducts.filter((product) => product.product_type === "set");

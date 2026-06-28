@@ -12,12 +12,12 @@ export default async function PalletCalculatorPage() {
     redirect("/login");
   }
 
-  if (user.role === "partner") {
+  if (user.role === "partner" || user.role === "user") {
     return (
       <div className="flex min-h-[calc(100vh-8rem)] items-center justify-center">
         <div className="text-center">
           <h1 className="text-2xl font-semibold text-[#0d1b34]">Access denied</h1>
-          <p className="mt-2 text-sm text-slate-500">Tools are available to admins and managers only.</p>
+          <p className="mt-2 text-sm text-slate-500">Tools are available to admins, managers, and controllers only.</p>
         </div>
       </div>
     );
@@ -43,6 +43,7 @@ export default async function PalletCalculatorPage() {
 
   return (
     <PalletCalculatorClient
+      canManage={user.role === "admin"}
       palletProfiles={(palletProfiles ?? []) as PalletProfile[]}
       products={(products ?? []) as Product[]}
     />

@@ -200,7 +200,7 @@ export default async function ProductDetailPage({
 }) {
   const user = await getCurrentUser();
 
-  if (!user) {
+  if (!user || user.role === "partner" || user.role === "user") {
     return (
       <div className="flex min-h-[calc(100vh-8rem)] items-center justify-center">
         <div className="text-center">
@@ -208,7 +208,7 @@ export default async function ProductDetailPage({
             <T k="common.accessDenied" fallback="Access denied" />
           </h1>
           <p className="mt-2 text-sm text-slate-500">
-            <T k="products.accessDeniedHelp" fallback="Products are available to signed-in users only." />
+            <T k="products.accessDeniedHelp" fallback="Products are available to admins, managers, and controllers only." />
           </p>
         </div>
       </div>
@@ -251,21 +251,7 @@ export default async function ProductDetailPage({
   }
 
   const product = data as Product;
-  const canManage = user.role === "admin" || user.role === "manager";
-  const isPartner = user.role === "partner";
-
-  if (isPartner && !product.code.toUpperCase().startsWith("MLP-")) {
-    return (
-      <div className="flex min-h-[calc(100vh-8rem)] items-center justify-center">
-        <div className="text-center">
-          <h1 className="text-2xl font-semibold text-[#0d1b34]">
-            <T k="common.accessDenied" fallback="Access denied" />
-          </h1>
-          <p className="mt-2 text-sm text-slate-500">This product is outside your access scope.</p>
-        </div>
-      </div>
-    );
-  }
+  const canManage = user.role === "admin";
 
   const backHref = searchParams?.from?.startsWith("/products") ? searchParams.from : "/products?tab=products";
   const supplierOptions = (suppliers ?? []) as ProductSupplierOption[];
