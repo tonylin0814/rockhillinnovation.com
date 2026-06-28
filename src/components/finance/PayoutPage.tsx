@@ -122,8 +122,7 @@ function defaultInvoiceNumber(trade: PayoutTrade, shareholder: PayoutShareholder
   if (invoice?.invoice_number) return invoice.invoice_number;
   const vendor = vendorForShareholder(shareholder);
   const tradeNumber = trade.trade_id.replace(/^MLP-?/i, "");
-  const namePart = shareholder.person_name.replace(/[^a-z0-9]+/gi, "").slice(0, 10).toUpperCase();
-  return `${vendor?.code ?? "PAYOUT"}-${tradeNumber}-${namePart || "SHARE"}`;
+  return `${vendor?.code ?? "PAYOUT"}-${tradeNumber}`;
 }
 
 type EditableLine = {
