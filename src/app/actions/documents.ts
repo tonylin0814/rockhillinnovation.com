@@ -5,6 +5,7 @@ import { z } from "zod";
 
 import { getCurrentUser } from "@/lib/auth";
 import { notifyParticipants } from "@/lib/notifications";
+import { deleteFromOneDrive } from "@/lib/onedrive";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import type { TradeDocument } from "@/types";
 
@@ -89,7 +90,7 @@ export async function deleteDocument(documentId: string): Promise<ActionResult> 
   const supabase = createServerSupabaseClient();
   const { data: document, error: fetchError } = await supabase
     .from("trade_documents")
-    .select("id, trade_id")
+    .select("id, onedrive_file_id, trade_id")
     .eq("id", documentId)
     .maybeSingle();
 
@@ -105,6 +106,10 @@ export async function deleteDocument(documentId: string): Promise<ActionResult> 
 
   if (error) {
     return { error: error.message };
+  }
+
+  if (document.onedrive_file_id) {
+    await deleteFromOneDrive(document.onedrive_file_id);
   }
 
   revalidatePath(`/trades/${document.trade_id}`);

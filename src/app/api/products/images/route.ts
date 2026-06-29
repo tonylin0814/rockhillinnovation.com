@@ -65,7 +65,7 @@ function ensureSlot(images: ProductImage[], slotIndex: number) {
 export async function POST(request: Request) {
   const user = await getCurrentUser();
 
-  if (!user || (user.role !== "admin" && user.role !== "manager")) {
+  if (!user || user.role !== "admin") {
     return NextResponse.json({ error: "Access denied" }, { status: 403 });
   }
 
