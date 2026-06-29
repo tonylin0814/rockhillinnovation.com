@@ -14,7 +14,7 @@ import {
 import { generatePdf } from "@/lib/pdf";
 import { createServerSupabaseAdmin, createServerSupabaseClient } from "@/lib/supabase/server";
 import { buildPalletCalculationHtml } from "@/lib/templates/pallet-calculator";
-import { getCurrentUser, requireManager } from "@/lib/auth";
+import { requireManager } from "@/lib/auth";
 
 type ActionResult = {
   success?: true;
@@ -45,11 +45,8 @@ function emptyToNull(value: FormDataEntryValue | null) {
 }
 
 export async function generatePalletCalculationPdf(formData: FormData): Promise<ActionResult> {
-  const user = await getCurrentUser();
-
-  if (!user || (user.role !== "admin" && user.role !== "manager")) {
-    return { error: "Access denied" };
-  }
+  const access = await requireManager();
+  if ("error" in access) return { error: access.error };
 
   const parsed = palletCalculationSchema.safeParse({
     product_name: formData.get("product_name"),
@@ -132,8 +129,8 @@ export async function getJudyPalletExplanation(payload: {
   pallet: { name: string; lengthCm: number; widthCm: number; heightCm: number; maxWeightKg: number };
   forkliftClearanceCm: number;
 }): Promise<{ result?: JudyPalletResult; error?: string }> {
-  const user = await getCurrentUser();
-  if (!user) return { error: "Unauthorized" };
+  const access = await requireManager();
+  if ("error" in access) return { error: access.error };
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) return { error: "AI not configured" };
 

@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
-import { getCurrentUser } from "@/lib/auth";
+import { requireManager } from "@/lib/auth";
 import { logActivity } from "@/lib/activity-log";
 import { uploadToOneDrive } from "@/lib/onedrive";
 import { generatePackingPlan as runGenerator } from "@/lib/packing-plan-generator";
@@ -12,13 +12,6 @@ import { createServerSupabaseAdmin, createServerSupabaseClient } from "@/lib/sup
 import type { ContainerType, Product, TradePackingPlan } from "@/types";
 
 export type ActionResult = { success?: true; error?: string; id?: string };
-
-async function requireManager() {
-  const user = await getCurrentUser();
-  if (!user) return { error: "Unauthorized" };
-  if (user.role === "partner" || user.role === "user") return { error: "Managers and admins only" };
-  return { user };
-}
 
 function normalizePlan(plan: unknown): TradePackingPlan | null {
   if (!plan || typeof plan !== "object") return null;

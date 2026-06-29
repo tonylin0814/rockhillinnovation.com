@@ -5,7 +5,7 @@ import path from "path";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
-import { getCurrentUser } from "@/lib/auth";
+import { requireManager } from "@/lib/auth";
 import { logActivity } from "@/lib/activity-log";
 import { getNextTradeDocumentVersion } from "@/lib/document-version";
 import { uploadToOneDrive } from "@/lib/onedrive";
@@ -87,13 +87,7 @@ const quotationLineSchema = z.object({
 });
 
 async function requireQuotationManager() {
-  const user = await getCurrentUser();
-
-  if (!user || user.role === "partner") {
-    return { error: "Access denied" };
-  }
-
-  return { user };
+  return requireManager();
 }
 
 function emptyToNull(value: FormDataEntryValue | null) {
@@ -274,11 +268,9 @@ export async function generateQuotationPdf(
   sessionId: string,
   formData: FormData
 ): Promise<{ success?: true; downloadUrl?: string; error?: string }> {
-  const user = await getCurrentUser();
-
-  if (!user || user.role === "partner") {
-    return { error: "Access denied" };
-  }
+  const access = await requireQuotationManager();
+  if ("error" in access) return { error: access.error };
+  const user = access.user;
 
   const rawRef = formData.get("quotation_ref");
   const rawValidUntil = formData.get("valid_until");

@@ -37,7 +37,6 @@ async function sendEmail(to: string, subject: string, text: string) {
   const from = process.env.RESEND_FROM_EMAIL ?? "no-reply@rockhillinnovation.com";
 
   if (!apiKey) {
-    console.log(`[email skipped] To: ${to}\n${text}`);
     return;
   }
 
