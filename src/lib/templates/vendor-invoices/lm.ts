@@ -33,7 +33,7 @@ function buildLmBankingPage(params: VendorOutgoingInvoiceParams) {
       <div class="lm-bank-reference">Re: Invoice ${params.invoiceNumber ? escapeHtml(params.invoiceNumber) : "Vendor Invoice"}</div>
       <table class="lm-bank-table">${rowsHtml}</table>
       <div class="lm-fee-note">
-        <strong>Important:</strong> Bank fees are the sender's responsibility. If a bank deducts a fee that results in a shortfall, please arrange an additional transfer to cover the difference.
+        Bank fees are the sender's responsibility. Please include the invoice number as the wire reference.
       </div>
     </section>`;
 }
@@ -70,14 +70,13 @@ export function buildLmInvoiceHtml(params: VendorOutgoingInvoiceParams): string 
       </div>
       ${params.notes ? `<div class="lm-notes"><strong>Notes:</strong><br />${multiline(params.notes)}</div>` : ""}
     </section>
-    ${buildLmBankingPage(params)}
-  `;
+    ${buildLmBankingPage(params)}`;
 
   return buildBaseHtml({
     content,
     styles: `
-      .lm-invoice { color:#1A1A1A; }
-      .lm-top-row { display:flex; justify-content:space-between; gap:24px; }
+      .lm-invoice { color:#1A1A1A; min-height:8.65in; }
+      .lm-top-row { display:flex; gap:24px; justify-content:space-between; }
       .lm-initials { color:#7B2D42; display:block; font-size:52pt; font-weight:900; letter-spacing:-3px; line-height:1; margin-bottom:-8px; }
       .lm-vendor-name { color:#1A1A1A; font-size:10pt; font-weight:600; }
       .lm-vendor-address { color:#6B7280; font-size:9pt; line-height:1.6; margin-top:4px; max-width:3.4in; }
@@ -111,6 +110,6 @@ export function buildLmInvoiceHtml(params: VendorOutgoingInvoiceParams): string 
       .lm-bank-value { border-bottom:1px solid #E5E7EB; color:#1A1A1A; font-size:10pt; font-weight:600; padding:9px 0; }
       .lm-fee-note { border-left:2px solid #7B2D42; color:#6B7280; font-size:8.5pt; margin-top:24px; padding:10px 16px; }
     `,
-    title: `Invoice ${params.invoiceNumber ?? params.invoiceDate}`,
+    title: `Invoice ${params.invoiceNumber ?? params.invoiceDate} - ${params.vendorName}`,
   });
 }

@@ -11,7 +11,7 @@ import {
 import type { VendorOutgoingInvoiceParams } from "@/lib/templates/vendor-invoices/types";
 
 function ornamentalDivider(className: string) {
-  return `<div class="${className}"><span></span><b>&#9670;</b><span></span></div>`;
+  return `<div class="${className}"><span></span><b>◆</b><span></span></div>`;
 }
 
 function buildChenlawBankingPage(params: VendorOutgoingInvoiceParams) {
@@ -42,7 +42,7 @@ function buildChenlawBankingPage(params: VendorOutgoingInvoiceParams) {
         <tbody>${rowsHtml}</tbody>
       </table>
       <div class="chenlaw-fee-box">
-        <strong>Important:</strong> Bank fees are the sender's responsibility. If a bank deducts a fee that results in a shortfall, please arrange an additional transfer to cover the difference.
+        Bank fees are the sender's responsibility. Please include the invoice number as the wire reference.
       </div>
       <footer class="chenlaw-bank-footer">Strictly Confidential - This document is for the addressee only.</footer>
     </section>`;
@@ -64,7 +64,7 @@ export function buildChenlawInvoiceHtml(params: VendorOutgoingInvoiceParams): st
           ${params.billToAddress ? `<div class="chenlaw-address">${multiline(params.billToAddress)}</div>` : ""}
         </div>
         <div class="chenlaw-meta">
-          ${params.invoiceNumber ? `<div><span>Invoice No.</span><strong>${escapeHtml(params.invoiceNumber)}</strong></div>` : ""}
+          <div><span>Invoice No.</span><strong>${params.invoiceNumber ? escapeHtml(params.invoiceNumber) : "-"}</strong></div>
           <div><span>Date</span><strong>${escapeHtml(formatDate(params.invoiceDate))}</strong></div>
           <div><span>Type</span><strong>Invoice</strong></div>
         </div>
@@ -77,14 +77,13 @@ export function buildChenlawInvoiceHtml(params: VendorOutgoingInvoiceParams): st
       ${params.notes ? `<div class="chenlaw-notes"><strong>Notes:</strong><br />${multiline(params.notes)}</div>` : ""}
       <footer class="chenlaw-footer">Confidential - Prepared for Rock Hill Innovation</footer>
     </section>
-    ${buildChenlawBankingPage(params)}
-  `;
+    ${buildChenlawBankingPage(params)}`;
 
   return buildBaseHtml({
     content,
     styles: `
       body { background:#FFFEF5; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
-      .chenlaw-shell { background:#FFFEF5; color:#2C2C2C; min-height:8.85in; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+      .chenlaw-shell { background:#FFFEF5; color:#2C2C2C; min-height:8.65in; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
       .chenlaw-header { padding:28px 0 18px; text-align:center; }
       .chenlaw-vendor-name { color:#1A2744; font-size:20pt; font-weight:700; letter-spacing:1px; }
       .chenlaw-ornament { align-items:center; display:flex; gap:10px; justify-content:center; margin:10px auto 8px; max-width:3.2in; }
@@ -122,6 +121,6 @@ export function buildChenlawInvoiceHtml(params: VendorOutgoingInvoiceParams): st
       .chenlaw-fee-box { background:#FFF9E8; border:1px solid #C9A84C; border-left:3px solid #C9A84C; color:#78350F; font-size:8.5pt; margin-top:24px; padding:12px 16px; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
       .chenlaw-bank-footer { color:#9CA3AF; font-size:8pt; margin-top:28px; text-align:center; }
     `,
-    title: `Invoice ${params.invoiceNumber ?? params.invoiceDate}`,
+    title: `Invoice ${params.invoiceNumber ?? params.invoiceDate} - ${params.vendorName}`,
   });
 }
